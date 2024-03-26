@@ -1,0 +1,16 @@
+provider:
+  name: onlineornot
+resources:
+  status_page:
+    create:
+      path: /v1/status_pages
+      method: POST
+    read:
+      path: /v1/status_pages/{status_page_id}
+      method: GET
+    update:
+      path: /v1/status_pages/{status_page_id}
+      method: POST
+    delete:
+      path: /v1/status_pages/{status_page_id}
+      method: DELETE
