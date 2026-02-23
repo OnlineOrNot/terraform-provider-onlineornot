@@ -1,6 +1,124 @@
 provider:
   name: onlineornot
+
 resources:
+  # ===================
+  # UPTIME CHECKS
+  # ===================
+  check:
+    create:
+      path: /v1/checks
+      method: POST
+    read:
+      path: /v1/checks/{check_id}
+      method: GET
+    update:
+      path: /v1/checks/{check_id}
+      method: PATCH
+    delete:
+      path: /v1/checks/{check_id}
+      method: DELETE
+    schema:
+      ignores:
+        # API response wrapper fields - not part of the resource
+        - success
+        - errors
+        - messages
+        - result
+      attributes:
+        aliases:
+          check_id: id
+        overrides:
+          id:
+            description: "Uptime Check ID"
+          status:
+            description: "Current status of the check (UP, DOWN, PENDING, PAUSED, MUTED, MAINTENANCE, RECOVERING, VERIFYING)"
+          last_queued:
+            description: "Last time the check was queued"
+          check_type:
+            description: "Type of check (UPTIME or BROWSER)"
+
+  # ===================
+  # HEARTBEATS
+  # ===================
+  heartbeat:
+    create:
+      path: /v1/heartbeats
+      method: POST
+    read:
+      path: /v1/heartbeats/{heartbeat_id}
+      method: GET
+    update:
+      path: /v1/heartbeats/{heartbeat_id}
+      method: PATCH
+    delete:
+      path: /v1/heartbeats/{heartbeat_id}
+      method: DELETE
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result
+      attributes:
+        aliases:
+          heartbeat_id: id
+
+  # ===================
+  # MAINTENANCE WINDOWS
+  # ===================
+  maintenance_window:
+    create:
+      path: /v1/maintenance-windows
+      method: POST
+    read:
+      path: /v1/maintenance-windows/{maintenance_window_id}
+      method: GET
+    update:
+      path: /v1/maintenance-windows/{maintenance_window_id}
+      method: PATCH
+    delete:
+      path: /v1/maintenance-windows/{maintenance_window_id}
+      method: DELETE
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result
+      attributes:
+        aliases:
+          maintenance_window_id: id
+
+  # ===================
+  # WEBHOOKS
+  # ===================
+  webhook:
+    create:
+      path: /v1/webhooks
+      method: POST
+    read:
+      path: /v1/webhooks/{webhook_id}
+      method: GET
+    update:
+      path: /v1/webhooks/{webhook_id}
+      method: PATCH
+    delete:
+      path: /v1/webhooks/{webhook_id}
+      method: DELETE
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result
+      attributes:
+        aliases:
+          webhook_id: id
+
+  # ===================
+  # STATUS PAGES
+  # ===================
   status_page:
     create:
       path: /v1/status_pages
@@ -14,3 +132,179 @@ resources:
     delete:
       path: /v1/status_pages/{status_page_id}
       method: DELETE
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result
+      attributes:
+        aliases:
+          status_page_id: id
+
+  # ===================
+  # STATUS PAGE COMPONENTS
+  # ===================
+  status_page_component:
+    create:
+      path: /v1/status_pages/{status_page_id}/components
+      method: POST
+    read:
+      path: /v1/status_pages/{status_page_id}/components/{status_page_component_id}
+      method: GET
+    update:
+      path: /v1/status_pages/{status_page_id}/components/{status_page_component_id}
+      method: PATCH
+    delete:
+      path: /v1/status_pages/{status_page_id}/components/{status_page_component_id}
+      method: DELETE
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result
+      attributes:
+        aliases:
+          status_page_component_id: id
+
+  # ===================
+  # STATUS PAGE COMPONENT GROUPS
+  # ===================
+  status_page_component_group:
+    create:
+      path: /v1/status_pages/{status_page_id}/groups
+      method: POST
+    read:
+      path: /v1/status_pages/{status_page_id}/groups/{group_id}
+      method: GET
+    update:
+      path: /v1/status_pages/{status_page_id}/groups/{group_id}
+      method: PATCH
+    delete:
+      path: /v1/status_pages/{status_page_id}/groups/{group_id}
+      method: DELETE
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result
+      attributes:
+        aliases:
+          group_id: id
+
+  # ===================
+  # STATUS PAGE INCIDENTS
+  # ===================
+  status_page_incident:
+    create:
+      path: /v1/status_pages/{status_page_id}/incidents
+      method: POST
+    read:
+      path: /v1/status_pages/{status_page_id}/incidents/{status_page_incident_id}
+      method: GET
+    update:
+      path: /v1/status_pages/{status_page_id}/incidents/{status_page_incident_id}
+      method: PATCH
+    delete:
+      path: /v1/status_pages/{status_page_id}/incidents/{status_page_incident_id}
+      method: DELETE
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result
+      attributes:
+        aliases:
+          status_page_incident_id: id
+
+  # ===================
+  # STATUS PAGE SCHEDULED MAINTENANCE
+  # ===================
+  status_page_scheduled_maintenance:
+    create:
+      path: /v1/status_pages/{status_page_id}/scheduled_maintenance
+      method: POST
+    read:
+      path: /v1/status_pages/{status_page_id}/scheduled_maintenance/{scheduled_maintenance_id}
+      method: GET
+    update:
+      path: /v1/status_pages/{status_page_id}/scheduled_maintenance/{scheduled_maintenance_id}
+      method: PATCH
+    delete:
+      path: /v1/status_pages/{status_page_id}/scheduled_maintenance/{scheduled_maintenance_id}
+      method: DELETE
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result
+      attributes:
+        aliases:
+          scheduled_maintenance_id: id
+
+  # Note: status_page_subscriber is omitted because it doesn't have a read endpoint
+  # (only list and delete). This resource would need to be implemented manually
+  # if needed, or use the list endpoint to simulate read.
+
+# ===================
+# DATA SOURCES
+# ===================
+data_sources:
+  checks:
+    read:
+      path: /v1/checks
+      method: GET
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result_info
+
+  heartbeats:
+    read:
+      path: /v1/heartbeats
+      method: GET
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result_info
+
+  status_pages:
+    read:
+      path: /v1/status_pages
+      method: GET
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result_info
+
+  maintenance_windows:
+    read:
+      path: /v1/maintenance-windows
+      method: GET
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result_info
+
+  webhooks:
+    read:
+      path: /v1/webhooks
+      method: GET
+    schema:
+      ignores:
+        - success
+        - errors
+        - messages
+        - result_info

@@ -1,22 +1,20 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
 package provider
 
 import (
 	"context"
-	"net/http"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
 )
 
 // Ensure OnlineornotProvider satisfies various provider interfaces.
 var _ provider.Provider = &OnlineornotProvider{}
-var _ provider.ProviderWithFunctions = &OnlineornotProvider{}
 
 // OnlineornotProvider defines the provider implementation.
 type OnlineornotProvider struct {
@@ -28,9 +26,8 @@ type OnlineornotProvider struct {
 
 // OnlineornotProviderModel describes the provider data model.
 type OnlineornotProviderModel struct {
-	ApiHost   types.String `tfsdk:"api_host"`
-	ApiKey    types.String `tfsdk:"api_key" sensitive:"true"`
-	ApiScheme types.String `tfsdk:"api_scheme"`
+	APIKey  types.String `tfsdk:"api_key"`
+	BaseURL types.String `tfsdk:"base_url"`
 }
 
 func (p *OnlineornotProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -40,15 +37,16 @@ func (p *OnlineornotProvider) Metadata(ctx context.Context, req provider.Metadat
 
 func (p *OnlineornotProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "The OnlineOrNot provider allows you to manage uptime checks, heartbeats, status pages, and more.",
 		Attributes: map[string]schema.Attribute{
-			"api_host": schema.StringAttribute{
-				Optional: true,
-			},
 			"api_key": schema.StringAttribute{
-				Required: true,
+				Description: "The API key for authenticating with the OnlineOrNot API. Can also be set via the ONLINEORNOT_API_KEY environment variable.",
+				Optional:    true,
+				Sensitive:   true,
 			},
-			"api_scheme": schema.StringAttribute{
-				Optional: true,
+			"base_url": schema.StringAttribute{
+				Description: "The base URL for the OnlineOrNot API. Defaults to https://api.onlineornot.com.",
+				Optional:    true,
 			},
 		},
 	}
@@ -63,29 +61,50 @@ func (p *OnlineornotProvider) Configure(ctx context.Context, req provider.Config
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
+	// Get API key from config or environment variable
+	apiKey := data.APIKey.ValueString()
+	if apiKey == "" {
+		apiKey = os.Getenv("ONLINEORNOT_API_KEY")
+	}
 
-	// Example client configuration for data sources and resources
+	if apiKey == "" {
+		resp.Diagnostics.AddError(
+			"Missing API Key",
+			"The provider requires an API key. Set 'api_key' in the provider configuration or set the ONLINEORNOT_API_KEY environment variable.",
+		)
+		return
+	}
+
+	// Get base URL from config or use default
+	baseURL := data.BaseURL.ValueString()
+
+	// Create client
 	c := client.NewClient(&client.Config{
-		APIKey:    data.ApiKey.ValueString(),
-		APIHost:   data.ApiHost.ValueString(),
-		ApiScheme: data.ApiScheme.ValueString(),
-		Debug:     false,
+		APIKey:  apiKey,
+		BaseURL: baseURL,
 	})
-	resp.DataSourceData = client
-	resp.ResourceData = client
+
+	resp.DataSourceData = c
+	resp.ResourceData = c
 }
 
 func (p *OnlineornotProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewExampleResource,
+		NewCheckResource,
+		NewStatusPageResource,
+		NewHeartbeatResource,
+		NewWebhookResource,
+		NewMaintenanceWindowResource,
+		NewStatusPageComponentResource,
+		NewStatusPageComponentGroupResource,
+		NewStatusPageIncidentResource,
+		NewStatusPageScheduledMaintenanceResource,
 	}
 }
 
 func (p *OnlineornotProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewExampleDataSource,
+		// Data sources will be added later
 	}
 }
 
