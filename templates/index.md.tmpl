@@ -1,0 +1,30 @@
+---
+page_title: "OnlineOrNot Provider"
+description: |-
+  The OnlineOrNot provider allows you to manage uptime checks, heartbeats, status pages, and more.
+---
+
+# OnlineOrNot Provider
+
+The OnlineOrNot provider allows you to interact with the [OnlineOrNot](https://onlineornot.com) API to manage uptime monitoring resources including:
+
+- **Uptime Checks** - Monitor website availability and response times
+- **Heartbeats** - Monitor cron jobs and scheduled tasks  
+- **Status Pages** - Create public status pages for your services
+- **Webhooks** - Configure alert notifications
+- **Maintenance Windows** - Schedule maintenance periods
+
+## Example Usage
+
+{{ tffile "examples/provider/provider.tf" }}
+
+## Authentication
+
+The provider requires an API key for authentication. You can generate an API key from the [OnlineOrNot dashboard](https://onlineornot.com/app/api-tokens).
+
+The API key can be provided via:
+
+1. The `api_key` provider configuration argument
+2. The `ONLINEORNOT_API_KEY` environment variable (recommended)
+
+{{ .SchemaMarkdown | trimspace }}

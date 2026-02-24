@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -124,59 +126,210 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Update state from the created response
-	data.Id = types.StringValue(created.ID)
+	// Populate state from the API response (includes computed defaults)
+	r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
 
-	// Set computed fields to null only if they are unknown (not provided by user)
-	// This avoids "unknown after apply" errors while preserving user-provided values
-	if data.TestInterval.IsUnknown() {
-		data.TestInterval = types.Int64Null()
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// populateModelFromAPI updates a CheckModel with values from the API response
+func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource_check.CheckModel, check *client.Check, diags *diag.Diagnostics) {
+	data.Id = types.StringValue(check.ID)
+	data.Name = types.StringValue(check.Name)
+	data.Url = types.StringValue(check.URL)
+
+	// String fields with defaults
+	if check.Method != "" {
+		data.Method = types.StringValue(check.Method)
+	} else {
+		data.Method = types.StringNull()
 	}
-	if data.TestRegions.IsUnknown() {
-		data.TestRegions = types.ListNull(types.StringType)
+	// API returns check_type but schema uses type
+	// API returns "UPTIME"/"BROWSER" but schema expects "UPTIME_CHECK"/"BROWSER_CHECK"
+	checkType := check.CheckType
+	if checkType == "" {
+		checkType = check.Type
 	}
-	if data.TextToSearchFor.IsUnknown() {
+	switch checkType {
+	case "UPTIME":
+		data.Type = types.StringValue("UPTIME_CHECK")
+	case "BROWSER":
+		data.Type = types.StringValue("BROWSER_CHECK")
+	case "UPTIME_CHECK", "BROWSER_CHECK":
+		data.Type = types.StringValue(checkType)
+	case "":
+		data.Type = types.StringNull()
+	default:
+		data.Type = types.StringValue(checkType)
+	}
+	if check.AlertPriority != "" {
+		data.AlertPriority = types.StringValue(check.AlertPriority)
+	} else {
+		data.AlertPriority = types.StringNull()
+	}
+	if check.TextToSearchFor != "" {
+		data.TextToSearchFor = types.StringValue(check.TextToSearchFor)
+	} else {
 		data.TextToSearchFor = types.StringNull()
 	}
-	if data.Body.IsUnknown() {
+	if check.Body != "" {
+		data.Body = types.StringValue(check.Body)
+	} else {
 		data.Body = types.StringNull()
 	}
-	if data.Version.IsUnknown() {
+	if check.Version != "" {
+		data.Version = types.StringValue(check.Version)
+	} else {
 		data.Version = types.StringNull()
 	}
-	if data.AuthUsername.IsUnknown() {
+	if check.AuthUsername != "" {
+		data.AuthUsername = types.StringValue(check.AuthUsername)
+	} else {
 		data.AuthUsername = types.StringNull()
 	}
-	if data.AuthPassword.IsUnknown() {
+	if check.AuthPassword != "" {
+		data.AuthPassword = types.StringValue(check.AuthPassword)
+	} else {
 		data.AuthPassword = types.StringNull()
 	}
-	if data.Headers.IsUnknown() {
-		data.Headers = types.MapNull(types.StringType)
+
+	// Integer fields
+	if check.TestInterval > 0 {
+		data.TestInterval = types.Int64Value(int64(check.TestInterval))
+	} else {
+		data.TestInterval = types.Int64Null()
 	}
-	if data.UserAlerts.IsUnknown() {
+	if check.Timeout > 0 {
+		data.Timeout = types.Int64Value(int64(check.Timeout))
+	} else {
+		data.Timeout = types.Int64Null()
+	}
+	if check.ConfirmationPeriodSeconds > 0 {
+		data.ConfirmationPeriodSeconds = types.Int64Value(int64(check.ConfirmationPeriodSeconds))
+	} else {
+		data.ConfirmationPeriodSeconds = types.Int64Null()
+	}
+	if check.RecoveryPeriodSeconds > 0 {
+		data.RecoveryPeriodSeconds = types.Int64Value(int64(check.RecoveryPeriodSeconds))
+	} else {
+		data.RecoveryPeriodSeconds = types.Int64Null()
+	}
+	if check.ReminderAlertIntervalMinutes > 0 {
+		data.ReminderAlertIntervalMinutes = types.Int64Value(int64(check.ReminderAlertIntervalMinutes))
+	} else {
+		data.ReminderAlertIntervalMinutes = types.Int64Null()
+	}
+
+	// Boolean fields
+	if check.FollowRedirects != nil {
+		data.FollowRedirects = types.BoolValue(*check.FollowRedirects)
+	} else {
+		data.FollowRedirects = types.BoolNull()
+	}
+	if check.VerifySSL != nil {
+		data.VerifySsl = types.BoolValue(*check.VerifySSL)
+	} else {
+		data.VerifySsl = types.BoolNull()
+	}
+
+	// List fields - convert slices to Terraform lists
+	if len(check.TestRegions) > 0 {
+		testRegions, d := types.ListValueFrom(ctx, types.StringType, check.TestRegions)
+		diags.Append(d...)
+		data.TestRegions = testRegions
+	} else {
+		data.TestRegions = types.ListNull(types.StringType)
+	}
+
+	if len(check.UserAlerts) > 0 {
+		userAlerts, d := types.ListValueFrom(ctx, types.StringType, check.UserAlerts)
+		diags.Append(d...)
+		data.UserAlerts = userAlerts
+	} else {
 		data.UserAlerts = types.ListNull(types.StringType)
 	}
-	if data.SlackAlerts.IsUnknown() {
+
+	if len(check.SlackAlerts) > 0 {
+		slackAlerts, d := types.ListValueFrom(ctx, types.StringType, check.SlackAlerts)
+		diags.Append(d...)
+		data.SlackAlerts = slackAlerts
+	} else {
 		data.SlackAlerts = types.ListNull(types.StringType)
 	}
-	if data.DiscordAlerts.IsUnknown() {
+
+	if len(check.DiscordAlerts) > 0 {
+		discordAlerts, d := types.ListValueFrom(ctx, types.StringType, check.DiscordAlerts)
+		diags.Append(d...)
+		data.DiscordAlerts = discordAlerts
+	} else {
 		data.DiscordAlerts = types.ListNull(types.StringType)
 	}
-	if data.WebhookAlerts.IsUnknown() {
+
+	if len(check.WebhookAlerts) > 0 {
+		webhookAlerts, d := types.ListValueFrom(ctx, types.StringType, check.WebhookAlerts)
+		diags.Append(d...)
+		data.WebhookAlerts = webhookAlerts
+	} else {
 		data.WebhookAlerts = types.ListNull(types.StringType)
 	}
-	if data.OncallAlerts.IsUnknown() {
+
+	if len(check.OncallAlerts) > 0 {
+		oncallAlerts, d := types.ListValueFrom(ctx, types.StringType, check.OncallAlerts)
+		diags.Append(d...)
+		data.OncallAlerts = oncallAlerts
+	} else {
 		data.OncallAlerts = types.ListNull(types.StringType)
 	}
-	if data.IncidentIoAlerts.IsUnknown() {
+
+	if len(check.IncidentIOAlerts) > 0 {
+		incidentIoAlerts, d := types.ListValueFrom(ctx, types.StringType, check.IncidentIOAlerts)
+		diags.Append(d...)
+		data.IncidentIoAlerts = incidentIoAlerts
+	} else {
 		data.IncidentIoAlerts = types.ListNull(types.StringType)
 	}
-	if data.MicrosoftTeamsAlerts.IsUnknown() {
+
+	if len(check.MicrosoftTeamsAlerts) > 0 {
+		msTeamsAlerts, d := types.ListValueFrom(ctx, types.StringType, check.MicrosoftTeamsAlerts)
+		diags.Append(d...)
+		data.MicrosoftTeamsAlerts = msTeamsAlerts
+	} else {
 		data.MicrosoftTeamsAlerts = types.ListNull(types.StringType)
 	}
 
-	// For the complex Assertions list, we need to use the proper element type
-	if data.Assertions.IsUnknown() {
+	// Map fields
+	if len(check.Headers) > 0 {
+		headers, d := types.MapValueFrom(ctx, types.StringType, check.Headers)
+		diags.Append(d...)
+		data.Headers = headers
+	} else {
+		data.Headers = types.MapNull(types.StringType)
+	}
+
+	// Complex nested types - Assertions
+	if len(check.Assertions) > 0 {
+		assertionValues := make([]resource_check.AssertionsValue, len(check.Assertions))
+		for i, a := range check.Assertions {
+			assertionValues[i] = resource_check.NewAssertionsValueMust(
+				resource_check.AssertionsValue{}.AttributeTypes(ctx),
+				map[string]attr.Value{
+					"type":       types.StringValue(a.Type),
+					"property":   types.StringValue(a.Property),
+					"comparison": types.StringValue(a.Comparison),
+					"expected":   types.StringValue(a.Expected),
+				},
+			)
+		}
+		assertionsElemType := resource_check.AssertionsType{
+			ObjectType: types.ObjectType{
+				AttrTypes: resource_check.AssertionsValue{}.AttributeTypes(ctx),
+			},
+		}
+		assertionsList, d := types.ListValueFrom(ctx, assertionsElemType, assertionValues)
+		diags.Append(d...)
+		data.Assertions = assertionsList
+	} else {
 		assertionsElemType := resource_check.AssertionsType{
 			ObjectType: types.ObjectType{
 				AttrTypes: resource_check.AssertionsValue{}.AttributeTypes(ctx),
@@ -184,9 +337,6 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		}
 		data.Assertions = types.ListNull(assertionsElemType)
 	}
-
-	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -206,10 +356,8 @@ func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	// Update state from API response
-	data.Id = types.StringValue(check.ID)
-	data.Name = types.StringValue(check.Name)
-	data.Url = types.StringValue(check.URL)
+	// Populate state from the API response
+	r.populateModelFromAPI(ctx, &data, check, &resp.Diagnostics)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -217,13 +365,19 @@ func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data resource_check.CheckModel
+	var state resource_check.CheckModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	// Read current state to get the ID
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Use the ID from state (it's stable), data from plan (user's desired state)
+	checkID := state.Id.ValueString()
 
 	// Convert to API model
 	check := &client.Check{
@@ -254,12 +408,15 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		check.VerifySSL = &v
 	}
 
-	// Update the check
-	_, err := r.client.UpdateCheck(data.Id.ValueString(), check)
+	// Update the check using the ID from state
+	updated, err := r.client.UpdateCheck(checkID, check)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update check, got error: %s", err))
 		return
 	}
+
+	// Populate state from the API response
+	r.populateModelFromAPI(ctx, &data, updated, &resp.Diagnostics)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
