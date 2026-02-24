@@ -127,31 +127,63 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 	// Update state from the created response
 	data.Id = types.StringValue(created.ID)
 
-	// Set all computed fields to null to avoid "unknown after apply" errors
-	// The Read operation will populate actual values on subsequent refreshes
-	data.TestInterval = types.Int64Null()
-	data.TestRegions = types.ListNull(types.StringType)
-	data.TextToSearchFor = types.StringNull()
-	data.Body = types.StringNull()
-	data.Version = types.StringNull()
-	data.AuthUsername = types.StringNull()
-	data.AuthPassword = types.StringNull()
-	data.Headers = types.MapNull(types.StringType)
-	data.UserAlerts = types.ListNull(types.StringType)
-	data.SlackAlerts = types.ListNull(types.StringType)
-	data.DiscordAlerts = types.ListNull(types.StringType)
-	data.WebhookAlerts = types.ListNull(types.StringType)
-	data.OncallAlerts = types.ListNull(types.StringType)
-	data.IncidentIoAlerts = types.ListNull(types.StringType)
-	data.MicrosoftTeamsAlerts = types.ListNull(types.StringType)
+	// Set computed fields to null only if they are unknown (not provided by user)
+	// This avoids "unknown after apply" errors while preserving user-provided values
+	if data.TestInterval.IsUnknown() {
+		data.TestInterval = types.Int64Null()
+	}
+	if data.TestRegions.IsUnknown() {
+		data.TestRegions = types.ListNull(types.StringType)
+	}
+	if data.TextToSearchFor.IsUnknown() {
+		data.TextToSearchFor = types.StringNull()
+	}
+	if data.Body.IsUnknown() {
+		data.Body = types.StringNull()
+	}
+	if data.Version.IsUnknown() {
+		data.Version = types.StringNull()
+	}
+	if data.AuthUsername.IsUnknown() {
+		data.AuthUsername = types.StringNull()
+	}
+	if data.AuthPassword.IsUnknown() {
+		data.AuthPassword = types.StringNull()
+	}
+	if data.Headers.IsUnknown() {
+		data.Headers = types.MapNull(types.StringType)
+	}
+	if data.UserAlerts.IsUnknown() {
+		data.UserAlerts = types.ListNull(types.StringType)
+	}
+	if data.SlackAlerts.IsUnknown() {
+		data.SlackAlerts = types.ListNull(types.StringType)
+	}
+	if data.DiscordAlerts.IsUnknown() {
+		data.DiscordAlerts = types.ListNull(types.StringType)
+	}
+	if data.WebhookAlerts.IsUnknown() {
+		data.WebhookAlerts = types.ListNull(types.StringType)
+	}
+	if data.OncallAlerts.IsUnknown() {
+		data.OncallAlerts = types.ListNull(types.StringType)
+	}
+	if data.IncidentIoAlerts.IsUnknown() {
+		data.IncidentIoAlerts = types.ListNull(types.StringType)
+	}
+	if data.MicrosoftTeamsAlerts.IsUnknown() {
+		data.MicrosoftTeamsAlerts = types.ListNull(types.StringType)
+	}
 
 	// For the complex Assertions list, we need to use the proper element type
-	assertionsElemType := resource_check.AssertionsType{
-		ObjectType: types.ObjectType{
-			AttrTypes: resource_check.AssertionsValue{}.AttributeTypes(ctx),
-		},
+	if data.Assertions.IsUnknown() {
+		assertionsElemType := resource_check.AssertionsType{
+			ObjectType: types.ObjectType{
+				AttrTypes: resource_check.AssertionsValue{}.AttributeTypes(ctx),
+			},
+		}
+		data.Assertions = types.ListNull(assertionsElemType)
 	}
-	data.Assertions = types.ListNull(assertionsElemType)
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
