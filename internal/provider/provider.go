@@ -104,6 +104,7 @@ func (p *OnlineornotProvider) Resources(ctx context.Context) []func() resource.R
 
 func (p *OnlineornotProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		NewUserDataSource,
 		NewUsersDataSource,
 		NewChecksDataSource,
 		NewHeartbeatsDataSource,
