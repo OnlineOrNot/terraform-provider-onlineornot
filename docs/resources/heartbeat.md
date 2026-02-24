@@ -22,7 +22,7 @@ description: |-
 
 ### Optional
 
-- `alert_priority` (String) Alert priority level
+- `alert_priority` (String) Alert priority level. Must be one of: `HIGH`, `LOW`.
 - `discord_alerts` (List of String) Array of Discord integration IDs to alert
 - `id` (String) Heartbeat ID
 - `incident_io_alerts` (List of String) Array of incident.io integration IDs to alert

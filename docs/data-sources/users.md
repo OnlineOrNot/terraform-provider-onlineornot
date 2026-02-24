@@ -38,4 +38,4 @@ Read-Only:
 - `id` (String) The unique identifier of the user
 - `image` (String) URL to the user's avatar image
 - `last_name` (String) The user's last name
-- `role` (String) The role of the user in the organisation (ADMIN or STANDARD)
+- `role` (String) The role of the user in the organisation (ADMIN or STANDARD). Must be one of: `ADMIN`, `STANDARD`.

@@ -24,5 +24,5 @@ description: |-
 - `display_metrics` (Boolean) Show this component's response time metrics on the status page.
 - `display_uptime` (Boolean) Show this component's uptime and historical incidents on the status page.
 - `id` (String) Status Page Component ID
-- `status` (String) Status of the component
+- `status` (String) Status of the component. Must be one of: `DEGRADED_PERFORMANCE`, `MAINTENANCE`, `MAJOR_OUTAGE`, `NO_IMPACT`, `OPERATIONAL`, `PARTIAL_OUTAGE`.
 - `status_page_id` (String) Status Page ID

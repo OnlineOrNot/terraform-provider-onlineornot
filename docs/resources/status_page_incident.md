@@ -18,7 +18,7 @@ description: |-
 ### Required
 
 - `description` (String) a description of the incident
-- `status` (String) The current status of the incident
+- `status` (String) The current status of the incident. Must be one of: `IDENTIFIED`, `INVESTIGATING`, `MONITORING`, `RESOLVED`, `UPDATE`.
 - `title` (String) a title for the incident
 
 ### Optional
@@ -34,4 +34,4 @@ description: |-
 Required:
 
 - `id` (String) Status Page Component ID
-- `status` (String) New status for the component
+- `status` (String) New status for the component. Must be one of: `DEGRADED_PERFORMANCE`, `MAINTENANCE`, `MAJOR_OUTAGE`, `NO_IMPACT`, `OPERATIONAL`, `PARTIAL_OUTAGE`.

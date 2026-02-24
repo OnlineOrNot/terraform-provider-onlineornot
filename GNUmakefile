@@ -19,6 +19,7 @@ testacc:
 .PHONY: docs
 docs:
 	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate
+	go run ./tools/enrich-docs
 
 # Install the provider locally for development
 .PHONY: install

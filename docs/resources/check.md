@@ -60,7 +60,7 @@ resource "onlineornot_check" "browser" {
 
 ### Optional
 
-- `alert_priority` (String) Alert Priority
+- `alert_priority` (String) Alert Priority. Must be one of: `HIGH`, `LOW`.
 - `assertions` (Attributes List) Assertions to run on the response (see [below for nested schema](#nestedatt--assertions))
 - `auth_password` (String) Password to use for URLs behind HTTP Basic Auth
 - `auth_username` (String) Username to use for URLs behind HTTP Basic Auth
@@ -71,7 +71,7 @@ resource "onlineornot_check" "browser" {
 - `headers` (Map of String) Headers to send with the request
 - `id` (String) Uptime Check ID
 - `incident_io_alerts` (List of String)
-- `method` (String) HTTP Method
+- `method` (String) HTTP Method. Must be one of: `DELETE`, `GET`, `HEAD`, `PATCH`, `POST`, `PUT`.
 - `microsoft_teams_alerts` (List of String)
 - `oncall_alerts` (List of String) IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)
 - `recovery_period_seconds` (Number) Recovery period in seconds
@@ -81,10 +81,10 @@ resource "onlineornot_check" "browser" {
 - `test_regions` (List of String)
 - `text_to_search_for` (String) Text to search for in the response
 - `timeout` (Number) Timeout in milliseconds
-- `type` (String) Type of check
+- `type` (String) Type of check. Must be one of: `BROWSER_CHECK`, `UPTIME_CHECK`.
 - `user_alerts` (List of String)
 - `verify_ssl` (Boolean) Whether to fail a check if SSL verification fails
-- `version` (String) Version of the Browser Check
+- `version` (String) Version of the Browser Check. Must be one of: `NODE20_PLAYWRIGHT`.
 - `webhook_alerts` (List of String) IDs of webhooks to associate with this check
 
 <a id="nestedatt--assertions"></a>
@@ -92,7 +92,7 @@ resource "onlineornot_check" "browser" {
 
 Required:
 
-- `comparison` (String) Comparison operator
+- `comparison` (String) Comparison operator. Must be one of: `CONTAINS`, `EMPTY`, `EQUALS`, `FALSE`, `GREATER_THAN`, `LESS_THAN`, `NOT_CONTAINS`, `NOT_EMPTY`, `NOT_EQUALS`, `NOT_NULL`, `NULL`, `TRUE`.
 - `expected` (String) Expected value
 - `property` (String) Property to assert on (JSONPath for JSON_BODY, header name for RESPONSE_HEADERS)
-- `type` (String) Type of assertion
+- `type` (String) Type of assertion. Must be one of: `HTML_BODY`, `JSON_BODY`, `RESPONSE_HEADERS`, `TEXT_BODY`.

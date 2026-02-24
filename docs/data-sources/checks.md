@@ -24,9 +24,9 @@ Fetches the list of uptime checks.
 
 Read-Only:
 
-- `check_type` (String) The type of check (GET, POST, etc.)
+- `check_type` (String) The type of check (GET, POST, etc.). Must be one of: `BROWSER`, `UPTIME`.
 - `id` (String) The unique identifier of the check
 - `method` (String) The HTTP method used
 - `name` (String) The name of the check
-- `status` (String) The current status of the check
+- `status` (String) The current status of the check. Must be one of: `DOWN`, `MAINTENANCE`, `MUTED`, `PAUSED`, `PENDING`, `RECOVERING`, `UP`, `VERIFYING`.
 - `url` (String) The URL being monitored
