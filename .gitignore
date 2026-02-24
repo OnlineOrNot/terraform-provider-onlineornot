@@ -19,3 +19,9 @@
 
 # Go workspace file
 go.work
+
+# Terraform provider binary
+terraform-provider-onlineornot
+
+# Local testing directory
+test-local/
