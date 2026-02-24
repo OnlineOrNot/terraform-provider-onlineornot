@@ -70,6 +70,11 @@ func (r *StatusPageComponentGroupResource) Create(ctx context.Context, req resou
 
 	data.Id = types.StringValue(created.ID)
 
+	// Set computed fields to null if not provided by user to avoid "unknown after apply" errors
+	if data.Description.IsUnknown() {
+		data.Description = types.StringNull()
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

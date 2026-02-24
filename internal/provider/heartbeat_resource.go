@@ -96,6 +96,44 @@ func (r *HeartbeatResource) Create(ctx context.Context, req resource.CreateReque
 
 	data.Id = types.StringValue(created.ID)
 
+	// Set computed fields to null to avoid "unknown after apply" errors
+	if data.AlertPriority.IsUnknown() {
+		data.AlertPriority = types.StringNull()
+	}
+	if data.ReportPeriod.IsUnknown() {
+		data.ReportPeriod = types.Int64Null()
+	}
+	if data.ReportPeriodCron.IsUnknown() {
+		data.ReportPeriodCron = types.StringNull()
+	}
+	if data.ReminderAlertIntervalMinutes.IsUnknown() {
+		data.ReminderAlertIntervalMinutes = types.Int64Null()
+	}
+	if data.Timezone.IsUnknown() {
+		data.Timezone = types.StringNull()
+	}
+	if data.UserAlerts.IsUnknown() {
+		data.UserAlerts = types.ListNull(types.StringType)
+	}
+	if data.SlackAlerts.IsUnknown() {
+		data.SlackAlerts = types.ListNull(types.StringType)
+	}
+	if data.DiscordAlerts.IsUnknown() {
+		data.DiscordAlerts = types.ListNull(types.StringType)
+	}
+	if data.WebhookAlerts.IsUnknown() {
+		data.WebhookAlerts = types.ListNull(types.StringType)
+	}
+	if data.OncallAlerts.IsUnknown() {
+		data.OncallAlerts = types.ListNull(types.StringType)
+	}
+	if data.IncidentIoAlerts.IsUnknown() {
+		data.IncidentIoAlerts = types.ListNull(types.StringType)
+	}
+	if data.MicrosoftTeamsAlerts.IsUnknown() {
+		data.MicrosoftTeamsAlerts = types.ListNull(types.StringType)
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

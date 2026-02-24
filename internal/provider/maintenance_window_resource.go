@@ -81,6 +81,14 @@ func (r *MaintenanceWindowResource) Create(ctx context.Context, req resource.Cre
 
 	data.Id = types.StringValue(created.ID)
 
+	// Set computed fields to null if not provided by user to avoid "unknown after apply" errors
+	if data.Checks.IsUnknown() {
+		data.Checks = types.ListNull(types.StringType)
+	}
+	if data.Heartbeats.IsUnknown() {
+		data.Heartbeats = types.ListNull(types.StringType)
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

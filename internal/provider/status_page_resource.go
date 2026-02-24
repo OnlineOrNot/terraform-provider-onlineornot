@@ -79,6 +79,20 @@ func (r *StatusPageResource) Create(ctx context.Context, req resource.CreateRequ
 
 	data.Id = types.StringValue(created.ID)
 
+	// Set computed fields to null to avoid "unknown after apply" errors
+	if data.AllowedIps.IsUnknown() {
+		data.AllowedIps = types.ListNull(types.StringType)
+	}
+	if data.CustomDomain.IsUnknown() {
+		data.CustomDomain = types.StringNull()
+	}
+	if data.Description.IsUnknown() {
+		data.Description = types.StringNull()
+	}
+	if data.Password.IsUnknown() {
+		data.Password = types.StringNull()
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

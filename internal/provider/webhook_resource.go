@@ -82,6 +82,20 @@ func (r *WebhookResource) Create(ctx context.Context, req resource.CreateRequest
 
 	data.Id = types.StringValue(created.ID)
 
+	// Set computed fields to null if not provided by user to avoid "unknown after apply" errors
+	if data.CheckIds.IsUnknown() {
+		data.CheckIds = types.ListNull(types.StringType)
+	}
+	if data.Description.IsUnknown() {
+		data.Description = types.StringNull()
+	}
+	if data.HeartbeatIds.IsUnknown() {
+		data.HeartbeatIds = types.ListNull(types.StringType)
+	}
+	if data.StatusPageIds.IsUnknown() {
+		data.StatusPageIds = types.ListNull(types.StringType)
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

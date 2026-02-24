@@ -85,6 +85,14 @@ func (r *StatusPageScheduledMaintenanceResource) Create(ctx context.Context, req
 
 	data.Id = types.StringValue(created.ID)
 
+	// Set computed fields to null if not provided by user to avoid "unknown after apply" errors
+	if data.ComponentsAffected.IsUnknown() {
+		data.ComponentsAffected = types.ListNull(types.StringType)
+	}
+	if data.Notifications.IsUnknown() {
+		data.Notifications = resource_status_page_scheduled_maintenance.NewNotificationsValueNull()
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

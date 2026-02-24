@@ -88,6 +88,16 @@ func (r *StatusPageIncidentResource) Create(ctx context.Context, req resource.Cr
 
 	data.Id = types.StringValue(created.ID)
 
+	// Set computed fields to null if not provided by user to avoid "unknown after apply" errors
+	if data.Components.IsUnknown() {
+		componentsElemType := resource_status_page_incident.ComponentsType{
+			ObjectType: types.ObjectType{
+				AttrTypes: resource_status_page_incident.ComponentsValue{}.AttributeTypes(ctx),
+			},
+		}
+		data.Components = types.ListNull(componentsElemType)
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
