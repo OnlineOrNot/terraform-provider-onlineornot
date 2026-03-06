@@ -7,21 +7,23 @@ Resources, data sources, and generated schema code for terraform-provider-online
 ```
 provider/
 ├── provider.go                    # Provider definition, Configure, Resources(), DataSources()
-├── *_resource.go                  # Manual CRUD implementations (18 files)
+├── *_resource.go                  # Manual CRUD implementations (9 resources)
 ├── *_data_source.go               # Data source implementations (7 files)
+├── *_test.go                      # Acceptance tests
 └── resource_*/                    # Generated schema packages (DO NOT EDIT)
     └── *_resource_gen.go
 ```
 
 ## Where to Look
 
-| Task                              | File                                                     |
-| --------------------------------- | -------------------------------------------------------- |
-| Register new resource/data source | `provider.go` → `Resources()` / `DataSources()`          |
-| Resource CRUD logic               | `<name>_resource.go` (e.g., `check_resource.go`)         |
-| Data source read logic            | `<name>_data_source.go` or `<name>s_data_source.go`      |
-| Schema/model definitions          | `resource_<name>/<name>_resource_gen.go` (generated)     |
-| Nested resource imports           | Look for `ImportState` with `strings.Split(req.ID, "/")` |
+| Task | File |
+|------|------|
+| Register new resource/data source | `provider.go` -> `Resources()` / `DataSources()` |
+| Resource CRUD logic | `<name>_resource.go` (e.g., `check_resource.go`) |
+| Data source read logic | `<name>_data_source.go` or `<name>s_data_source.go` |
+| Schema/model definitions | `resource_<name>/<name>_resource_gen.go` (generated) |
+| Nested resource imports | Look for `ImportState` with `strings.Split(req.ID, "/")` |
+| Acceptance tests | `*_test.go` (requires `TF_ACC=1` + API key) |
 
 ## Patterns
 
@@ -46,10 +48,10 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 }
 ```
 
-### Model Conversion (Terraform ↔ API)
+### Model Conversion (Terraform <-> API)
 
 ```go
-// Terraform → API
+// Terraform -> API
 check := &client.Check{
     Name: data.Name.ValueString(),
     URL:  data.Url.ValueString(),
@@ -59,7 +61,7 @@ if !data.FollowRedirects.IsNull() {
     check.FollowRedirects = &v
 }
 
-// API → Terraform
+// API -> Terraform
 data.Id = types.StringValue(check.ID)
 data.Name = types.StringValue(check.Name)
 ```
@@ -106,3 +108,11 @@ if data.Components.IsUnknown() {
     data.Components = types.ListNull(elemType)
 }
 ```
+
+## Resources
+
+`check`, `heartbeat`, `maintenance_window`, `status_page`, `status_page_component`, `status_page_component_group`, `status_page_incident`, `status_page_scheduled_maintenance`, `webhook`
+
+## Data Sources
+
+`checks`, `heartbeats`, `maintenance_windows`, `status_pages`, `user`, `users`, `webhooks`
