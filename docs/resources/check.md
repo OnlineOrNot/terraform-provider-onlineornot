@@ -78,7 +78,7 @@ resource "onlineornot_check" "browser" {
 - `reminder_alert_interval_minutes` (Number) Interval in minutes between reminders (-1 for never)
 - `slack_alerts` (List of String)
 - `test_interval` (Number) Interval in seconds between checks
-- `test_regions` (List of String)
+- `test_regions` (List of String) Regions to run checks from. Valid regions: aws:us-east-1, aws:us-west-1, aws:eu-central-1, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1
 - `text_to_search_for` (String) Text to search for in the response
 - `timeout` (Number) Timeout in milliseconds
 - `type` (String) Type of check. Must be one of: `BROWSER_CHECK`, `UPTIME_CHECK`.

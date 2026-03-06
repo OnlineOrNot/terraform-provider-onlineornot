@@ -9,14 +9,23 @@ import (
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/provider"
 )
 
-// Run "go generate" to format example terraform files and generate the docs for the registry/website
+// Run "go generate" to:
+// 1. Generate provider code specification from OpenAPI
+// 2. Generate framework code from specification
+// 3. Format example terraform files
+// 4. Generate documentation
 
-// If you do not have terraform installed, you can remove the formatting command, but its suggested to
-// ensure the documentation is formatted properly.
+// Step 1: Fetch OpenAPI spec and convert to Provider Code Specification
+//go:generate curl -sSL -o openapi.json https://raw.githubusercontent.com/OnlineOrNot/api-schemas/main/openapi.json
+//go:generate go run github.com/hashicorp/terraform-plugin-codegen-openapi/cmd/tfplugingen-openapi generate --config generator_config.yml --output provider_code_spec.json openapi.json
+
+// Step 2: Generate framework code (resources) from the specification
+//go:generate go run github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework generate resources --input provider_code_spec.json --output internal/provider
+
+// Step 3: Format example terraform files
 //go:generate terraform fmt -recursive ./examples/
 
-// Run the docs generation tool, check its repository for more information on how it works and how docs
-// can be customized.
+// Step 4: Generate documentation
 //go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate -provider-name terraform-provider-onlineornot
 
 var (

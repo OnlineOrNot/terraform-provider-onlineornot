@@ -25,3 +25,7 @@ terraform-provider-onlineornot
 
 # Local testing directory
 test-local/
+
+# Generated files (regenerate with `make generate`)
+openapi.json
+provider_code_spec.json

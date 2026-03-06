@@ -27,8 +27,7 @@ jobs:
 
       - name: Regenerate schemas and docs
         run: |
-          go generate ./...
-          go run tools/enrich-docs/main.go
+          make generate
 
       - name: Create PR if changed
         run: |
