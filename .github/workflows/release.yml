@@ -4,13 +4,96 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - main
+    paths:
+      - 'internal/**'
+      - 'main.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'docs/**'
+      - 'examples/**'
 
 permissions:
   contents: write
 
 jobs:
+  # Check if we should release (skip if no version bump needed)
+  check-release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      next_version: ${{ steps.check.outputs.next_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check if release needed
+        id: check
+        run: |
+          # Get latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          
+          # Check if there are provider code or docs changes since last tag
+          CHANGES=$(git diff --name-only "$LATEST_TAG"..HEAD -- internal/ main.go go.mod go.sum docs/ examples/ | wc -l)
+          
+          if [ "$CHANGES" -gt 0 ]; then
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            
+            # Bump patch version
+            VERSION=${LATEST_TAG#v}
+            MAJOR=$(echo $VERSION | cut -d. -f1)
+            MINOR=$(echo $VERSION | cut -d. -f2)
+            PATCH=$(echo $VERSION | cut -d. -f3)
+            NEXT_PATCH=$((PATCH + 1))
+            NEXT_VERSION="v${MAJOR}.${MINOR}.${NEXT_PATCH}"
+            
+            echo "next_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+            echo "Will release $NEXT_VERSION"
+          else
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "No provider code changes, skipping release"
+          fi
+
+  # Auto-release on main branch pushes with provider code changes
+  auto-release:
+    needs: check-release
+    if: needs.check-release.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        id: import_gpg
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a ${{ needs.check-release.outputs.next_version }} -m "Release ${{ needs.check-release.outputs.next_version }}"
+          git push origin ${{ needs.check-release.outputs.next_version }}
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+
+  # Manual release via tag push (existing behavior)
   goreleaser:
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
         with:
