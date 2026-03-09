@@ -227,8 +227,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "Regions to run checks from. Valid regions: aws:us-east-1, aws:us-west-1, aws:eu-central-1, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1",
-				MarkdownDescription: "Regions to run checks from. Valid regions: aws:us-east-1, aws:us-west-1, aws:eu-central-1, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1",
+				Description:         "Regions to run checks from. Valid regions: aws:us-east-1, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1",
+				MarkdownDescription: "Regions to run checks from. Valid regions: aws:us-east-1, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1",
 			},
 			"text_to_search_for": schema.StringAttribute{
 				Optional:            true,
