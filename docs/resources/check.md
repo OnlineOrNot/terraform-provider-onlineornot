@@ -56,7 +56,6 @@ resource "onlineornot_check" "browser" {
 ### Required
 
 - `name` (String) Name of the check
-- `url` (String) URL to check
 
 ### Optional
 
@@ -76,15 +75,17 @@ resource "onlineornot_check" "browser" {
 - `oncall_alerts` (List of String) IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)
 - `recovery_period_seconds` (Number) Recovery period in seconds
 - `reminder_alert_interval_minutes` (Number) Interval in minutes between reminders (-1 for never)
+- `script` (String) Playwright Test script for scripted browser checks. Required for script-based checks, optional for URL-based checks.
 - `slack_alerts` (List of String)
 - `test_interval` (Number) Interval in seconds between checks
 - `test_regions` (List of String) Regions to run checks from. Valid regions: aws:us-east-1, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1
 - `text_to_search_for` (String) Text to search for in the response
 - `timeout` (Number) Timeout in milliseconds
 - `type` (String) Type of check. Must be one of: `BROWSER_CHECK`, `UPTIME_CHECK`.
+- `url` (String) URL to check. Required for URL-based checks, optional for script-based checks.
 - `user_alerts` (List of String)
 - `verify_ssl` (Boolean) Whether to fail a check if SSL verification fails
-- `version` (String) Version of the Browser Check. Must be one of: `NODE20_PLAYWRIGHT`.
+- `version` (String) Runtime version for browser checks. Must be one of: `NODE24_PLAYWRIGHT`.
 - `webhook_alerts` (List of String) IDs of webhooks to associate with this check
 
 <a id="nestedatt--assertions"></a>

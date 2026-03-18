@@ -209,6 +209,12 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				},
 				Default: int64default.StaticInt64(1440),
 			},
+			"script": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Playwright Test script for scripted browser checks. Required for script-based checks, optional for URL-based checks.",
+				MarkdownDescription: "Playwright Test script for scripted browser checks. Required for script-based checks, optional for URL-based checks.",
+			},
 			"slack_alerts": schema.ListAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
@@ -263,9 +269,10 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				Default: stringdefault.StaticString("UPTIME_CHECK"),
 			},
 			"url": schema.StringAttribute{
-				Required:            true,
-				Description:         "URL to check",
-				MarkdownDescription: "URL to check",
+				Optional:            true,
+				Computed:            true,
+				Description:         "URL to check. Required for URL-based checks, optional for script-based checks.",
+				MarkdownDescription: "URL to check. Required for URL-based checks, optional for script-based checks.",
 			},
 			"user_alerts": schema.ListAttribute{
 				ElementType: types.StringType,
@@ -282,11 +289,11 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 			"version": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Version of the Browser Check",
-				MarkdownDescription: "Version of the Browser Check",
+				Description:         "Runtime version for browser checks.",
+				MarkdownDescription: "Runtime version for browser checks.",
 				Validators: []validator.String{
 					stringvalidator.OneOf(
-						"NODE20_PLAYWRIGHT",
+						"NODE24_PLAYWRIGHT",
 					),
 				},
 			},
@@ -319,6 +326,7 @@ type CheckModel struct {
 	OncallAlerts                 types.List   `tfsdk:"oncall_alerts"`
 	RecoveryPeriodSeconds        types.Int64  `tfsdk:"recovery_period_seconds"`
 	ReminderAlertIntervalMinutes types.Int64  `tfsdk:"reminder_alert_interval_minutes"`
+	Script                       types.String `tfsdk:"script"`
 	SlackAlerts                  types.List   `tfsdk:"slack_alerts"`
 	TestInterval                 types.Int64  `tfsdk:"test_interval"`
 	TestRegions                  types.List   `tfsdk:"test_regions"`
