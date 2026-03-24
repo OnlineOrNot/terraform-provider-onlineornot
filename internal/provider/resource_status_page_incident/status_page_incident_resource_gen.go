@@ -104,6 +104,9 @@ func StatusPageIncidentResourceSchema(ctx context.Context) schema.Schema {
 				Required:            true,
 				Description:         "a title for the incident",
 				MarkdownDescription: "a title for the incident",
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 256),
+				},
 			},
 		},
 	}

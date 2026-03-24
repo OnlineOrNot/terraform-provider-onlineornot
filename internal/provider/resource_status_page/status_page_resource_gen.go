@@ -53,6 +53,9 @@ func StatusPageResourceSchema(ctx context.Context) schema.Schema {
 				Required:            true,
 				Description:         "Name of the Status Page",
 				MarkdownDescription: "Name of the Status Page",
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 100),
+				},
 			},
 			"password": schema.StringAttribute{
 				Optional:            true,
