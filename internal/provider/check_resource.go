@@ -79,6 +79,7 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		AlertPriority:                data.AlertPriority.ValueString(),
 		Type:                         data.Type.ValueString(),
 		Version:                      data.Version.ValueString(),
+		Script:                       data.Script.ValueString(),
 		AuthUsername:                 data.AuthUsername.ValueString(),
 		AuthPassword:                 data.AuthPassword.ValueString(),
 	}
@@ -182,6 +183,11 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource
 		data.Version = types.StringValue(check.Version)
 	} else {
 		data.Version = types.StringNull()
+	}
+	if check.Script != "" {
+		data.Script = types.StringValue(check.Script)
+	} else {
+		data.Script = types.StringNull()
 	}
 	if check.AuthUsername != "" {
 		data.AuthUsername = types.StringValue(check.AuthUsername)
@@ -394,6 +400,7 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		AlertPriority:                data.AlertPriority.ValueString(),
 		Type:                         data.Type.ValueString(),
 		Version:                      data.Version.ValueString(),
+		Script:                       data.Script.ValueString(),
 		AuthUsername:                 data.AuthUsername.ValueString(),
 		AuthPassword:                 data.AuthPassword.ValueString(),
 	}

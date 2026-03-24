@@ -64,6 +64,45 @@ Use pointer: `FollowRedirects *bool`
 
 API key via `ONLINEORNOT_API_KEY` or provider config
 
+## Adding a New Field to a Resource
+
+When adding a new field, update **all 4 locations** or Terraform will error with "unknown value after apply":
+
+1. **Client struct** (`internal/client/*.go`)
+   ```go
+   type Check struct {
+       // ...
+       Script string `json:"script,omitempty"`
+   }
+   ```
+
+2. **Create function** (`internal/provider/*_resource.go`)
+   ```go
+   check := &client.Check{
+       // ...
+       Script: data.Script.ValueString(),
+   }
+   ```
+
+3. **Update function** (same file)
+   ```go
+   check := &client.Check{
+       // ...
+       Script: data.Script.ValueString(),
+   }
+   ```
+
+4. **populateModelFromAPI** (same file) - set to value OR null, never leave unknown:
+   ```go
+   if check.Script != "" {
+       data.Script = types.StringValue(check.Script)
+   } else {
+       data.Script = types.StringNull()
+   }
+   ```
+
+Missing any of these causes: `Provider returned invalid result object after apply... unknown value for X`
+
 ## Anti-Patterns (THIS PROJECT)
 
 ### DO NOT EDIT Generated Files

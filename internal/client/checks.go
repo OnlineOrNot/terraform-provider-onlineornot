@@ -29,6 +29,7 @@ type Check struct {
 	AlertPriority                string            `json:"alert_priority,omitempty"`
 	Type                         string            `json:"type,omitempty"`
 	Version                      string            `json:"version,omitempty"`
+	Script                       string            `json:"script,omitempty"`
 	TestRegions                  []string          `json:"test_regions,omitempty"`
 	UserAlerts                   []string          `json:"user_alerts,omitempty"`
 	SlackAlerts                  []string          `json:"slack_alerts,omitempty"`
