@@ -68,8 +68,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 						},
 						"property": schema.StringAttribute{
 							Required:            true,
-							Description:         "Property to assert on (JSONPath for JSON_BODY, header name for RESPONSE_HEADERS)",
-							MarkdownDescription: "Property to assert on (JSONPath for JSON_BODY, header name for RESPONSE_HEADERS)",
+							Description:         "Property to assert on (JSONPath for JSON_BODY, header name for RESPONSE_HEADERS, CSS selector for HTML_BODY; unused for TEXT_BODY)",
+							MarkdownDescription: "Property to assert on (JSONPath for JSON_BODY, header name for RESPONSE_HEADERS, CSS selector for HTML_BODY; unused for TEXT_BODY)",
 						},
 						"type": schema.StringAttribute{
 							Required:            true,
@@ -113,10 +113,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				Computed: true,
 			},
 			"confirmation_period_seconds": schema.Int64Attribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Confirmation period in seconds",
-				MarkdownDescription: "Confirmation period in seconds",
+				Optional: true,
+				Computed: true,
 				Validators: []validator.Int64{
 					int64validator.AtLeast(0),
 				},
@@ -179,8 +177,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				Description:         "Name of the check",
-				MarkdownDescription: "Name of the check",
+				Description:         "Name of the monitor",
+				MarkdownDescription: "Name of the monitor",
 			},
 			"oncall_alerts": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -190,20 +188,16 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)",
 			},
 			"recovery_period_seconds": schema.Int64Attribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Recovery period in seconds",
-				MarkdownDescription: "Recovery period in seconds",
+				Optional: true,
+				Computed: true,
 				Validators: []validator.Int64{
 					int64validator.AtLeast(0),
 				},
 				Default: int64default.StaticInt64(180),
 			},
 			"reminder_alert_interval_minutes": schema.Int64Attribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Interval in minutes between reminders (-1 for never)",
-				MarkdownDescription: "Interval in minutes between reminders (-1 for never)",
+				Optional: true,
+				Computed: true,
 				Validators: []validator.Int64{
 					int64validator.AtLeast(-1),
 				},
@@ -216,6 +210,11 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Playwright Test script for scripted browser checks. Required for script-based checks, optional for URL-based checks.",
 			},
 			"slack_alerts": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Computed:    true,
+			},
+			"telegram_alerts": schema.ListAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
 				Computed:    true,
@@ -233,8 +232,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "Regions to run checks from. Valid regions: aws:us-east-1, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1",
-				MarkdownDescription: "Regions to run checks from. Valid regions: aws:us-east-1, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1",
+				Description:         "Regions to run checks from. Valid regions: aws:us-east-1, aws:us-east-2, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1",
+				MarkdownDescription: "Regions to run checks from. Valid regions: aws:us-east-1, aws:us-east-2, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1",
 			},
 			"text_to_search_for": schema.StringAttribute{
 				Optional:            true,
@@ -246,10 +245,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				},
 			},
 			"timeout": schema.Int64Attribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Timeout in milliseconds",
-				MarkdownDescription: "Timeout in milliseconds",
+				Optional: true,
+				Computed: true,
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1000),
 				},
@@ -328,6 +325,7 @@ type CheckModel struct {
 	ReminderAlertIntervalMinutes types.Int64  `tfsdk:"reminder_alert_interval_minutes"`
 	Script                       types.String `tfsdk:"script"`
 	SlackAlerts                  types.List   `tfsdk:"slack_alerts"`
+	TelegramAlerts               types.List   `tfsdk:"telegram_alerts"`
 	TestInterval                 types.Int64  `tfsdk:"test_interval"`
 	TestRegions                  types.List   `tfsdk:"test_regions"`
 	TextToSearchFor              types.String `tfsdk:"text_to_search_for"`

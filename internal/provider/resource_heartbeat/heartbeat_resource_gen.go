@@ -112,6 +112,13 @@ func HeartbeatResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Array of Slack integration IDs to alert",
 				MarkdownDescription: "Array of Slack integration IDs to alert",
 			},
+			"telegram_alerts": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "Array of Telegram integration IDs to alert",
+				MarkdownDescription: "Array of Telegram integration IDs to alert",
+			},
 			"timezone": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -149,6 +156,7 @@ type HeartbeatModel struct {
 	ReportPeriod                 types.Int64  `tfsdk:"report_period"`
 	ReportPeriodCron             types.String `tfsdk:"report_period_cron"`
 	SlackAlerts                  types.List   `tfsdk:"slack_alerts"`
+	TelegramAlerts               types.List   `tfsdk:"telegram_alerts"`
 	Timezone                     types.String `tfsdk:"timezone"`
 	UserAlerts                   types.List   `tfsdk:"user_alerts"`
 	WebhookAlerts                types.List   `tfsdk:"webhook_alerts"`
