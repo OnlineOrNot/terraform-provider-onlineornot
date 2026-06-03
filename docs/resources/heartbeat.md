@@ -32,6 +32,7 @@ description: |-
 - `report_period` (Number) Expected interval in seconds between heartbeat pings (for simple schedule)
 - `report_period_cron` (String) Cron expression for expected heartbeat schedule
 - `slack_alerts` (List of String) Array of Slack integration IDs to alert
+- `telegram_alerts` (List of String) Array of Telegram integration IDs to alert
 - `timezone` (String) Timezone for cron schedule
 - `user_alerts` (List of String) Array of user IDs to alert
 - `webhook_alerts` (List of String) IDs of webhooks to associate with this heartbeat
