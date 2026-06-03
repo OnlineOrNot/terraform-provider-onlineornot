@@ -55,7 +55,7 @@ resource "onlineornot_check" "browser" {
 
 ### Required
 
-- `name` (String) Name of the check
+- `name` (String) Name of the monitor
 
 ### Optional
 
@@ -77,8 +77,9 @@ resource "onlineornot_check" "browser" {
 - `reminder_alert_interval_minutes` (Number) Interval in minutes between reminders (-1 for never)
 - `script` (String) Playwright Test script for scripted browser checks. Required for script-based checks, optional for URL-based checks.
 - `slack_alerts` (List of String)
+- `telegram_alerts` (List of String)
 - `test_interval` (Number) Interval in seconds between checks
-- `test_regions` (List of String) Regions to run checks from. Valid regions: aws:us-east-1, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1
+- `test_regions` (List of String) Regions to run checks from. Valid regions: aws:us-east-1, aws:us-east-2, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1
 - `text_to_search_for` (String) Text to search for in the response
 - `timeout` (Number) Timeout in milliseconds
 - `type` (String) Type of check. Must be one of: `BROWSER_CHECK`, `UPTIME_CHECK`.
@@ -95,5 +96,5 @@ Required:
 
 - `comparison` (String) Comparison operator. Must be one of: `CONTAINS`, `EMPTY`, `EQUALS`, `FALSE`, `GREATER_THAN`, `LESS_THAN`, `NOT_CONTAINS`, `NOT_EMPTY`, `NOT_EQUALS`, `NOT_NULL`, `NULL`, `TRUE`.
 - `expected` (String) Expected value
-- `property` (String) Property to assert on (JSONPath for JSON_BODY, header name for RESPONSE_HEADERS)
+- `property` (String) Property to assert on (JSONPath for JSON_BODY, header name for RESPONSE_HEADERS, CSS selector for HTML_BODY; unused for TEXT_BODY)
 - `type` (String) Type of assertion. Must be one of: `HTML_BODY`, `JSON_BODY`, `RESPONSE_HEADERS`, `TEXT_BODY`.
