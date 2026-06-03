@@ -34,6 +34,7 @@ type Check struct {
 	UserAlerts                   []string          `json:"user_alerts,omitempty"`
 	SlackAlerts                  []string          `json:"slack_alerts,omitempty"`
 	DiscordAlerts                []string          `json:"discord_alerts,omitempty"`
+	TelegramAlerts               []string          `json:"telegram_alerts,omitempty"`
 	WebhookAlerts                []string          `json:"webhook_alerts,omitempty"`
 	OncallAlerts                 []string          `json:"oncall_alerts,omitempty"`
 	IncidentIOAlerts             []string          `json:"incident_io_alerts,omitempty"`

@@ -107,6 +107,9 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if !data.DiscordAlerts.IsNull() {
 		data.DiscordAlerts.ElementsAs(ctx, &check.DiscordAlerts, false)
 	}
+	if !data.TelegramAlerts.IsNull() {
+		data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)
+	}
 	if !data.WebhookAlerts.IsNull() {
 		data.WebhookAlerts.ElementsAs(ctx, &check.WebhookAlerts, false)
 	}
@@ -272,6 +275,14 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource
 		data.DiscordAlerts = types.ListNull(types.StringType)
 	}
 
+	if len(check.TelegramAlerts) > 0 {
+		telegramAlerts, d := types.ListValueFrom(ctx, types.StringType, check.TelegramAlerts)
+		diags.Append(d...)
+		data.TelegramAlerts = telegramAlerts
+	} else {
+		data.TelegramAlerts = types.ListNull(types.StringType)
+	}
+
 	if len(check.WebhookAlerts) > 0 {
 		webhookAlerts, d := types.ListValueFrom(ctx, types.StringType, check.WebhookAlerts)
 		diags.Append(d...)
@@ -413,6 +424,34 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	if !data.VerifySsl.IsNull() {
 		v := data.VerifySsl.ValueBool()
 		check.VerifySSL = &v
+	}
+
+	if !data.TestRegions.IsNull() {
+		data.TestRegions.ElementsAs(ctx, &check.TestRegions, false)
+	}
+	if !data.UserAlerts.IsNull() {
+		data.UserAlerts.ElementsAs(ctx, &check.UserAlerts, false)
+	}
+	if !data.SlackAlerts.IsNull() {
+		data.SlackAlerts.ElementsAs(ctx, &check.SlackAlerts, false)
+	}
+	if !data.DiscordAlerts.IsNull() {
+		data.DiscordAlerts.ElementsAs(ctx, &check.DiscordAlerts, false)
+	}
+	if !data.TelegramAlerts.IsNull() {
+		data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)
+	}
+	if !data.WebhookAlerts.IsNull() {
+		data.WebhookAlerts.ElementsAs(ctx, &check.WebhookAlerts, false)
+	}
+	if !data.OncallAlerts.IsNull() {
+		data.OncallAlerts.ElementsAs(ctx, &check.OncallAlerts, false)
+	}
+	if !data.IncidentIoAlerts.IsNull() {
+		data.IncidentIoAlerts.ElementsAs(ctx, &check.IncidentIOAlerts, false)
+	}
+	if !data.MicrosoftTeamsAlerts.IsNull() {
+		data.MicrosoftTeamsAlerts.ElementsAs(ctx, &check.MicrosoftTeamsAlerts, false)
 	}
 
 	// Update the check using the ID from state
