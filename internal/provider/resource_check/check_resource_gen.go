@@ -68,8 +68,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 						},
 						"property": schema.StringAttribute{
 							Required:            true,
-							Description:         "Property to assert on (JSONPath for JSON_BODY, header name for RESPONSE_HEADERS)",
-							MarkdownDescription: "Property to assert on (JSONPath for JSON_BODY, header name for RESPONSE_HEADERS)",
+							Description:         "Property to assert on (JSONPath for JSON_BODY, header name for RESPONSE_HEADERS, CSS selector for HTML_BODY; unused for TEXT_BODY)",
+							MarkdownDescription: "Property to assert on (JSONPath for JSON_BODY, header name for RESPONSE_HEADERS, CSS selector for HTML_BODY; unused for TEXT_BODY)",
 						},
 						"type": schema.StringAttribute{
 							Required:            true,
@@ -179,8 +179,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				Description:         "Name of the check",
-				MarkdownDescription: "Name of the check",
+				Description:         "Name of the monitor",
+				MarkdownDescription: "Name of the monitor",
 			},
 			"oncall_alerts": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -220,6 +220,11 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				Optional:    true,
 				Computed:    true,
 			},
+			"telegram_alerts": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Computed:    true,
+			},
 			"test_interval": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
@@ -233,8 +238,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "Regions to run checks from. Valid regions: aws:us-east-1, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1",
-				MarkdownDescription: "Regions to run checks from. Valid regions: aws:us-east-1, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1",
+				Description:         "Regions to run checks from. Valid regions: aws:us-east-1, aws:us-east-2, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1",
+				MarkdownDescription: "Regions to run checks from. Valid regions: aws:us-east-1, aws:us-east-2, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1",
 			},
 			"text_to_search_for": schema.StringAttribute{
 				Optional:            true,
@@ -328,6 +333,7 @@ type CheckModel struct {
 	ReminderAlertIntervalMinutes types.Int64  `tfsdk:"reminder_alert_interval_minutes"`
 	Script                       types.String `tfsdk:"script"`
 	SlackAlerts                  types.List   `tfsdk:"slack_alerts"`
+	TelegramAlerts               types.List   `tfsdk:"telegram_alerts"`
 	TestInterval                 types.Int64  `tfsdk:"test_interval"`
 	TestRegions                  types.List   `tfsdk:"test_regions"`
 	TextToSearchFor              types.String `tfsdk:"text_to_search_for"`
