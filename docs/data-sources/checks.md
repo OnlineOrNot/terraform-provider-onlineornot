@@ -24,7 +24,7 @@ Fetches the list of uptime checks.
 
 Read-Only:
 
-- `check_type` (String) The type of check (GET, POST, etc.). Must be one of: `BROWSER`, `DNS`, `UPTIME`.
+- `check_type` (String) The type of check (GET, POST, etc.). Must be one of: `BROWSER`, `DNS`, `TCP`, `UPTIME`.
 - `id` (String) The unique identifier of the check
 - `method` (String) The HTTP method used
 - `name` (String) The name of the check
