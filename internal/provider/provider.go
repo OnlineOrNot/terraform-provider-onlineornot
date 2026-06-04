@@ -91,6 +91,10 @@ func (p *OnlineornotProvider) Configure(ctx context.Context, req provider.Config
 func (p *OnlineornotProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewCheckResource,
+		NewUptimeCheckResource,
+		NewBrowserCheckResource,
+		NewDNSCheckResource,
+		NewTCPCheckResource,
 		NewStatusPageResource,
 		NewHeartbeatResource,
 		NewWebhookResource,

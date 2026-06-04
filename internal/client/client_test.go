@@ -119,6 +119,98 @@ func TestClient_CreateCheck(t *testing.T) {
 	}
 }
 
+func TestClient_CreateTypedCheck(t *testing.T) {
+	input := &Check{
+		Name: "New Browser Check",
+		URL:  "https://example.com",
+		Type: "BROWSER_CHECK",
+	}
+
+	createdCheck := Check{
+		ID:        "browser123",
+		Name:      "New Browser Check",
+		URL:       "https://example.com",
+		CheckType: "BROWSER",
+	}
+
+	server, client := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/checks/browser" {
+			t.Errorf("expected /v1/checks/browser, got %s", r.URL.Path)
+		}
+
+		var reqBody Check
+		json.NewDecoder(r.Body).Decode(&reqBody)
+		if reqBody.Type != "BROWSER_CHECK" {
+			t.Errorf("expected type BROWSER_CHECK, got %s", reqBody.Type)
+		}
+
+		resp := APIResponse[Check]{
+			Result:  createdCheck,
+			Success: true,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(resp)
+	})
+	defer server.Close()
+
+	result, err := client.CreateTypedCheck("browser", input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result.ID != createdCheck.ID {
+		t.Errorf("expected ID %s, got %s", createdCheck.ID, result.ID)
+	}
+}
+
+func TestClient_CreateDNSCheck(t *testing.T) {
+	input := &DNSCheck{
+		Name:          "DNS Check",
+		DNSDomain:     "example.com",
+		DNSRecordType: "A",
+	}
+	createdCheck := DNSCheck{
+		ID:            "dns123",
+		Name:          "DNS Check",
+		CheckType:     "DNS",
+		DNSDomain:     "example.com",
+		DNSRecordType: "A",
+	}
+
+	server, client := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/checks/dns" {
+			t.Errorf("expected /v1/checks/dns, got %s", r.URL.Path)
+		}
+
+		var reqBody DNSCheck
+		json.NewDecoder(r.Body).Decode(&reqBody)
+		if reqBody.DNSDomain != input.DNSDomain {
+			t.Errorf("expected DNS domain %s, got %s", input.DNSDomain, reqBody.DNSDomain)
+		}
+
+		resp := APIResponse[DNSCheck]{Result: createdCheck, Success: true}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(resp)
+	})
+	defer server.Close()
+
+	result, err := client.CreateDNSCheck(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.ID != createdCheck.ID {
+		t.Errorf("expected ID %s, got %s", createdCheck.ID, result.ID)
+	}
+}
+
 func TestClient_UpdateCheck(t *testing.T) {
 	input := &Check{
 		Name: "Updated Check",
@@ -158,6 +250,60 @@ func TestClient_UpdateCheck(t *testing.T) {
 	}
 }
 
+func TestClient_UpdateTypedCheck(t *testing.T) {
+	input := &Check{Name: "Updated Uptime Check"}
+	updatedCheck := Check{ID: "abc123", Name: "Updated Uptime Check", CheckType: "UPTIME"}
+
+	server, client := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("expected PATCH, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/checks/uptime/abc123" {
+			t.Errorf("expected /v1/checks/uptime/abc123, got %s", r.URL.Path)
+		}
+
+		resp := APIResponse[Check]{Result: updatedCheck, Success: true}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	})
+	defer server.Close()
+
+	result, err := client.UpdateTypedCheck("uptime", "abc123", input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Name != updatedCheck.Name {
+		t.Errorf("expected Name %s, got %s", updatedCheck.Name, result.Name)
+	}
+}
+
+func TestClient_UpdateTCPCheck(t *testing.T) {
+	input := &TCPCheck{Name: "Updated TCP Check", TCPHostname: "example.com", TCPPort: 443}
+	updatedCheck := TCPCheck{ID: "tcp123", Name: "Updated TCP Check", CheckType: "TCP", TCPHostname: "example.com", TCPPort: 443}
+
+	server, client := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("expected PATCH, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/checks/tcp/tcp123" {
+			t.Errorf("expected /v1/checks/tcp/tcp123, got %s", r.URL.Path)
+		}
+
+		resp := APIResponse[TCPCheck]{Result: updatedCheck, Success: true}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	})
+	defer server.Close()
+
+	result, err := client.UpdateTCPCheck("tcp123", input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Name != updatedCheck.Name {
+		t.Errorf("expected Name %s, got %s", updatedCheck.Name, result.Name)
+	}
+}
+
 func TestClient_DeleteCheck(t *testing.T) {
 	server, client := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete {
@@ -178,6 +324,29 @@ func TestClient_DeleteCheck(t *testing.T) {
 
 	err := client.DeleteCheck("abc123")
 	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestClient_DeleteTypedCheck(t *testing.T) {
+	server, client := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			t.Errorf("expected DELETE, got %s", r.Method)
+		}
+		if r.URL.Path != "/v1/checks/uptime/abc123" {
+			t.Errorf("expected /v1/checks/uptime/abc123, got %s", r.URL.Path)
+		}
+
+		resp := APIResponse[struct{ ID string }]{
+			Result:  struct{ ID string }{ID: "abc123"},
+			Success: true,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	})
+	defer server.Close()
+
+	if err := client.DeleteTypedCheck("uptime", "abc123"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

@@ -52,7 +52,17 @@ type Assertion struct {
 
 // CreateCheck creates a new uptime check
 func (c *Client) CreateCheck(check *Check) (*Check, error) {
-	respBody, err := c.Post("/v1/checks", check)
+	return c.CreateTypedCheck("", check)
+}
+
+// CreateTypedCheck creates a check using a typed check endpoint when kind is set.
+func (c *Client) CreateTypedCheck(kind string, check *Check) (*Check, error) {
+	path := "/v1/checks"
+	if kind != "" {
+		path = fmt.Sprintf("/v1/checks/%s", kind)
+	}
+
+	respBody, err := c.Post(path, check)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +84,17 @@ func (c *Client) CreateCheck(check *Check) (*Check, error) {
 
 // GetCheck retrieves a check by ID
 func (c *Client) GetCheck(id string) (*Check, error) {
-	respBody, err := c.Get(fmt.Sprintf("/v1/checks/%s", id))
+	return c.GetTypedCheck("", id)
+}
+
+// GetTypedCheck retrieves a check using a typed check endpoint when kind is set.
+func (c *Client) GetTypedCheck(kind string, id string) (*Check, error) {
+	path := fmt.Sprintf("/v1/checks/%s", id)
+	if kind != "" {
+		path = fmt.Sprintf("/v1/checks/%s/%s", kind, id)
+	}
+
+	respBody, err := c.Get(path)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +116,17 @@ func (c *Client) GetCheck(id string) (*Check, error) {
 
 // UpdateCheck updates an existing check
 func (c *Client) UpdateCheck(id string, check *Check) (*Check, error) {
-	respBody, err := c.Patch(fmt.Sprintf("/v1/checks/%s", id), check)
+	return c.UpdateTypedCheck("", id, check)
+}
+
+// UpdateTypedCheck updates a check using a typed check endpoint when kind is set.
+func (c *Client) UpdateTypedCheck(kind string, id string, check *Check) (*Check, error) {
+	path := fmt.Sprintf("/v1/checks/%s", id)
+	if kind != "" {
+		path = fmt.Sprintf("/v1/checks/%s/%s", kind, id)
+	}
+
+	respBody, err := c.Patch(path, check)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +148,17 @@ func (c *Client) UpdateCheck(id string, check *Check) (*Check, error) {
 
 // DeleteCheck deletes a check
 func (c *Client) DeleteCheck(id string) error {
-	_, err := c.Delete(fmt.Sprintf("/v1/checks/%s", id))
+	return c.DeleteTypedCheck("", id)
+}
+
+// DeleteTypedCheck deletes a check using a typed check endpoint when kind is set.
+func (c *Client) DeleteTypedCheck(kind string, id string) error {
+	path := fmt.Sprintf("/v1/checks/%s", id)
+	if kind != "" {
+		path = fmt.Sprintf("/v1/checks/%s/%s", kind, id)
+	}
+
+	_, err := c.Delete(path)
 	return err
 }
 

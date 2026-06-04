@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
@@ -22,17 +24,49 @@ func NewCheckResource() resource.Resource {
 	return &CheckResource{}
 }
 
+func NewUptimeCheckResource() resource.Resource {
+	return &CheckResource{
+		typeName:        "uptime_check",
+		endpointKind:    "uptime",
+		forcedInputType: "UPTIME_CHECK",
+	}
+}
+
+func NewBrowserCheckResource() resource.Resource {
+	return &CheckResource{
+		typeName:        "browser_check",
+		endpointKind:    "browser",
+		forcedInputType: "BROWSER_CHECK",
+	}
+}
+
 // CheckResource defines the resource implementation.
 type CheckResource struct {
-	client *client.Client
+	client          *client.Client
+	typeName        string
+	endpointKind    string
+	forcedInputType string
 }
 
 func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_check"
+	typeName := r.typeName
+	if typeName == "" {
+		typeName = "check"
+	}
+	resp.TypeName = req.ProviderTypeName + "_" + typeName
 }
 
 func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_check.CheckResourceSchema(ctx)
+
+	if r.forcedInputType != "" {
+		if typeAttr, ok := resp.Schema.Attributes["type"].(schema.StringAttribute); ok {
+			typeAttr.Default = stringdefault.StaticString(r.forcedInputType)
+			typeAttr.Description = fmt.Sprintf("Type of check. Always %s for this resource.", r.forcedInputType)
+			typeAttr.MarkdownDescription = typeAttr.Description
+			resp.Schema.Attributes["type"] = typeAttr
+		}
+	}
 }
 
 func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -83,6 +117,9 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		AuthUsername:                 data.AuthUsername.ValueString(),
 		AuthPassword:                 data.AuthPassword.ValueString(),
 	}
+	if r.forcedInputType != "" {
+		check.Type = r.forcedInputType
+	}
 
 	if !data.FollowRedirects.IsNull() {
 		v := data.FollowRedirects.ValueBool()
@@ -124,7 +161,7 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Create the check
-	created, err := r.client.CreateCheck(check)
+	created, err := r.client.CreateTypedCheck(r.endpointKind, check)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create check, got error: %s", err))
 		return
@@ -367,7 +404,7 @@ func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	// Get check from API
-	check, err := r.client.GetCheck(data.Id.ValueString())
+	check, err := r.client.GetTypedCheck(r.endpointKind, data.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read check, got error: %s", err))
 		return
@@ -415,6 +452,9 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		AuthUsername:                 data.AuthUsername.ValueString(),
 		AuthPassword:                 data.AuthPassword.ValueString(),
 	}
+	if r.forcedInputType != "" {
+		check.Type = r.forcedInputType
+	}
 
 	if !data.FollowRedirects.IsNull() {
 		v := data.FollowRedirects.ValueBool()
@@ -455,7 +495,7 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Update the check using the ID from state
-	updated, err := r.client.UpdateCheck(checkID, check)
+	updated, err := r.client.UpdateTypedCheck(r.endpointKind, checkID, check)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update check, got error: %s", err))
 		return
@@ -479,7 +519,7 @@ func (r *CheckResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	}
 
 	// Delete the check
-	err := r.client.DeleteCheck(data.Id.ValueString())
+	err := r.client.DeleteTypedCheck(r.endpointKind, data.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete check, got error: %s", err))
 		return
