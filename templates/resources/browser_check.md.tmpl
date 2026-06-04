@@ -1,0 +1,25 @@
+---
+page_title: "onlineornot_browser_check Resource - terraform-provider-onlineornot"
+subcategory: "Checks"
+description: |-
+  Manages an OnlineOrNot browser check using the typed browser check API.
+---
+
+# onlineornot_browser_check (Resource)
+
+Use `onlineornot_browser_check` to monitor a browser-rendered page or scripted Playwright flow.
+
+This resource uses the typed `/v1/checks/browser` API. Browser checks are separate from uptime checks in Terraform even though some fields are shared.
+
+## Example Usage
+
+{{ tffile "examples/resources/onlineornot_browser_check/resource.tf" }}
+
+## Notes
+
+- Provide `url` for a simple page-load browser check.
+- Provide `script` for a scripted Playwright check.
+- `type` is managed by the provider and is always `BROWSER_CHECK` for this resource.
+- Importing a non-browser monitor ID fails because reads go through the typed browser endpoint.
+
+{{ .SchemaMarkdown | trimspace }}

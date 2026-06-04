@@ -1,0 +1,26 @@
+---
+page_title: "onlineornot_tcp_check Resource - terraform-provider-onlineornot"
+subcategory: "Checks"
+description: |-
+  Manages an OnlineOrNot TCP check using the typed TCP check API.
+---
+
+# onlineornot_tcp_check (Resource)
+
+Use `onlineornot_tcp_check` to verify that a TCP service accepts connections from one or more OnlineOrNot regions.
+
+This resource uses the typed `/v1/checks/tcp` API and has TCP-specific fields instead of the generic URL check schema.
+
+## Example Usage
+
+{{ tffile "examples/resources/onlineornot_tcp_check/resource.tf" }}
+
+## Notes
+
+- `tcp_hostname` is the hostname or address to connect to.
+- `tcp_port` must be between `1` and `65535`.
+- `tcp_ip_family` defaults to `Any`.
+- `tcp_data` is optional data sent after the connection opens.
+- Importing a non-TCP monitor ID fails because reads go through the typed TCP endpoint.
+
+{{ .SchemaMarkdown | trimspace }}

@@ -1,0 +1,24 @@
+---
+page_title: "onlineornot_uptime_check Resource - terraform-provider-onlineornot"
+subcategory: "Checks"
+description: |-
+  Manages an OnlineOrNot uptime check using the typed uptime check API.
+---
+
+# onlineornot_uptime_check (Resource)
+
+Use `onlineornot_uptime_check` to monitor an HTTP or HTTPS endpoint from one or more OnlineOrNot regions.
+
+This resource uses the typed `/v1/checks/uptime` API. Use it for new HTTP uptime monitors instead of the legacy generic `onlineornot_check` resource.
+
+## Example Usage
+
+{{ tffile "examples/resources/onlineornot_uptime_check/resource.tf" }}
+
+## Notes
+
+- `url` is required for URL-based uptime checks.
+- `type` is managed by the provider and is always `UPTIME_CHECK` for this resource.
+- Importing a non-uptime monitor ID fails because reads go through the typed uptime endpoint.
+
+{{ .SchemaMarkdown | trimspace }}

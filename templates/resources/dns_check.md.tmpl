@@ -1,0 +1,26 @@
+---
+page_title: "onlineornot_dns_check Resource - terraform-provider-onlineornot"
+subcategory: "Checks"
+description: |-
+  Manages an OnlineOrNot DNS check using the typed DNS check API.
+---
+
+# onlineornot_dns_check (Resource)
+
+Use `onlineornot_dns_check` to verify that a DNS name resolves as expected from one or more OnlineOrNot regions.
+
+This resource uses the typed `/v1/checks/dns` API and has DNS-specific fields instead of the generic URL check schema.
+
+## Example Usage
+
+{{ tffile "examples/resources/onlineornot_dns_check/resource.tf" }}
+
+## Notes
+
+- `dns_domain` is the domain name to query.
+- `dns_record_type` is the record type to query, such as `A`, `AAAA`, `CNAME`, `MX`, `NS`, `SOA`, or `TXT`.
+- `dns_resolver` is optional. Leave it unset to use the platform default resolver.
+- `dns_protocol` defaults to `UDP`.
+- Importing a non-DNS monitor ID fails because reads go through the typed DNS endpoint.
+
+{{ .SchemaMarkdown | trimspace }}
