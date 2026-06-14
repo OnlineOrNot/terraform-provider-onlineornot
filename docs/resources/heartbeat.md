@@ -28,6 +28,7 @@ description: |-
 - `incident_io_alerts` (List of String) Array of incident.io integration IDs to alert
 - `microsoft_teams_alerts` (List of String) Array of Microsoft Teams integration IDs to alert
 - `oncall_alerts` (List of String) IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)
+- `pushover_alerts` (List of String) Array of Pushover integration IDs to alert
 - `reminder_alert_interval_minutes` (Number) Interval in minutes between reminder alerts (-1 for never)
 - `report_period` (Number) Expected interval in seconds between heartbeat pings (for simple schedule)
 - `report_period_cron` (String) Cron expression for expected heartbeat schedule
