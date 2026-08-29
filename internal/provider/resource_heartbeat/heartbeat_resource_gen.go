@@ -80,6 +80,13 @@ func HeartbeatResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)",
 				MarkdownDescription: "IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)",
 			},
+			"pushover_alerts": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "Array of Pushover integration IDs to alert",
+				MarkdownDescription: "Array of Pushover integration IDs to alert",
+			},
 			"reminder_alert_interval_minutes": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
@@ -152,6 +159,7 @@ type HeartbeatModel struct {
 	MicrosoftTeamsAlerts         types.List   `tfsdk:"microsoft_teams_alerts"`
 	Name                         types.String `tfsdk:"name"`
 	OncallAlerts                 types.List   `tfsdk:"oncall_alerts"`
+	PushoverAlerts               types.List   `tfsdk:"pushover_alerts"`
 	ReminderAlertIntervalMinutes types.Int64  `tfsdk:"reminder_alert_interval_minutes"`
 	ReportPeriod                 types.Int64  `tfsdk:"report_period"`
 	ReportPeriodCron             types.String `tfsdk:"report_period_cron"`
