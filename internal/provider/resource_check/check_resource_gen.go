@@ -189,6 +189,11 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)",
 				MarkdownDescription: "IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)",
 			},
+			"pushover_alerts": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Computed:    true,
+			},
 			"recovery_period_seconds": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
@@ -329,6 +334,7 @@ type CheckModel struct {
 	MicrosoftTeamsAlerts         types.List   `tfsdk:"microsoft_teams_alerts"`
 	Name                         types.String `tfsdk:"name"`
 	OncallAlerts                 types.List   `tfsdk:"oncall_alerts"`
+	PushoverAlerts               types.List   `tfsdk:"pushover_alerts"`
 	RecoveryPeriodSeconds        types.Int64  `tfsdk:"recovery_period_seconds"`
 	ReminderAlertIntervalMinutes types.Int64  `tfsdk:"reminder_alert_interval_minutes"`
 	Script                       types.String `tfsdk:"script"`

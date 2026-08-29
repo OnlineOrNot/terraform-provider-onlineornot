@@ -73,6 +73,7 @@ resource "onlineornot_check" "browser" {
 - `method` (String) HTTP Method. Must be one of: `DELETE`, `GET`, `HEAD`, `PATCH`, `POST`, `PUT`.
 - `microsoft_teams_alerts` (List of String)
 - `oncall_alerts` (List of String) IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)
+- `pushover_alerts` (List of String)
 - `recovery_period_seconds` (Number) Recovery period in seconds
 - `reminder_alert_interval_minutes` (Number) Interval in minutes between reminders (-1 for never)
 - `script` (String) Playwright Test script for scripted browser checks. Required for script-based checks, optional for URL-based checks.
