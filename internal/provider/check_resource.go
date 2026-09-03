@@ -147,6 +147,9 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if !data.TelegramAlerts.IsNull() {
 		data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)
 	}
+	if !data.PushoverAlerts.IsNull() {
+		data.PushoverAlerts.ElementsAs(ctx, &check.PushoverAlerts, false)
+	}
 	if !data.WebhookAlerts.IsNull() {
 		data.WebhookAlerts.ElementsAs(ctx, &check.WebhookAlerts, false)
 	}
@@ -320,6 +323,14 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource
 		data.TelegramAlerts = types.ListNull(types.StringType)
 	}
 
+	if len(check.PushoverAlerts) > 0 {
+		pushoverAlerts, d := types.ListValueFrom(ctx, types.StringType, check.PushoverAlerts)
+		diags.Append(d...)
+		data.PushoverAlerts = pushoverAlerts
+	} else {
+		data.PushoverAlerts = types.ListNull(types.StringType)
+	}
+
 	if len(check.WebhookAlerts) > 0 {
 		webhookAlerts, d := types.ListValueFrom(ctx, types.StringType, check.WebhookAlerts)
 		diags.Append(d...)
@@ -480,6 +491,9 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 	if !data.TelegramAlerts.IsNull() {
 		data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)
+	}
+	if !data.PushoverAlerts.IsNull() {
+		data.PushoverAlerts.ElementsAs(ctx, &check.PushoverAlerts, false)
 	}
 	if !data.WebhookAlerts.IsNull() {
 		data.WebhookAlerts.ElementsAs(ctx, &check.WebhookAlerts, false)
