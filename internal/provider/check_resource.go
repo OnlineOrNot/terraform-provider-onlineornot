@@ -98,7 +98,27 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Convert to API model
+	check := checkModelToClient(ctx, &data, r.forcedInputType, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create the check
+	created, err := r.client.CreateTypedCheck(r.endpointKind, check)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create check, got error: %s", err))
+		return
+	}
+
+	// Populate state from the API response (includes computed defaults)
+	r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
+
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// checkModelToClient converts a Terraform check model into the API request model.
+func checkModelToClient(ctx context.Context, data *resource_check.CheckModel, forcedInputType string, diags *diag.Diagnostics) *client.Check {
 	check := &client.Check{
 		Name:                         data.Name.ValueString(),
 		URL:                          data.Url.ValueString(),
@@ -117,64 +137,67 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		AuthUsername:                 data.AuthUsername.ValueString(),
 		AuthPassword:                 data.AuthPassword.ValueString(),
 	}
-	if r.forcedInputType != "" {
-		check.Type = r.forcedInputType
+	if forcedInputType != "" {
+		check.Type = forcedInputType
 	}
 
 	if !data.FollowRedirects.IsNull() {
-		v := data.FollowRedirects.ValueBool()
-		check.FollowRedirects = &v
+		value := data.FollowRedirects.ValueBool()
+		check.FollowRedirects = &value
 	}
-
 	if !data.VerifySsl.IsNull() {
-		v := data.VerifySsl.ValueBool()
-		check.VerifySSL = &v
+		value := data.VerifySsl.ValueBool()
+		check.VerifySSL = &value
 	}
 
-	// Convert string lists
 	if !data.TestRegions.IsNull() {
-		data.TestRegions.ElementsAs(ctx, &check.TestRegions, false)
+		diags.Append(data.TestRegions.ElementsAs(ctx, &check.TestRegions, false)...)
 	}
 	if !data.UserAlerts.IsNull() {
-		data.UserAlerts.ElementsAs(ctx, &check.UserAlerts, false)
+		diags.Append(data.UserAlerts.ElementsAs(ctx, &check.UserAlerts, false)...)
 	}
 	if !data.SlackAlerts.IsNull() {
-		data.SlackAlerts.ElementsAs(ctx, &check.SlackAlerts, false)
+		diags.Append(data.SlackAlerts.ElementsAs(ctx, &check.SlackAlerts, false)...)
 	}
 	if !data.DiscordAlerts.IsNull() {
-		data.DiscordAlerts.ElementsAs(ctx, &check.DiscordAlerts, false)
+		diags.Append(data.DiscordAlerts.ElementsAs(ctx, &check.DiscordAlerts, false)...)
 	}
 	if !data.TelegramAlerts.IsNull() {
-		data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)
+		diags.Append(data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)...)
 	}
 	if !data.PushoverAlerts.IsNull() {
-		data.PushoverAlerts.ElementsAs(ctx, &check.PushoverAlerts, false)
+		diags.Append(data.PushoverAlerts.ElementsAs(ctx, &check.PushoverAlerts, false)...)
 	}
 	if !data.WebhookAlerts.IsNull() {
-		data.WebhookAlerts.ElementsAs(ctx, &check.WebhookAlerts, false)
+		diags.Append(data.WebhookAlerts.ElementsAs(ctx, &check.WebhookAlerts, false)...)
 	}
 	if !data.OncallAlerts.IsNull() {
-		data.OncallAlerts.ElementsAs(ctx, &check.OncallAlerts, false)
+		diags.Append(data.OncallAlerts.ElementsAs(ctx, &check.OncallAlerts, false)...)
 	}
 	if !data.IncidentIoAlerts.IsNull() {
-		data.IncidentIoAlerts.ElementsAs(ctx, &check.IncidentIOAlerts, false)
+		diags.Append(data.IncidentIoAlerts.ElementsAs(ctx, &check.IncidentIOAlerts, false)...)
 	}
 	if !data.MicrosoftTeamsAlerts.IsNull() {
-		data.MicrosoftTeamsAlerts.ElementsAs(ctx, &check.MicrosoftTeamsAlerts, false)
+		diags.Append(data.MicrosoftTeamsAlerts.ElementsAs(ctx, &check.MicrosoftTeamsAlerts, false)...)
+	}
+	if !data.Headers.IsNull() {
+		diags.Append(data.Headers.ElementsAs(ctx, &check.Headers, false)...)
 	}
 
-	// Create the check
-	created, err := r.client.CreateTypedCheck(r.endpointKind, check)
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create check, got error: %s", err))
-		return
+	if !data.Assertions.IsNull() {
+		var assertionValues []resource_check.AssertionsValue
+		diags.Append(data.Assertions.ElementsAs(ctx, &assertionValues, false)...)
+		for _, assertion := range assertionValues {
+			check.Assertions = append(check.Assertions, client.Assertion{
+				Type:       assertion.AssertionsType.ValueString(),
+				Property:   assertion.Property.ValueString(),
+				Comparison: assertion.Comparison.ValueString(),
+				Expected:   assertion.Expected.ValueString(),
+			})
+		}
 	}
 
-	// Populate state from the API response (includes computed defaults)
-	r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
-
-	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	return check
 }
 
 // populateModelFromAPI updates a CheckModel with values from the API response
@@ -444,68 +467,9 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Use the ID from state (it's stable), data from plan (user's desired state)
 	checkID := state.Id.ValueString()
 
-	// Convert to API model
-	check := &client.Check{
-		Name:                         data.Name.ValueString(),
-		URL:                          data.Url.ValueString(),
-		TestInterval:                 int(data.TestInterval.ValueInt64()),
-		TextToSearchFor:              data.TextToSearchFor.ValueString(),
-		ReminderAlertIntervalMinutes: int(data.ReminderAlertIntervalMinutes.ValueInt64()),
-		ConfirmationPeriodSeconds:    int(data.ConfirmationPeriodSeconds.ValueInt64()),
-		RecoveryPeriodSeconds:        int(data.RecoveryPeriodSeconds.ValueInt64()),
-		Timeout:                      int(data.Timeout.ValueInt64()),
-		Method:                       data.Method.ValueString(),
-		Body:                         data.Body.ValueString(),
-		AlertPriority:                data.AlertPriority.ValueString(),
-		Type:                         data.Type.ValueString(),
-		Version:                      data.Version.ValueString(),
-		Script:                       data.Script.ValueString(),
-		AuthUsername:                 data.AuthUsername.ValueString(),
-		AuthPassword:                 data.AuthPassword.ValueString(),
-	}
-	if r.forcedInputType != "" {
-		check.Type = r.forcedInputType
-	}
-
-	if !data.FollowRedirects.IsNull() {
-		v := data.FollowRedirects.ValueBool()
-		check.FollowRedirects = &v
-	}
-
-	if !data.VerifySsl.IsNull() {
-		v := data.VerifySsl.ValueBool()
-		check.VerifySSL = &v
-	}
-
-	if !data.TestRegions.IsNull() {
-		data.TestRegions.ElementsAs(ctx, &check.TestRegions, false)
-	}
-	if !data.UserAlerts.IsNull() {
-		data.UserAlerts.ElementsAs(ctx, &check.UserAlerts, false)
-	}
-	if !data.SlackAlerts.IsNull() {
-		data.SlackAlerts.ElementsAs(ctx, &check.SlackAlerts, false)
-	}
-	if !data.DiscordAlerts.IsNull() {
-		data.DiscordAlerts.ElementsAs(ctx, &check.DiscordAlerts, false)
-	}
-	if !data.TelegramAlerts.IsNull() {
-		data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)
-	}
-	if !data.PushoverAlerts.IsNull() {
-		data.PushoverAlerts.ElementsAs(ctx, &check.PushoverAlerts, false)
-	}
-	if !data.WebhookAlerts.IsNull() {
-		data.WebhookAlerts.ElementsAs(ctx, &check.WebhookAlerts, false)
-	}
-	if !data.OncallAlerts.IsNull() {
-		data.OncallAlerts.ElementsAs(ctx, &check.OncallAlerts, false)
-	}
-	if !data.IncidentIoAlerts.IsNull() {
-		data.IncidentIoAlerts.ElementsAs(ctx, &check.IncidentIOAlerts, false)
-	}
-	if !data.MicrosoftTeamsAlerts.IsNull() {
-		data.MicrosoftTeamsAlerts.ElementsAs(ctx, &check.MicrosoftTeamsAlerts, false)
+	check := checkModelToClient(ctx, &data, r.forcedInputType, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	// Update the check using the ID from state
