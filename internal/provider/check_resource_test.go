@@ -77,6 +77,42 @@ func TestCheckModelToClientPreservesHeadersAndAssertions(t *testing.T) {
 	}
 }
 
+func TestCheckModelToClientSkipsUnknownCollections(t *testing.T) {
+	ctx := context.Background()
+	unknownStrings := types.ListUnknown(types.StringType)
+	assertionType := resource_check.AssertionsType{
+		ObjectType: types.ObjectType{
+			AttrTypes: resource_check.AssertionsValue{}.AttributeTypes(ctx),
+		},
+	}
+	model := resource_check.CheckModel{
+		Name:                 types.StringValue("API check"),
+		Url:                  types.StringValue("https://example.com"),
+		TestRegions:          unknownStrings,
+		UserAlerts:           unknownStrings,
+		SlackAlerts:          unknownStrings,
+		DiscordAlerts:        unknownStrings,
+		TelegramAlerts:       unknownStrings,
+		PushoverAlerts:       unknownStrings,
+		WebhookAlerts:        unknownStrings,
+		OncallAlerts:         unknownStrings,
+		IncidentIoAlerts:     unknownStrings,
+		MicrosoftTeamsAlerts: unknownStrings,
+		Headers:              types.MapUnknown(types.StringType),
+		Assertions:           types.ListUnknown(assertionType),
+	}
+	var diagnostics diag.Diagnostics
+
+	check := checkModelToClient(ctx, &model, "UPTIME_CHECK", &diagnostics)
+
+	if diagnostics.HasError() {
+		t.Fatalf("unexpected diagnostics for unknown computed values: %v", diagnostics.Errors())
+	}
+	if check.TestRegions != nil || check.UserAlerts != nil || check.Headers != nil || check.Assertions != nil {
+		t.Errorf("expected unknown collections to be omitted, got %#v", check)
+	}
+}
+
 func TestAccCheckResource_basic(t *testing.T) {
 	rName := acctest.RandomWithPrefix("tf-acc-test")
 

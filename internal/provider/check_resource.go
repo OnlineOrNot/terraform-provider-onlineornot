@@ -150,41 +150,41 @@ func checkModelToClient(ctx context.Context, data *resource_check.CheckModel, fo
 		check.VerifySSL = &value
 	}
 
-	if !data.TestRegions.IsNull() {
+	if !data.TestRegions.IsNull() && !data.TestRegions.IsUnknown() {
 		diags.Append(data.TestRegions.ElementsAs(ctx, &check.TestRegions, false)...)
 	}
-	if !data.UserAlerts.IsNull() {
+	if !data.UserAlerts.IsNull() && !data.UserAlerts.IsUnknown() {
 		diags.Append(data.UserAlerts.ElementsAs(ctx, &check.UserAlerts, false)...)
 	}
-	if !data.SlackAlerts.IsNull() {
+	if !data.SlackAlerts.IsNull() && !data.SlackAlerts.IsUnknown() {
 		diags.Append(data.SlackAlerts.ElementsAs(ctx, &check.SlackAlerts, false)...)
 	}
-	if !data.DiscordAlerts.IsNull() {
+	if !data.DiscordAlerts.IsNull() && !data.DiscordAlerts.IsUnknown() {
 		diags.Append(data.DiscordAlerts.ElementsAs(ctx, &check.DiscordAlerts, false)...)
 	}
-	if !data.TelegramAlerts.IsNull() {
+	if !data.TelegramAlerts.IsNull() && !data.TelegramAlerts.IsUnknown() {
 		diags.Append(data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)...)
 	}
-	if !data.PushoverAlerts.IsNull() {
+	if !data.PushoverAlerts.IsNull() && !data.PushoverAlerts.IsUnknown() {
 		diags.Append(data.PushoverAlerts.ElementsAs(ctx, &check.PushoverAlerts, false)...)
 	}
-	if !data.WebhookAlerts.IsNull() {
+	if !data.WebhookAlerts.IsNull() && !data.WebhookAlerts.IsUnknown() {
 		diags.Append(data.WebhookAlerts.ElementsAs(ctx, &check.WebhookAlerts, false)...)
 	}
-	if !data.OncallAlerts.IsNull() {
+	if !data.OncallAlerts.IsNull() && !data.OncallAlerts.IsUnknown() {
 		diags.Append(data.OncallAlerts.ElementsAs(ctx, &check.OncallAlerts, false)...)
 	}
-	if !data.IncidentIoAlerts.IsNull() {
+	if !data.IncidentIoAlerts.IsNull() && !data.IncidentIoAlerts.IsUnknown() {
 		diags.Append(data.IncidentIoAlerts.ElementsAs(ctx, &check.IncidentIOAlerts, false)...)
 	}
-	if !data.MicrosoftTeamsAlerts.IsNull() {
+	if !data.MicrosoftTeamsAlerts.IsNull() && !data.MicrosoftTeamsAlerts.IsUnknown() {
 		diags.Append(data.MicrosoftTeamsAlerts.ElementsAs(ctx, &check.MicrosoftTeamsAlerts, false)...)
 	}
-	if !data.Headers.IsNull() {
+	if !data.Headers.IsNull() && !data.Headers.IsUnknown() {
 		diags.Append(data.Headers.ElementsAs(ctx, &check.Headers, false)...)
 	}
 
-	if !data.Assertions.IsNull() {
+	if !data.Assertions.IsNull() && !data.Assertions.IsUnknown() {
 		var assertionValues []resource_check.AssertionsValue
 		diags.Append(data.Assertions.ElementsAs(ctx, &assertionValues, false)...)
 		for _, assertion := range assertionValues {
