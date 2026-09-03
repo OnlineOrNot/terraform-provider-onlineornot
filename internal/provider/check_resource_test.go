@@ -1,12 +1,81 @@
 package provider
 
 import (
+	"context"
 	"fmt"
+	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
+	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
+	"github.com/onlineornot/terraform-provider-onlineornot/internal/provider/resource_check"
 )
+
+func TestCheckModelToClientPreservesHeadersAndAssertions(t *testing.T) {
+	ctx := context.Background()
+	headers := map[string]string{
+		"Authorization": "Bearer example",
+		"Content-Type":  "application/json",
+	}
+	headerValues, headerDiags := types.MapValueFrom(ctx, types.StringType, headers)
+	if headerDiags.HasError() {
+		t.Fatalf("failed to create test headers: %v", headerDiags.Errors())
+	}
+
+	assertion := resource_check.NewAssertionsValueMust(
+		resource_check.AssertionsValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"type":       types.StringValue("JSON_BODY"),
+			"property":   types.StringValue("$.status"),
+			"comparison": types.StringValue("EQUALS"),
+			"expected":   types.StringValue("ok"),
+		},
+	)
+	assertionType := resource_check.AssertionsType{
+		ObjectType: types.ObjectType{
+			AttrTypes: resource_check.AssertionsValue{}.AttributeTypes(ctx),
+		},
+	}
+	assertionValues, assertionDiags := types.ListValueFrom(ctx, assertionType, []resource_check.AssertionsValue{assertion})
+	if assertionDiags.HasError() {
+		t.Fatalf("failed to create test assertions: %v", assertionDiags.Errors())
+	}
+
+	model := resource_check.CheckModel{
+		Name:       types.StringValue("API check"),
+		Url:        types.StringValue("https://example.com"),
+		Headers:    headerValues,
+		Assertions: assertionValues,
+	}
+	var diagnostics diag.Diagnostics
+
+	check := checkModelToClient(ctx, &model, "UPTIME_CHECK", &diagnostics)
+
+	if diagnostics.HasError() {
+		t.Fatalf("unexpected conversion diagnostics: %v", diagnostics.Errors())
+	}
+	if !reflect.DeepEqual(check.Headers, headers) {
+		t.Errorf("expected headers %v, got %v", headers, check.Headers)
+	}
+	expectedAssertions := []client.Assertion{{
+		Type:       "JSON_BODY",
+		Property:   "$.status",
+		Comparison: "EQUALS",
+		Expected:   "ok",
+	}}
+	if !reflect.DeepEqual(check.Assertions, expectedAssertions) {
+		t.Errorf("expected assertions %v, got %v", expectedAssertions, check.Assertions)
+	}
+	if check.Type != "UPTIME_CHECK" {
+		t.Errorf("expected forced type UPTIME_CHECK, got %s", check.Type)
+	}
+}
 
 func TestAccCheckResource_basic(t *testing.T) {
 	rName := acctest.RandomWithPrefix("tf-acc-test")
