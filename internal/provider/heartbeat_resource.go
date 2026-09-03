@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -21,6 +22,12 @@ func NewHeartbeatResource() resource.Resource {
 
 type HeartbeatResource struct {
 	client *client.Client
+}
+
+func populateHeartbeatPushoverAlerts(ctx context.Context, data *resource_heartbeat.HeartbeatModel, alerts []string, diags *diag.Diagnostics) {
+	pushoverAlerts, diagnostics := types.ListValueFrom(ctx, types.StringType, alerts)
+	diags.Append(diagnostics...)
+	data.PushoverAlerts = pushoverAlerts
 }
 
 func (r *HeartbeatResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -75,6 +82,9 @@ func (r *HeartbeatResource) Create(ctx context.Context, req resource.CreateReque
 	if !data.DiscordAlerts.IsNull() {
 		data.DiscordAlerts.ElementsAs(ctx, &hb.DiscordAlerts, false)
 	}
+	if !data.PushoverAlerts.IsNull() {
+		data.PushoverAlerts.ElementsAs(ctx, &hb.PushoverAlerts, false)
+	}
 	if !data.WebhookAlerts.IsNull() {
 		data.WebhookAlerts.ElementsAs(ctx, &hb.WebhookAlerts, false)
 	}
@@ -121,6 +131,9 @@ func (r *HeartbeatResource) Create(ctx context.Context, req resource.CreateReque
 	if data.DiscordAlerts.IsUnknown() {
 		data.DiscordAlerts = types.ListNull(types.StringType)
 	}
+	if data.PushoverAlerts.IsUnknown() {
+		populateHeartbeatPushoverAlerts(ctx, &data, created.PushoverAlerts, &resp.Diagnostics)
+	}
 	if data.WebhookAlerts.IsUnknown() {
 		data.WebhookAlerts = types.ListNull(types.StringType)
 	}
@@ -154,6 +167,7 @@ func (r *HeartbeatResource) Read(ctx context.Context, req resource.ReadRequest, 
 	data.Id = types.StringValue(hb.ID)
 	data.Name = types.StringValue(hb.Name)
 	data.GracePeriod = types.Int64Value(int64(hb.GracePeriod))
+	populateHeartbeatPushoverAlerts(ctx, &data, hb.PushoverAlerts, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -184,6 +198,9 @@ func (r *HeartbeatResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 	if !data.DiscordAlerts.IsNull() {
 		data.DiscordAlerts.ElementsAs(ctx, &hb.DiscordAlerts, false)
+	}
+	if !data.PushoverAlerts.IsNull() {
+		data.PushoverAlerts.ElementsAs(ctx, &hb.PushoverAlerts, false)
 	}
 	if !data.WebhookAlerts.IsNull() {
 		data.WebhookAlerts.ElementsAs(ctx, &hb.WebhookAlerts, false)
