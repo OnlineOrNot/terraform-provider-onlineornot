@@ -233,6 +233,7 @@ func TestClient_CreateDNSCheck(t *testing.T) {
 func TestClient_UpdateCheck(t *testing.T) {
 	input := &Check{
 		Name:    "Updated Check",
+		Type:    "UPTIME_CHECK",
 		Headers: map[string]string{"X-Request-ID": "terraform"},
 		Assertions: []Assertion{{
 			Type:       "RESPONSE_HEADERS",
@@ -270,6 +271,9 @@ func TestClient_UpdateCheck(t *testing.T) {
 		if !reflect.DeepEqual(reqBody.Assertions, input.Assertions) {
 			t.Errorf("expected Assertions %v, got %v", input.Assertions, reqBody.Assertions)
 		}
+		if reqBody.Type != input.Type {
+			t.Errorf("expected Type %s, got %s", input.Type, reqBody.Type)
+		}
 
 		resp := APIResponse[Check]{
 			Result:  updatedCheck,
@@ -291,7 +295,16 @@ func TestClient_UpdateCheck(t *testing.T) {
 }
 
 func TestClient_UpdateTypedCheck(t *testing.T) {
-	input := &Check{Name: "Updated Uptime Check"}
+	input := &Check{
+		Name: "Updated Uptime Check",
+		Type: "UPTIME_CHECK",
+		Assertions: []Assertion{{
+			Type:       "TEXT_BODY",
+			Property:   "",
+			Comparison: "CONTAINS",
+			Expected:   "Example Domain",
+		}},
+	}
 	updatedCheck := Check{ID: "abc123", Name: "Updated Uptime Check", CheckType: "UPTIME"}
 
 	server, client := newTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -300,6 +313,22 @@ func TestClient_UpdateTypedCheck(t *testing.T) {
 		}
 		if r.URL.Path != "/v1/checks/uptime/abc123" {
 			t.Errorf("expected /v1/checks/uptime/abc123, got %s", r.URL.Path)
+		}
+
+		var reqBody map[string]json.RawMessage
+		if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+		if _, ok := reqBody["type"]; ok {
+			t.Error("expected top-level type to be omitted from typed update request")
+		}
+
+		var assertions []Assertion
+		if err := json.Unmarshal(reqBody["assertions"], &assertions); err != nil {
+			t.Fatalf("failed to decode assertions: %v", err)
+		}
+		if !reflect.DeepEqual(assertions, input.Assertions) {
+			t.Errorf("expected Assertions %v, got %v", input.Assertions, assertions)
 		}
 
 		resp := APIResponse[Check]{Result: updatedCheck, Success: true}

@@ -123,11 +123,15 @@ func (c *Client) UpdateCheck(id string, check *Check) (*Check, error) {
 // UpdateTypedCheck updates a check using a typed check endpoint when kind is set.
 func (c *Client) UpdateTypedCheck(kind string, id string, check *Check) (*Check, error) {
 	path := fmt.Sprintf("/v1/checks/%s", id)
+	payload := check
 	if kind != "" {
 		path = fmt.Sprintf("/v1/checks/%s/%s", kind, id)
+		checkWithoutType := *check
+		checkWithoutType.Type = ""
+		payload = &checkWithoutType
 	}
 
-	respBody, err := c.Patch(path, check)
+	respBody, err := c.Patch(path, payload)
 	if err != nil {
 		return nil, err
 	}
