@@ -56,8 +56,8 @@ resource "onlineornot_browser_check" "scripted_checkout" {
 
 - `alert_priority` (String) Alert Priority
 - `assertions` (Attributes List) Assertions to run on the response (see [below for nested schema](#nestedatt--assertions))
-- `auth_password` (String) Password to use for URLs behind HTTP Basic Auth
-- `auth_username` (String) Username to use for URLs behind HTTP Basic Auth
+- `auth_password` (String, Sensitive) Password to use for URLs behind HTTP Basic Auth. Empty strings are preserved.
+- `auth_username` (String) Username to use for URLs behind HTTP Basic Auth. Set this to an empty string for an empty user-id.
 - `body` (String)
 - `confirmation_period_seconds` (Number) Confirmation period in seconds
 - `discord_alerts` (List of String)

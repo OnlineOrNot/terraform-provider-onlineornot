@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -98,34 +100,64 @@ func TestCheckModelToClientPreservesBasicAuthValues(t *testing.T) {
 	}
 }
 
-func TestCheckResourcePopulateModelFromAPIPreservesBasicAuthState(t *testing.T) {
+func TestCheckResourceSchemaMarksAuthPasswordSensitive(t *testing.T) {
+	var response frameworkresource.SchemaResponse
+	resource := CheckResource{}
+
+	resource.Schema(context.Background(), frameworkresource.SchemaRequest{}, &response)
+
+	authPassword, ok := response.Schema.Attributes["auth_password"].(resourceschema.StringAttribute)
+	if !ok {
+		t.Fatalf("expected auth_password to be a string attribute, got %T", response.Schema.Attributes["auth_password"])
+	}
+	if !authPassword.Sensitive {
+		t.Error("expected auth_password to be sensitive")
+	}
+}
+
+func TestCheckResourcePopulateModelFromAPIReconcilesBasicAuthState(t *testing.T) {
+	empty := ""
+	user := "user"
+	secret := "secret"
 	tests := []struct {
 		name             string
 		username         types.String
 		password         types.String
+		check            *client.Check
 		expectedUsername types.String
 		expectedPassword types.String
 	}{
 		{
-			name:             "explicit empty values",
-			username:         types.StringValue(""),
-			password:         types.StringValue(""),
+			name:             "explicit empty values returned by API",
+			username:         types.StringValue("stale-user"),
+			password:         types.StringValue("stale-password"),
+			check:            &client.Check{AuthUsername: &empty, AuthPassword: &empty},
 			expectedUsername: types.StringValue(""),
 			expectedPassword: types.StringValue(""),
 		},
 		{
-			name:             "credentials omitted by API response",
+			name:             "credentials removed outside Terraform",
 			username:         types.StringValue("user"),
 			password:         types.StringValue("secret"),
-			expectedUsername: types.StringValue("user"),
-			expectedPassword: types.StringValue("secret"),
+			check:            &client.Check{},
+			expectedUsername: types.StringNull(),
+			expectedPassword: types.StringNull(),
 		},
 		{
 			name:             "computed values absent from API response",
 			username:         types.StringUnknown(),
 			password:         types.StringUnknown(),
+			check:            &client.Check{},
 			expectedUsername: types.StringNull(),
 			expectedPassword: types.StringNull(),
+		},
+		{
+			name:             "credentials returned by API",
+			username:         types.StringNull(),
+			password:         types.StringNull(),
+			check:            &client.Check{AuthUsername: &user, AuthPassword: &secret},
+			expectedUsername: types.StringValue("user"),
+			expectedPassword: types.StringValue("secret"),
 		},
 	}
 
@@ -138,7 +170,7 @@ func TestCheckResourcePopulateModelFromAPIPreservesBasicAuthState(t *testing.T) 
 			var diagnostics diag.Diagnostics
 			resource := CheckResource{}
 
-			resource.populateModelFromAPI(context.Background(), &model, &client.Check{}, &diagnostics)
+			resource.populateModelFromAPI(context.Background(), &model, test.check, &diagnostics)
 
 			if diagnostics.HasError() {
 				t.Fatalf("unexpected diagnostics: %v", diagnostics.Errors())

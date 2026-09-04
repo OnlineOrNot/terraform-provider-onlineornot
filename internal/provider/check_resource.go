@@ -59,6 +59,18 @@ func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataReque
 func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_check.CheckResourceSchema(ctx)
 
+	if authUsernameAttr, ok := resp.Schema.Attributes["auth_username"].(schema.StringAttribute); ok {
+		authUsernameAttr.Description = "Username to use for URLs behind HTTP Basic Auth. Set this to an empty string for an empty user-id."
+		authUsernameAttr.MarkdownDescription = authUsernameAttr.Description
+		resp.Schema.Attributes["auth_username"] = authUsernameAttr
+	}
+	if authPasswordAttr, ok := resp.Schema.Attributes["auth_password"].(schema.StringAttribute); ok {
+		authPasswordAttr.Sensitive = true
+		authPasswordAttr.Description = "Password to use for URLs behind HTTP Basic Auth. Empty strings are preserved."
+		authPasswordAttr.MarkdownDescription = authPasswordAttr.Description
+		resp.Schema.Attributes["auth_password"] = authPasswordAttr
+	}
+
 	if r.forcedInputType != "" {
 		if typeAttr, ok := resp.Schema.Attributes["type"].(schema.StringAttribute); ok {
 			typeAttr.Default = stringdefault.StaticString(r.forcedInputType)
@@ -263,12 +275,12 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource
 	}
 	if check.AuthUsername != nil {
 		data.AuthUsername = types.StringValue(*check.AuthUsername)
-	} else if data.AuthUsername.IsUnknown() {
+	} else {
 		data.AuthUsername = types.StringNull()
 	}
 	if check.AuthPassword != nil {
 		data.AuthPassword = types.StringValue(*check.AuthPassword)
-	} else if data.AuthPassword.IsUnknown() {
+	} else {
 		data.AuthPassword = types.StringNull()
 	}
 
