@@ -566,9 +566,9 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update check, got error: %s", err))
 		return
 	}
-	for _, change := range changes[1:] {
+	for i := 1; i < len(changes); i++ {
 		patch = &client.CheckPatch{}
-		applyOperationalState(change, &patch.Paused, &patch.Muted)
+		applyOperationalState(changes[i], &patch.Paused, &patch.Muted)
 		updated, err = r.client.UpdateTypedCheck(r.endpointKind, checkID, patch)
 		if err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update check operational state, got error: %s", err))

@@ -2,7 +2,10 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 
@@ -10,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -218,6 +222,82 @@ func TestCheckModelToClientSkipsUnknownCollections(t *testing.T) {
 	}
 	if check.TestRegions != nil || check.UserAlerts != nil || check.Headers != nil || check.Assertions != nil {
 		t.Errorf("expected unknown collections to be omitted, got %#v", check)
+	}
+}
+
+func TestCheckResourceUpdateWithoutOperationalStateChanges(t *testing.T) {
+	ctx := context.Background()
+	requestCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		requestCount++
+		if req.Method != http.MethodPatch {
+			t.Errorf("expected PATCH request, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/checks/check-id" {
+			t.Errorf("expected check update path, got %s", req.URL.Path)
+		}
+
+		var payload map[string]any
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode update payload: %v", err)
+		}
+		if _, ok := payload["paused"]; ok {
+			t.Error("expected ordinary update to omit paused")
+		}
+		if _, ok := payload["muted"]; ok {
+			t.Error("expected ordinary update to omit muted")
+		}
+
+		if err := json.NewEncoder(w).Encode(client.APIResponse[client.Check]{
+			Success: true,
+			Result: client.Check{
+				ID:     "check-id",
+				Name:   "updated check",
+				URL:    "https://example.org",
+				Method: "GET",
+			},
+		}); err != nil {
+			t.Fatalf("failed to encode update response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	checkResource := CheckResource{client: client.NewClient(&client.Config{BaseURL: server.URL})}
+	var schemaResponse frameworkresource.SchemaResponse
+	checkResource.Schema(ctx, frameworkresource.SchemaRequest{}, &schemaResponse)
+
+	stateModel := checkModel{}
+	var modelDiagnostics diag.Diagnostics
+	checkResource.populateModelFromAPI(ctx, &stateModel, &client.Check{
+		ID:     "check-id",
+		Name:   "original check",
+		URL:    "https://example.com",
+		Method: "GET",
+	}, &modelDiagnostics)
+	if modelDiagnostics.HasError() {
+		t.Fatalf("failed to create state model: %v", modelDiagnostics.Errors())
+	}
+	planModel := stateModel
+	planModel.Name = types.StringValue("updated check")
+	planModel.Url = types.StringValue("https://example.org")
+
+	plan := tfsdk.Plan{Schema: schemaResponse.Schema}
+	if diagnostics := plan.Set(ctx, &planModel); diagnostics.HasError() {
+		t.Fatalf("failed to create update plan: %v", diagnostics.Errors())
+	}
+	state := tfsdk.State{Schema: schemaResponse.Schema}
+	if diagnostics := state.Set(ctx, &stateModel); diagnostics.HasError() {
+		t.Fatalf("failed to create prior state: %v", diagnostics.Errors())
+	}
+	response := frameworkresource.UpdateResponse{State: tfsdk.State{Schema: schemaResponse.Schema}}
+
+	checkResource.Update(ctx, frameworkresource.UpdateRequest{Plan: plan, State: state}, &response)
+
+	if response.Diagnostics.HasError() {
+		t.Fatalf("unexpected update diagnostics: %v", response.Diagnostics.Errors())
+	}
+	if requestCount != 1 {
+		t.Fatalf("expected one update request, got %d", requestCount)
 	}
 }
 

@@ -288,9 +288,9 @@ func (r *HeartbeatResource) Update(ctx context.Context, req resource.UpdateReque
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update heartbeat, got error: %s", err))
 		return
 	}
-	for _, change := range changes[1:] {
+	for i := 1; i < len(changes); i++ {
 		patch = &client.HeartbeatPatch{}
-		applyOperationalState(change, &patch.Paused, &patch.Muted)
+		applyOperationalState(changes[i], &patch.Paused, &patch.Muted)
 		updated, err = r.client.UpdateHeartbeat(data.Id.ValueString(), patch)
 		if err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update heartbeat operational state, got error: %s", err))

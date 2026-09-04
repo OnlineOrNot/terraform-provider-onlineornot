@@ -286,9 +286,9 @@ func (r *DNSCheckResource) Update(ctx context.Context, req resource.UpdateReques
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update DNS check, got error: %s", err))
 		return
 	}
-	for _, change := range changes[1:] {
+	for i := 1; i < len(changes); i++ {
 		patch = &client.DNSCheckPatch{}
-		applyOperationalState(change, &patch.Paused, &patch.Muted)
+		applyOperationalState(changes[i], &patch.Paused, &patch.Muted)
 		updated, err = r.client.UpdateDNSCheck(state.Id.ValueString(), patch)
 		if err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update DNS check operational state, got error: %s", err))
@@ -387,9 +387,9 @@ func (r *TCPCheckResource) Update(ctx context.Context, req resource.UpdateReques
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update TCP check, got error: %s", err))
 		return
 	}
-	for _, change := range changes[1:] {
+	for i := 1; i < len(changes); i++ {
 		patch = &client.TCPCheckPatch{}
-		applyOperationalState(change, &patch.Paused, &patch.Muted)
+		applyOperationalState(changes[i], &patch.Paused, &patch.Muted)
 		updated, err = r.client.UpdateTCPCheck(state.Id.ValueString(), patch)
 		if err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update TCP check operational state, got error: %s", err))
