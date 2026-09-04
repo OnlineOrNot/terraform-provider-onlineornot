@@ -294,7 +294,7 @@ func TestClient_UpdateCheck(t *testing.T) {
 	})
 	defer server.Close()
 
-	result, err := client.UpdateCheck("abc123", input)
+	result, err := client.UpdateCheck("abc123", &CheckPatch{Check: input})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -347,7 +347,7 @@ func TestClient_UpdateTypedCheck(t *testing.T) {
 	})
 	defer server.Close()
 
-	result, err := client.UpdateTypedCheck("uptime", "abc123", input)
+	result, err := client.UpdateTypedCheck("uptime", "abc123", &CheckPatch{Check: input})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -374,7 +374,7 @@ func TestClient_UpdateTCPCheck(t *testing.T) {
 	})
 	defer server.Close()
 
-	result, err := client.UpdateTCPCheck("tcp123", input)
+	result, err := client.UpdateTCPCheck("tcp123", &TCPCheckPatch{TCPCheck: input})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

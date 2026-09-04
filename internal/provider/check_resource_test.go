@@ -49,7 +49,7 @@ func TestCheckModelToClientPreservesHeadersAndAssertions(t *testing.T) {
 		t.Fatalf("failed to create test assertions: %v", assertionDiags.Errors())
 	}
 
-	model := resource_check.CheckModel{
+	model := checkModel{
 		Name:       types.StringValue("API check"),
 		Url:        types.StringValue("https://example.com"),
 		Headers:    headerValues,
@@ -81,7 +81,7 @@ func TestCheckModelToClientPreservesHeadersAndAssertions(t *testing.T) {
 
 func TestCheckModelToClientPreservesBasicAuthValues(t *testing.T) {
 	ctx := context.Background()
-	model := resource_check.CheckModel{
+	model := checkModel{
 		AuthUsername: types.StringValue(""),
 		AuthPassword: types.StringValue("secret"),
 	}
@@ -163,7 +163,7 @@ func TestCheckResourcePopulateModelFromAPIReconcilesBasicAuthState(t *testing.T)
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			model := resource_check.CheckModel{
+			model := checkModel{
 				AuthUsername: test.username,
 				AuthPassword: test.password,
 			}
@@ -193,7 +193,7 @@ func TestCheckModelToClientSkipsUnknownCollections(t *testing.T) {
 			AttrTypes: resource_check.AssertionsValue{}.AttributeTypes(ctx),
 		},
 	}
-	model := resource_check.CheckModel{
+	model := checkModel{
 		Name:                 types.StringValue("API check"),
 		Url:                  types.StringValue("https://example.com"),
 		TestRegions:          unknownStrings,

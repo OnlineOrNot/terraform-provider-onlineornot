@@ -40,6 +40,42 @@ func NewBrowserCheckResource() resource.Resource {
 	}
 }
 
+type checkModel struct {
+	AlertPriority                types.String `tfsdk:"alert_priority"`
+	Assertions                   types.List   `tfsdk:"assertions"`
+	AuthPassword                 types.String `tfsdk:"auth_password"`
+	AuthUsername                 types.String `tfsdk:"auth_username"`
+	Body                         types.String `tfsdk:"body"`
+	ConfirmationPeriodSeconds    types.Int64  `tfsdk:"confirmation_period_seconds"`
+	DiscordAlerts                types.List   `tfsdk:"discord_alerts"`
+	FollowRedirects              types.Bool   `tfsdk:"follow_redirects"`
+	Headers                      types.Map    `tfsdk:"headers"`
+	Id                           types.String `tfsdk:"id"`
+	IncidentIoAlerts             types.List   `tfsdk:"incident_io_alerts"`
+	Method                       types.String `tfsdk:"method"`
+	MicrosoftTeamsAlerts         types.List   `tfsdk:"microsoft_teams_alerts"`
+	Muted                        types.Bool   `tfsdk:"muted"`
+	Name                         types.String `tfsdk:"name"`
+	OncallAlerts                 types.List   `tfsdk:"oncall_alerts"`
+	Paused                       types.Bool   `tfsdk:"paused"`
+	PushoverAlerts               types.List   `tfsdk:"pushover_alerts"`
+	RecoveryPeriodSeconds        types.Int64  `tfsdk:"recovery_period_seconds"`
+	ReminderAlertIntervalMinutes types.Int64  `tfsdk:"reminder_alert_interval_minutes"`
+	Script                       types.String `tfsdk:"script"`
+	SlackAlerts                  types.List   `tfsdk:"slack_alerts"`
+	TelegramAlerts               types.List   `tfsdk:"telegram_alerts"`
+	TestInterval                 types.Int64  `tfsdk:"test_interval"`
+	TestRegions                  types.List   `tfsdk:"test_regions"`
+	TextToSearchFor              types.String `tfsdk:"text_to_search_for"`
+	Timeout                      types.Int64  `tfsdk:"timeout"`
+	Type                         types.String `tfsdk:"type"`
+	Url                          types.String `tfsdk:"url"`
+	UserAlerts                   types.List   `tfsdk:"user_alerts"`
+	VerifySsl                    types.Bool   `tfsdk:"verify_ssl"`
+	Version                      types.String `tfsdk:"version"`
+	WebhookAlerts                types.List   `tfsdk:"webhook_alerts"`
+}
+
 // CheckResource defines the resource implementation.
 type CheckResource struct {
 	client          *client.Client
@@ -58,6 +94,8 @@ func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataReque
 
 func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_check.CheckResourceSchema(ctx)
+	resp.Schema.Attributes["paused"] = pausedAttribute("check")
+	resp.Schema.Attributes["muted"] = mutedAttribute("check")
 
 	if authUsernameAttr, ok := resp.Schema.Attributes["auth_username"].(schema.StringAttribute); ok {
 		authUsernameAttr.Description = "Username to use for URLs behind HTTP Basic Auth. Set this to an empty string for an empty user-id."
@@ -101,7 +139,7 @@ func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureReq
 }
 
 func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data resource_check.CheckModel
+	var data checkModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -115,22 +153,43 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Create the check
+	changes, err := operationalStateChanges(data.Paused, data.Muted, types.BoolValue(false), types.BoolValue(false))
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Operational State", err.Error())
+		return
+	}
+
+	// Create the check without PATCH-only operational fields.
 	created, err := r.client.CreateTypedCheck(r.endpointKind, check)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create check, got error: %s", err))
 		return
 	}
 
-	// Populate state from the API response (includes computed defaults)
+	// Populate state from the API response (includes computed defaults).
 	r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	for _, change := range changes {
+		patch := &client.CheckPatch{}
+		applyOperationalState(change, &patch.Paused, &patch.Muted)
+		created, err = r.client.UpdateTypedCheck(r.endpointKind, created.ID, patch)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to set check operational state, got error: %s", err))
+			return
+		}
+		r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
+	}
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 // checkModelToClient converts a Terraform check model into the API request model.
-func checkModelToClient(ctx context.Context, data *resource_check.CheckModel, forcedInputType string, diags *diag.Diagnostics) *client.Check {
+func checkModelToClient(ctx context.Context, data *checkModel, forcedInputType string, diags *diag.Diagnostics) *client.Check {
 	check := &client.Check{
 		Name:                         data.Name.ValueString(),
 		URL:                          data.Url.ValueString(),
@@ -219,10 +278,12 @@ func checkModelToClient(ctx context.Context, data *resource_check.CheckModel, fo
 }
 
 // populateModelFromAPI updates a CheckModel with values from the API response
-func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource_check.CheckModel, check *client.Check, diags *diag.Diagnostics) {
+func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkModel, check *client.Check, diags *diag.Diagnostics) {
 	data.Id = types.StringValue(check.ID)
 	data.Name = types.StringValue(check.Name)
 	data.Url = types.StringValue(check.URL)
+	data.Paused = types.BoolValue(check.Status == "PAUSED")
+	data.Muted = types.BoolValue(check.Status == "MUTED")
 
 	// String fields with defaults
 	if check.Method != "" {
@@ -446,7 +507,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource
 }
 
 func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data resource_check.CheckModel
+	var data checkModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -470,8 +531,8 @@ func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp
 }
 
 func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data resource_check.CheckModel
-	var state resource_check.CheckModel
+	var data checkModel
+	var state checkModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -490,14 +551,32 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Update the check using the ID from state
-	updated, err := r.client.UpdateTypedCheck(r.endpointKind, checkID, check)
+	changes, err := operationalStateChanges(data.Paused, data.Muted, state.Paused, state.Muted)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Operational State", err.Error())
+		return
+	}
+
+	patch := &client.CheckPatch{Check: check}
+	if len(changes) > 0 {
+		applyOperationalState(changes[0], &patch.Paused, &patch.Muted)
+	}
+	updated, err := r.client.UpdateTypedCheck(r.endpointKind, checkID, patch)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update check, got error: %s", err))
 		return
 	}
+	for _, change := range changes[1:] {
+		patch = &client.CheckPatch{}
+		applyOperationalState(change, &patch.Paused, &patch.Muted)
+		updated, err = r.client.UpdateTypedCheck(r.endpointKind, checkID, patch)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update check operational state, got error: %s", err))
+			return
+		}
+	}
 
-	// Populate state from the API response
+	// Populate state from the final API response.
 	r.populateModelFromAPI(ctx, &data, updated, &resp.Diagnostics)
 
 	// Save updated data into Terraform state
@@ -505,7 +584,7 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 }
 
 func (r *CheckResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data resource_check.CheckModel
+	var data checkModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)

@@ -34,8 +34,11 @@ type typedCheckModel struct {
 	Id                           types.String `tfsdk:"id"`
 	IncidentIoAlerts             types.List   `tfsdk:"incident_io_alerts"`
 	MicrosoftTeamsAlerts         types.List   `tfsdk:"microsoft_teams_alerts"`
+	Muted                        types.Bool   `tfsdk:"muted"`
 	Name                         types.String `tfsdk:"name"`
 	OncallAlerts                 types.List   `tfsdk:"oncall_alerts"`
+	Paused                       types.Bool   `tfsdk:"paused"`
+	PushoverAlerts               types.List   `tfsdk:"pushover_alerts"`
 	RecoveryPeriodSeconds        types.Int64  `tfsdk:"recovery_period_seconds"`
 	ReminderAlertIntervalMinutes types.Int64  `tfsdk:"reminder_alert_interval_minutes"`
 	SlackAlerts                  types.List   `tfsdk:"slack_alerts"`
@@ -169,8 +172,11 @@ func typedCheckSchema(ctx context.Context, idDescription string) schema.Schema {
 		},
 		"incident_io_alerts":              stringListAttribute(),
 		"microsoft_teams_alerts":          stringListAttribute(),
+		"muted":                           mutedAttribute("check"),
 		"name":                            schema.StringAttribute{Required: true, Description: "Name of the monitor", MarkdownDescription: "Name of the monitor"},
 		"oncall_alerts":                   stringListAttribute(),
+		"paused":                          pausedAttribute("check"),
+		"pushover_alerts":                 stringListAttribute(),
 		"recovery_period_seconds":         schema.Int64Attribute{Optional: true, Computed: true, Validators: []validator.Int64{int64validator.AtLeast(0)}, Default: int64default.StaticInt64(180)},
 		"reminder_alert_interval_minutes": schema.Int64Attribute{Optional: true, Computed: true, Validators: []validator.Int64{int64validator.AtLeast(-1)}, Default: int64default.StaticInt64(1440)},
 		"slack_alerts":                    stringListAttribute(),
@@ -214,12 +220,29 @@ func (r *DNSCheckResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	created, err := r.client.CreateDNSCheck(dnsModelToClient(ctx, &data, &resp.Diagnostics))
+	check := dnsModelToClient(ctx, &data, &resp.Diagnostics)
+	changes, err := operationalStateChanges(data.Paused, data.Muted, types.BoolValue(false), types.BoolValue(false))
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Operational State", err.Error())
+		return
+	}
+	created, err := r.client.CreateDNSCheck(check)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create DNS check, got error: %s", err))
 		return
 	}
 	populateDNSModel(ctx, &data, created, &resp.Diagnostics)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	for _, change := range changes {
+		patch := &client.DNSCheckPatch{}
+		applyOperationalState(change, &patch.Paused, &patch.Muted)
+		created, err = r.client.UpdateDNSCheck(created.ID, patch)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to set DNS check operational state, got error: %s", err))
+			return
+		}
+		populateDNSModel(ctx, &data, created, &resp.Diagnostics)
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -248,10 +271,29 @@ func (r *DNSCheckResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	updated, err := r.client.UpdateDNSCheck(state.Id.ValueString(), dnsModelToClient(ctx, &data, &resp.Diagnostics))
+	check := dnsModelToClient(ctx, &data, &resp.Diagnostics)
+	changes, err := operationalStateChanges(data.Paused, data.Muted, state.Paused, state.Muted)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Operational State", err.Error())
+		return
+	}
+	patch := &client.DNSCheckPatch{DNSCheck: check}
+	if len(changes) > 0 {
+		applyOperationalState(changes[0], &patch.Paused, &patch.Muted)
+	}
+	updated, err := r.client.UpdateDNSCheck(state.Id.ValueString(), patch)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update DNS check, got error: %s", err))
 		return
+	}
+	for _, change := range changes[1:] {
+		patch = &client.DNSCheckPatch{}
+		applyOperationalState(change, &patch.Paused, &patch.Muted)
+		updated, err = r.client.UpdateDNSCheck(state.Id.ValueString(), patch)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update DNS check operational state, got error: %s", err))
+			return
+		}
 	}
 	populateDNSModel(ctx, &data, updated, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -279,12 +321,29 @@ func (r *TCPCheckResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	created, err := r.client.CreateTCPCheck(tcpModelToClient(ctx, &data, &resp.Diagnostics))
+	check := tcpModelToClient(ctx, &data, &resp.Diagnostics)
+	changes, err := operationalStateChanges(data.Paused, data.Muted, types.BoolValue(false), types.BoolValue(false))
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Operational State", err.Error())
+		return
+	}
+	created, err := r.client.CreateTCPCheck(check)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create TCP check, got error: %s", err))
 		return
 	}
 	populateTCPModel(ctx, &data, created, &resp.Diagnostics)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	for _, change := range changes {
+		patch := &client.TCPCheckPatch{}
+		applyOperationalState(change, &patch.Paused, &patch.Muted)
+		created, err = r.client.UpdateTCPCheck(created.ID, patch)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to set TCP check operational state, got error: %s", err))
+			return
+		}
+		populateTCPModel(ctx, &data, created, &resp.Diagnostics)
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -313,10 +372,29 @@ func (r *TCPCheckResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	updated, err := r.client.UpdateTCPCheck(state.Id.ValueString(), tcpModelToClient(ctx, &data, &resp.Diagnostics))
+	check := tcpModelToClient(ctx, &data, &resp.Diagnostics)
+	changes, err := operationalStateChanges(data.Paused, data.Muted, state.Paused, state.Muted)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Operational State", err.Error())
+		return
+	}
+	patch := &client.TCPCheckPatch{TCPCheck: check}
+	if len(changes) > 0 {
+		applyOperationalState(changes[0], &patch.Paused, &patch.Muted)
+	}
+	updated, err := r.client.UpdateTCPCheck(state.Id.ValueString(), patch)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update TCP check, got error: %s", err))
 		return
+	}
+	for _, change := range changes[1:] {
+		patch = &client.TCPCheckPatch{}
+		applyOperationalState(change, &patch.Paused, &patch.Muted)
+		updated, err = r.client.UpdateTCPCheck(state.Id.ValueString(), patch)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update TCP check operational state, got error: %s", err))
+			return
+		}
 	}
 	populateTCPModel(ctx, &data, updated, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -354,7 +432,7 @@ func dnsModelToClient(ctx context.Context, data *DNSCheckModel, diags *diag.Diag
 		v := data.DNSResolver.ValueString()
 		check.DNSResolver = &v
 	}
-	populateClientCommon(ctx, &data.typedCheckModel, &check.TestRegions, &check.UserAlerts, &check.SlackAlerts, &check.DiscordAlerts, &check.TelegramAlerts, &check.WebhookAlerts, &check.OncallAlerts, &check.IncidentIOAlerts, &check.MicrosoftTeamsAlerts, &check.Assertions, diags)
+	populateClientCommon(ctx, &data.typedCheckModel, &check.TestRegions, &check.UserAlerts, &check.SlackAlerts, &check.DiscordAlerts, &check.TelegramAlerts, &check.PushoverAlerts, &check.WebhookAlerts, &check.OncallAlerts, &check.IncidentIOAlerts, &check.MicrosoftTeamsAlerts, &check.Assertions, diags)
 	return check
 }
 
@@ -379,16 +457,17 @@ func tcpModelToClient(ctx context.Context, data *TCPCheckModel, diags *diag.Diag
 		v := data.TCPShouldFail.ValueBool()
 		check.TCPShouldFail = &v
 	}
-	populateClientCommon(ctx, &data.typedCheckModel, &check.TestRegions, &check.UserAlerts, &check.SlackAlerts, &check.DiscordAlerts, &check.TelegramAlerts, &check.WebhookAlerts, &check.OncallAlerts, &check.IncidentIOAlerts, &check.MicrosoftTeamsAlerts, &check.Assertions, diags)
+	populateClientCommon(ctx, &data.typedCheckModel, &check.TestRegions, &check.UserAlerts, &check.SlackAlerts, &check.DiscordAlerts, &check.TelegramAlerts, &check.PushoverAlerts, &check.WebhookAlerts, &check.OncallAlerts, &check.IncidentIOAlerts, &check.MicrosoftTeamsAlerts, &check.Assertions, diags)
 	return check
 }
 
-func populateClientCommon(ctx context.Context, data *typedCheckModel, testRegions, userAlerts, slackAlerts, discordAlerts, telegramAlerts, webhookAlerts, oncallAlerts, incidentIOAlerts, microsoftTeamsAlerts *[]string, assertions *[]client.MonitorAssertion, diags *diag.Diagnostics) {
+func populateClientCommon(ctx context.Context, data *typedCheckModel, testRegions, userAlerts, slackAlerts, discordAlerts, telegramAlerts, pushoverAlerts, webhookAlerts, oncallAlerts, incidentIOAlerts, microsoftTeamsAlerts *[]string, assertions *[]client.MonitorAssertion, diags *diag.Diagnostics) {
 	listElementsAs(ctx, data.TestRegions, testRegions, diags)
 	listElementsAs(ctx, data.UserAlerts, userAlerts, diags)
 	listElementsAs(ctx, data.SlackAlerts, slackAlerts, diags)
 	listElementsAs(ctx, data.DiscordAlerts, discordAlerts, diags)
 	listElementsAs(ctx, data.TelegramAlerts, telegramAlerts, diags)
+	listElementsAs(ctx, data.PushoverAlerts, pushoverAlerts, diags)
 	listElementsAs(ctx, data.WebhookAlerts, webhookAlerts, diags)
 	listElementsAs(ctx, data.OncallAlerts, oncallAlerts, diags)
 	listElementsAs(ctx, data.IncidentIoAlerts, incidentIOAlerts, diags)
@@ -415,7 +494,7 @@ func listElementsAs(ctx context.Context, value types.List, target *[]string, dia
 }
 
 func populateDNSModel(ctx context.Context, data *DNSCheckModel, check *client.DNSCheck, diags *diag.Diagnostics) {
-	populateCommonModel(ctx, &data.typedCheckModel, check.ID, check.Name, check.TestInterval, check.ReminderAlertIntervalMinutes, check.ConfirmationPeriodSeconds, check.RecoveryPeriodSeconds, check.Timeout, check.AlertPriority, check.TestRegions, check.UserAlerts, check.SlackAlerts, check.DiscordAlerts, check.TelegramAlerts, check.WebhookAlerts, check.OncallAlerts, check.IncidentIOAlerts, check.MicrosoftTeamsAlerts, check.Assertions, diags)
+	populateCommonModel(ctx, &data.typedCheckModel, check.ID, check.Name, check.Status, check.TestInterval, check.ReminderAlertIntervalMinutes, check.ConfirmationPeriodSeconds, check.RecoveryPeriodSeconds, check.Timeout, check.AlertPriority, check.TestRegions, check.UserAlerts, check.SlackAlerts, check.DiscordAlerts, check.TelegramAlerts, check.PushoverAlerts, check.WebhookAlerts, check.OncallAlerts, check.IncidentIOAlerts, check.MicrosoftTeamsAlerts, check.Assertions, diags)
 	data.DNSDomain = types.StringValue(check.DNSDomain)
 	data.DNSRecordType = types.StringValue(check.DNSRecordType)
 	data.DNSProtocol = optionalStringValue(check.DNSProtocol)
@@ -427,7 +506,7 @@ func populateDNSModel(ctx context.Context, data *DNSCheckModel, check *client.DN
 }
 
 func populateTCPModel(ctx context.Context, data *TCPCheckModel, check *client.TCPCheck, diags *diag.Diagnostics) {
-	populateCommonModel(ctx, &data.typedCheckModel, check.ID, check.Name, check.TestInterval, check.ReminderAlertIntervalMinutes, check.ConfirmationPeriodSeconds, check.RecoveryPeriodSeconds, check.Timeout, check.AlertPriority, check.TestRegions, check.UserAlerts, check.SlackAlerts, check.DiscordAlerts, check.TelegramAlerts, check.WebhookAlerts, check.OncallAlerts, check.IncidentIOAlerts, check.MicrosoftTeamsAlerts, check.Assertions, diags)
+	populateCommonModel(ctx, &data.typedCheckModel, check.ID, check.Name, check.Status, check.TestInterval, check.ReminderAlertIntervalMinutes, check.ConfirmationPeriodSeconds, check.RecoveryPeriodSeconds, check.Timeout, check.AlertPriority, check.TestRegions, check.UserAlerts, check.SlackAlerts, check.DiscordAlerts, check.TelegramAlerts, check.PushoverAlerts, check.WebhookAlerts, check.OncallAlerts, check.IncidentIOAlerts, check.MicrosoftTeamsAlerts, check.Assertions, diags)
 	data.TCPHostname = types.StringValue(check.TCPHostname)
 	data.TCPPort = types.Int64Value(int64(check.TCPPort))
 	data.TCPIPFamily = optionalStringValue(check.TCPIPFamily)
@@ -443,9 +522,11 @@ func populateTCPModel(ctx context.Context, data *TCPCheckModel, check *client.TC
 	}
 }
 
-func populateCommonModel(ctx context.Context, data *typedCheckModel, id, name string, testInterval, reminderInterval, confirmationPeriod, recoveryPeriod, timeout int, alertPriority string, testRegions, userAlerts, slackAlerts, discordAlerts, telegramAlerts, webhookAlerts, oncallAlerts, incidentIOAlerts, microsoftTeamsAlerts []string, assertions []client.MonitorAssertion, diags *diag.Diagnostics) {
+func populateCommonModel(ctx context.Context, data *typedCheckModel, id, name, status string, testInterval, reminderInterval, confirmationPeriod, recoveryPeriod, timeout int, alertPriority string, testRegions, userAlerts, slackAlerts, discordAlerts, telegramAlerts, pushoverAlerts, webhookAlerts, oncallAlerts, incidentIOAlerts, microsoftTeamsAlerts []string, assertions []client.MonitorAssertion, diags *diag.Diagnostics) {
 	data.Id = types.StringValue(id)
 	data.Name = types.StringValue(name)
+	data.Paused = types.BoolValue(status == "PAUSED")
+	data.Muted = types.BoolValue(status == "MUTED")
 	data.TestInterval = optionalInt64Value(testInterval)
 	data.ReminderAlertIntervalMinutes = optionalInt64Value(reminderInterval)
 	data.ConfirmationPeriodSeconds = optionalInt64Value(confirmationPeriod)
@@ -457,6 +538,7 @@ func populateCommonModel(ctx context.Context, data *typedCheckModel, id, name st
 	data.SlackAlerts = stringListValue(ctx, slackAlerts, diags)
 	data.DiscordAlerts = stringListValue(ctx, discordAlerts, diags)
 	data.TelegramAlerts = stringListValue(ctx, telegramAlerts, diags)
+	data.PushoverAlerts = stringListValue(ctx, pushoverAlerts, diags)
 	data.WebhookAlerts = stringListValue(ctx, webhookAlerts, diags)
 	data.OncallAlerts = stringListValue(ctx, oncallAlerts, diags)
 	data.IncidentIoAlerts = stringListValue(ctx, incidentIOAlerts, diags)

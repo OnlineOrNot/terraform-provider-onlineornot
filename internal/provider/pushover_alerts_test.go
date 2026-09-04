@@ -9,8 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
-	"github.com/onlineornot/terraform-provider-onlineornot/internal/provider/resource_check"
-	"github.com/onlineornot/terraform-provider-onlineornot/internal/provider/resource_heartbeat"
 )
 
 func TestCheckResourcePopulateModelFromAPIPushoverAlerts(t *testing.T) {
@@ -34,7 +32,7 @@ func TestCheckResourcePopulateModelFromAPIPushoverAlerts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			data := resource_check.CheckModel{
+			data := checkModel{
 				PushoverAlerts: types.ListUnknown(types.StringType),
 			}
 			var diagnostics diag.Diagnostics
@@ -75,7 +73,7 @@ func TestPopulateHeartbeatPushoverAlerts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			data := resource_heartbeat.HeartbeatModel{
+			data := heartbeatModel{
 				PushoverAlerts: types.ListUnknown(types.StringType),
 			}
 			var diagnostics diag.Diagnostics

@@ -8,6 +8,7 @@ import (
 // Heartbeat represents a heartbeat monitor
 type Heartbeat struct {
 	ID                           string   `json:"id,omitempty"`
+	Status                       string   `json:"status,omitempty"`
 	Name                         string   `json:"name"`
 	ReportPeriod                 int      `json:"report_period,omitempty"`
 	ReportPeriodCron             string   `json:"report_period_cron,omitempty"`
@@ -18,11 +19,19 @@ type Heartbeat struct {
 	UserAlerts                   []string `json:"user_alerts,omitempty"`
 	SlackAlerts                  []string `json:"slack_alerts,omitempty"`
 	DiscordAlerts                []string `json:"discord_alerts,omitempty"`
+	TelegramAlerts               []string `json:"telegram_alerts,omitempty"`
 	PushoverAlerts               []string `json:"pushover_alerts,omitempty"`
 	WebhookAlerts                []string `json:"webhook_alerts,omitempty"`
 	OncallAlerts                 []string `json:"oncall_alerts,omitempty"`
 	IncidentIOAlerts             []string `json:"incident_io_alerts,omitempty"`
 	MicrosoftTeamsAlerts         []string `json:"microsoft_teams_alerts,omitempty"`
+}
+
+// HeartbeatPatch contains heartbeat fields accepted by PATCH plus operational state.
+type HeartbeatPatch struct {
+	*Heartbeat
+	Paused *bool `json:"paused,omitempty"`
+	Muted  *bool `json:"muted,omitempty"`
 }
 
 // CreateHeartbeat creates a new heartbeat
@@ -70,7 +79,7 @@ func (c *Client) GetHeartbeat(id string) (*Heartbeat, error) {
 }
 
 // UpdateHeartbeat updates an existing heartbeat
-func (c *Client) UpdateHeartbeat(id string, hb *Heartbeat) (*Heartbeat, error) {
+func (c *Client) UpdateHeartbeat(id string, hb *HeartbeatPatch) (*Heartbeat, error) {
 	respBody, err := c.Patch(fmt.Sprintf("/v1/heartbeats/%s", id), hb)
 	if err != nil {
 		return nil, err
