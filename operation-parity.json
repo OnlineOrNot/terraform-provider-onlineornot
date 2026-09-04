@@ -1,0 +1,505 @@
+{
+  "schemaLock": "schema.lock.json",
+  "operations": [
+    {
+      "operationId": "pingHeartbeatGet",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Imperative heartbeat signal; not declarative infrastructure."
+    },
+    {
+      "operationId": "pingHeartbeat",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Imperative heartbeat signal; not declarative infrastructure."
+    },
+    {
+      "operationId": "listAuditLogs",
+      "status": "planned",
+      "terraform": "onlineornot_audit_logs data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "verifyToken",
+      "status": "waived",
+      "terraform": "provider configuration",
+      "reason": "Authentication validation is handled while configuring the provider."
+    },
+    {
+      "operationId": "getTokenPermissions",
+      "status": "waived",
+      "terraform": "provider configuration",
+      "reason": "Token capability introspection does not represent managed infrastructure."
+    },
+    {
+      "operationId": "listTokens",
+      "status": "planned",
+      "terraform": "onlineornot_tokens data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "createToken",
+      "status": "planned",
+      "terraform": "onlineornot_token resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "getToken",
+      "status": "planned",
+      "terraform": "onlineornot_token resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "deleteToken",
+      "status": "planned",
+      "terraform": "onlineornot_token resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "createDnsCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_dns_check resource"
+    },
+    {
+      "operationId": "getDnsCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_dns_check resource"
+    },
+    {
+      "operationId": "updateDnsCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_dns_check resource"
+    },
+    {
+      "operationId": "deleteDnsCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_dns_check resource"
+    },
+    {
+      "operationId": "createTcpCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_tcp_check resource"
+    },
+    {
+      "operationId": "getTcpCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_tcp_check resource"
+    },
+    {
+      "operationId": "updateTcpCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_tcp_check resource"
+    },
+    {
+      "operationId": "deleteTcpCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_tcp_check resource"
+    },
+    {
+      "operationId": "createUptimeCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_uptime_check resource"
+    },
+    {
+      "operationId": "getUptimeCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_uptime_check resource"
+    },
+    {
+      "operationId": "updateUptimeCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_uptime_check resource"
+    },
+    {
+      "operationId": "deleteUptimeCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_uptime_check resource"
+    },
+    {
+      "operationId": "createBrowserCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_browser_check resource"
+    },
+    {
+      "operationId": "getBrowserCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_browser_check resource"
+    },
+    {
+      "operationId": "updateBrowserCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_browser_check resource"
+    },
+    {
+      "operationId": "deleteBrowserCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_browser_check resource"
+    },
+    {
+      "operationId": "listUptimeCheckIncidents",
+      "status": "planned",
+      "terraform": "onlineornot_uptime_check_incidents data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "listBrowserCheckIncidents",
+      "status": "planned",
+      "terraform": "onlineornot_browser_check_incidents data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "listDnsCheckIncidents",
+      "status": "planned",
+      "terraform": "onlineornot_dns_check_incidents data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "listTcpCheckIncidents",
+      "status": "planned",
+      "terraform": "onlineornot_tcp_check_incidents data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "listUptimeCheckResults",
+      "status": "planned",
+      "terraform": "onlineornot_uptime_check_results data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "listBrowserCheckResults",
+      "status": "planned",
+      "terraform": "onlineornot_browser_check_results data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "listDnsCheckResults",
+      "status": "planned",
+      "terraform": "onlineornot_dns_check_results data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "listTcpCheckResults",
+      "status": "planned",
+      "terraform": "onlineornot_tcp_check_results data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "listChecks",
+      "status": "implemented",
+      "terraform": "onlineornot_checks data source"
+    },
+    {
+      "operationId": "createCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_check resource"
+    },
+    {
+      "operationId": "getCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_check resource"
+    },
+    {
+      "operationId": "deleteCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_check resource"
+    },
+    {
+      "operationId": "updateCheck",
+      "status": "implemented",
+      "terraform": "onlineornot_check resource"
+    },
+    {
+      "operationId": "listHeartbeats",
+      "status": "implemented",
+      "terraform": "onlineornot_heartbeats data source"
+    },
+    {
+      "operationId": "createHeartbeat",
+      "status": "implemented",
+      "terraform": "onlineornot_heartbeat resource"
+    },
+    {
+      "operationId": "getHeartbeat",
+      "status": "implemented",
+      "terraform": "onlineornot_heartbeat resource"
+    },
+    {
+      "operationId": "updateHeartbeat",
+      "status": "implemented",
+      "terraform": "onlineornot_heartbeat resource"
+    },
+    {
+      "operationId": "deleteHeartbeat",
+      "status": "implemented",
+      "terraform": "onlineornot_heartbeat resource"
+    },
+    {
+      "operationId": "listMaintenanceWindows",
+      "status": "implemented",
+      "terraform": "onlineornot_maintenance_windows data source"
+    },
+    {
+      "operationId": "createMaintenanceWindow",
+      "status": "implemented",
+      "terraform": "onlineornot_maintenance_window resource"
+    },
+    {
+      "operationId": "getMaintenanceWindow",
+      "status": "implemented",
+      "terraform": "onlineornot_maintenance_window resource"
+    },
+    {
+      "operationId": "updateMaintenanceWindow",
+      "status": "implemented",
+      "terraform": "onlineornot_maintenance_window resource"
+    },
+    {
+      "operationId": "deleteMaintenanceWindow",
+      "status": "implemented",
+      "terraform": "onlineornot_maintenance_window resource"
+    },
+    {
+      "operationId": "listUsers",
+      "status": "implemented",
+      "terraform": "onlineornot_users data source"
+    },
+    {
+      "operationId": "removeUser",
+      "status": "planned",
+      "terraform": "onlineornot_organization_member resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "listInvitations",
+      "status": "planned",
+      "terraform": "onlineornot_invitations data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "createInvitation",
+      "status": "planned",
+      "terraform": "onlineornot_invitation resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "getStatusPage",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page resource"
+    },
+    {
+      "operationId": "updateStatusPage",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page resource"
+    },
+    {
+      "operationId": "deleteStatusPage",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page resource"
+    },
+    {
+      "operationId": "getStatusPageSummary",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_summary data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "createStatusPage",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page resource"
+    },
+    {
+      "operationId": "listStatusPages",
+      "status": "implemented",
+      "terraform": "onlineornot_status_pages data source"
+    },
+    {
+      "operationId": "createStatusPageComponent",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_component resource"
+    },
+    {
+      "operationId": "listStatusPageComponents",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_components data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "getStatusPageComponent",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_component resource"
+    },
+    {
+      "operationId": "updateStatusPageComponent",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_component resource"
+    },
+    {
+      "operationId": "deleteStatusPageComponent",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_component resource"
+    },
+    {
+      "operationId": "updateStatusPageComponentSortOrder",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_component_order resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "listStatusPageComponentGroups",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_component_groups data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "createStatusPageComponentGroup",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_component_group resource"
+    },
+    {
+      "operationId": "getStatusPageComponentGroup",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_component_group resource"
+    },
+    {
+      "operationId": "updateStatusPageComponentGroup",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_component_group resource"
+    },
+    {
+      "operationId": "deleteStatusPageComponentGroup",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_component_group resource"
+    },
+    {
+      "operationId": "updateStatusPageComponentGroupSortOrder",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_group_order resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "updateStatusPageGroupComponentSortOrder",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_group_component_order resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "listStatusPageSubscribers",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_subscriber resource read",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "createStatusPageSubscriber",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_subscriber resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "deleteStatusPageSubscriber",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_subscriber resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "listStatusPageIncidents",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_incidents data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "createStatusPageIncident",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_incident resource"
+    },
+    {
+      "operationId": "getStatusPageIncident",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_incident resource"
+    },
+    {
+      "operationId": "updateStatusPageIncident",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_incident resource"
+    },
+    {
+      "operationId": "deleteStatusPageIncident",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_incident resource"
+    },
+    {
+      "operationId": "listStatusPageIncidentUpdates",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_incident_updates data source",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "createStatusPageIncidentUpdate",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_incident_update resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "getStatusPageIncidentUpdate",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_incident_update resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "updateStatusPageIncidentUpdate",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_incident_update resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "deleteStatusPageIncidentUpdate",
+      "status": "planned",
+      "terraform": "onlineornot_status_page_incident_update resource",
+      "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "createStatusPageScheduledMaintenance",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_scheduled_maintenance resource"
+    },
+    {
+      "operationId": "getStatusPageScheduledMaintenance",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_scheduled_maintenance resource"
+    },
+    {
+      "operationId": "updateStatusPageScheduledMaintenance",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_scheduled_maintenance resource"
+    },
+    {
+      "operationId": "deleteStatusPageScheduledMaintenance",
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_scheduled_maintenance resource"
+    },
+    {
+      "operationId": "listWebhooks",
+      "status": "implemented",
+      "terraform": "onlineornot_webhooks data source"
+    },
+    {
+      "operationId": "createWebhook",
+      "status": "implemented",
+      "terraform": "onlineornot_webhook resource"
+    },
+    {
+      "operationId": "getWebhook",
+      "status": "implemented",
+      "terraform": "onlineornot_webhook resource"
+    },
+    {
+      "operationId": "updateWebhook",
+      "status": "implemented",
+      "terraform": "onlineornot_webhook resource"
+    },
+    {
+      "operationId": "deleteWebhook",
+      "status": "implemented",
+      "terraform": "onlineornot_webhook resource"
+    }
+  ]
+}

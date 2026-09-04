@@ -1,4 +1,4 @@
-name: Sync Upstream API Schemas
+name: Sync API SDK Schema Lock
 
 on:
   schedule:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   sync-schemas:
-    name: Sync API Schemas
+    name: Sync API SDK schema lock
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,8 +25,11 @@ jobs:
         with:
           terraform_wrapper: false
 
-      - name: Regenerate schemas and docs
+      - name: Sync schema lock from the API SDK
         run: |
+          curl --fail --silent --show-error --location \
+            https://raw.githubusercontent.com/OnlineOrNot/onlineornot/main/packages/api/schema.lock.json \
+            --output schema.lock.json
           make generate
 
       - name: Create PR if changed
@@ -36,7 +39,7 @@ jobs:
             exit 0
           fi
 
-          BRANCH="sync-upstream-schemas"
+          BRANCH="sync-api-sdk-schema-lock"
           
           # Check if PR already exists
           EXISTING_PR=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
@@ -51,14 +54,14 @@ jobs:
           # Create/update branch
           git checkout -B "$BRANCH"
           git add -A
-          git commit -m "chore: sync with upstream API schemas"
+          git commit -m "chore: sync API SDK schema lock"
           git push -f origin "$BRANCH"
 
           # Create PR if it doesn't exist
           if [ -z "$EXISTING_PR" ]; then
             gh pr create \
-              --title "chore: sync with upstream API schemas" \
-              --body "Automated PR to sync generated code with the latest [OnlineOrNot API schemas](https://github.com/OnlineOrNot/api-schemas)."
+              --title "chore: sync API SDK schema lock" \
+              --body 'Automated PR to sync the provider with the OpenAPI revision pinned by `@onlineornot/api`. New operations must be classified in `operation-parity.json`.'
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
