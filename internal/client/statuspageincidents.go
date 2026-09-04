@@ -16,10 +16,18 @@ type StatusPageIncident struct {
 	ID                string                        `json:"id,omitempty"`
 	StatusPageID      string                        `json:"status_page_id,omitempty"`
 	Title             string                        `json:"title"`
-	Description       string                        `json:"description"`
-	Status            string                        `json:"status"`
+	Impact            *string                       `json:"impact,omitempty"`
+	Description       string                        `json:"description,omitempty"`
+	Status            string                        `json:"status,omitempty"`
 	NotifySubscribers *bool                         `json:"notify_subscribers,omitempty"`
 	Components        []StatusPageIncidentComponent `json:"components,omitempty"`
+}
+
+// StatusPageIncidentPatch is the OpenAPI update payload. Impact is required by
+// the API but nullable, so it must not use omitempty.
+type StatusPageIncidentPatch struct {
+	Title  string  `json:"title"`
+	Impact *string `json:"impact"`
 }
 
 // CreateStatusPageIncident creates a new status page incident
@@ -67,7 +75,7 @@ func (c *Client) GetStatusPageIncident(statusPageID, incidentID string) (*Status
 }
 
 // UpdateStatusPageIncident updates an existing status page incident
-func (c *Client) UpdateStatusPageIncident(statusPageID, incidentID string, incident *StatusPageIncident) (*StatusPageIncident, error) {
+func (c *Client) UpdateStatusPageIncident(statusPageID, incidentID string, incident *StatusPageIncidentPatch) (*StatusPageIncident, error) {
 	respBody, err := c.Patch(fmt.Sprintf("/v1/status_pages/%s/incidents/%s", statusPageID, incidentID), incident)
 	if err != nil {
 		return nil, err

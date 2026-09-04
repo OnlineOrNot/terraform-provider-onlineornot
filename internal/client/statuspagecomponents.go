@@ -7,12 +7,27 @@ import (
 
 // StatusPageComponent represents a status page component
 type StatusPageComponent struct {
-	ID             string `json:"id,omitempty"`
-	StatusPageID   string `json:"status_page_id,omitempty"`
-	Name           string `json:"name"`
-	Status         string `json:"status,omitempty"`
-	DisplayUptime  *bool  `json:"display_uptime,omitempty"`
-	DisplayMetrics *bool  `json:"display_metrics,omitempty"`
+	ID                  string  `json:"id,omitempty"`
+	StatusPageID        string  `json:"status_page_id,omitempty"`
+	Name                string  `json:"name"`
+	Status              string  `json:"status,omitempty"`
+	DisplayUptime       *bool   `json:"display_uptime,omitempty"`
+	DisplayMetrics      *bool   `json:"display_metrics,omitempty"`
+	GroupID             *string `json:"group_id,omitempty"`
+	IsExternalComponent bool    `json:"is_external_component,omitempty"`
+}
+
+// StatusPageComponentPatch is the OpenAPI update payload. Relationship fields
+// are intentionally included without omitempty so Terraform can clear them.
+type StatusPageComponentPatch struct {
+	Name           string   `json:"name,omitempty"`
+	Status         string   `json:"status,omitempty"`
+	DisplayUptime  *bool    `json:"display_uptime,omitempty"`
+	DisplayMetrics *bool    `json:"display_metrics,omitempty"`
+	GroupID        *string  `json:"group_id"`
+	CheckIDs       []string `json:"check_ids"`
+	HeartbeatID    *string  `json:"heartbeat_id"`
+	OverrideStatus bool     `json:"override_status"`
 }
 
 // CreateStatusPageComponent creates a new status page component
@@ -60,7 +75,7 @@ func (c *Client) GetStatusPageComponent(statusPageID, componentID string) (*Stat
 }
 
 // UpdateStatusPageComponent updates an existing status page component
-func (c *Client) UpdateStatusPageComponent(statusPageID, componentID string, comp *StatusPageComponent) (*StatusPageComponent, error) {
+func (c *Client) UpdateStatusPageComponent(statusPageID, componentID string, comp *StatusPageComponentPatch) (*StatusPageComponent, error) {
 	respBody, err := c.Patch(fmt.Sprintf("/v1/status_pages/%s/components/%s", statusPageID, componentID), comp)
 	if err != nil {
 		return nil, err

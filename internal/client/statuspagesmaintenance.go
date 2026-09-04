@@ -24,6 +24,14 @@ type StatusPageScheduledMaintenance struct {
 	Notifications      *ScheduledMaintenanceNotifications `json:"notifications,omitempty"`
 }
 
+// StatusPageScheduledMaintenancePatch contains only fields accepted by the
+// scheduled-maintenance PATCH operation.
+type StatusPageScheduledMaintenancePatch struct {
+	Title           string `json:"title,omitempty"`
+	StartDate       string `json:"start_date,omitempty"`
+	DurationMinutes int    `json:"duration_minutes,omitempty"`
+}
+
 // CreateStatusPageScheduledMaintenance creates a new scheduled maintenance
 func (c *Client) CreateStatusPageScheduledMaintenance(statusPageID string, sm *StatusPageScheduledMaintenance) (*StatusPageScheduledMaintenance, error) {
 	respBody, err := c.Post(fmt.Sprintf("/v1/status_pages/%s/scheduled_maintenance", statusPageID), sm)
@@ -69,7 +77,7 @@ func (c *Client) GetStatusPageScheduledMaintenance(statusPageID, smID string) (*
 }
 
 // UpdateStatusPageScheduledMaintenance updates an existing scheduled maintenance
-func (c *Client) UpdateStatusPageScheduledMaintenance(statusPageID, smID string, sm *StatusPageScheduledMaintenance) (*StatusPageScheduledMaintenance, error) {
+func (c *Client) UpdateStatusPageScheduledMaintenance(statusPageID, smID string, sm *StatusPageScheduledMaintenancePatch) (*StatusPageScheduledMaintenance, error) {
 	respBody, err := c.Patch(fmt.Sprintf("/v1/status_pages/%s/scheduled_maintenance/%s", statusPageID, smID), sm)
 	if err != nil {
 		return nil, err

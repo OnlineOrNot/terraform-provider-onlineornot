@@ -15,7 +15,7 @@ type StatusPageComponentGroup struct {
 
 // CreateStatusPageComponentGroup creates a new status page component group
 func (c *Client) CreateStatusPageComponentGroup(statusPageID string, group *StatusPageComponentGroup) (*StatusPageComponentGroup, error) {
-	respBody, err := c.Post(fmt.Sprintf("/v1/status_pages/%s/component_groups", statusPageID), group)
+	respBody, err := c.Post(fmt.Sprintf("/v1/status_pages/%s/groups", statusPageID), group)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func (c *Client) CreateStatusPageComponentGroup(statusPageID string, group *Stat
 
 // GetStatusPageComponentGroup retrieves a status page component group by ID
 func (c *Client) GetStatusPageComponentGroup(statusPageID, groupID string) (*StatusPageComponentGroup, error) {
-	respBody, err := c.Get(fmt.Sprintf("/v1/status_pages/%s/component_groups/%s", statusPageID, groupID))
+	respBody, err := c.Get(fmt.Sprintf("/v1/status_pages/%s/groups/%s", statusPageID, groupID))
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (c *Client) GetStatusPageComponentGroup(statusPageID, groupID string) (*Sta
 
 // UpdateStatusPageComponentGroup updates an existing status page component group
 func (c *Client) UpdateStatusPageComponentGroup(statusPageID, groupID string, group *StatusPageComponentGroup) (*StatusPageComponentGroup, error) {
-	respBody, err := c.Patch(fmt.Sprintf("/v1/status_pages/%s/component_groups/%s", statusPageID, groupID), group)
+	respBody, err := c.Patch(fmt.Sprintf("/v1/status_pages/%s/groups/%s", statusPageID, groupID), group)
 	if err != nil {
 		return nil, err
 	}
@@ -81,13 +81,13 @@ func (c *Client) UpdateStatusPageComponentGroup(statusPageID, groupID string, gr
 
 // DeleteStatusPageComponentGroup deletes a status page component group
 func (c *Client) DeleteStatusPageComponentGroup(statusPageID, groupID string) error {
-	_, err := c.Delete(fmt.Sprintf("/v1/status_pages/%s/component_groups/%s", statusPageID, groupID))
+	_, err := c.Delete(fmt.Sprintf("/v1/status_pages/%s/groups/%s", statusPageID, groupID))
 	return err
 }
 
 // ListStatusPageComponentGroups retrieves all component groups for a status page
 func (c *Client) ListStatusPageComponentGroups(statusPageID string) ([]StatusPageComponentGroup, error) {
-	respBody, err := c.Get(fmt.Sprintf("/v1/status_pages/%s/component_groups", statusPageID))
+	respBody, err := c.Get(fmt.Sprintf("/v1/status_pages/%s/groups", statusPageID))
 	if err != nil {
 		return nil, err
 	}
