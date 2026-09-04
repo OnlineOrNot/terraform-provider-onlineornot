@@ -60,7 +60,10 @@ resource "onlineornot_tcp_check" "smtp_banner" {
 - `id` (String) TCP check ID
 - `incident_io_alerts` (List of String)
 - `microsoft_teams_alerts` (List of String)
+- `muted` (Boolean) Whether alerts for the check are muted. Cannot be true when paused is true.
 - `oncall_alerts` (List of String)
+- `paused` (Boolean) Whether the check is paused. Cannot be true when muted is true.
+- `pushover_alerts` (List of String)
 - `recovery_period_seconds` (Number)
 - `reminder_alert_interval_minutes` (Number)
 - `slack_alerts` (List of String)

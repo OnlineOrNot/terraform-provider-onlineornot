@@ -43,6 +43,13 @@ type Check struct {
 	Assertions                   []Assertion       `json:"assertions,omitempty"`
 }
 
+// CheckPatch contains check fields accepted by PATCH plus operational state.
+type CheckPatch struct {
+	*Check
+	Paused *bool `json:"paused,omitempty"`
+	Muted  *bool `json:"muted,omitempty"`
+}
+
 // Assertion represents a check assertion
 type Assertion struct {
 	Type       string `json:"type"`
@@ -116,19 +123,19 @@ func (c *Client) GetTypedCheck(kind string, id string) (*Check, error) {
 }
 
 // UpdateCheck updates an existing check
-func (c *Client) UpdateCheck(id string, check *Check) (*Check, error) {
+func (c *Client) UpdateCheck(id string, check *CheckPatch) (*Check, error) {
 	return c.UpdateTypedCheck("", id, check)
 }
 
 // UpdateTypedCheck updates a check using a typed check endpoint when kind is set.
-func (c *Client) UpdateTypedCheck(kind string, id string, check *Check) (*Check, error) {
+func (c *Client) UpdateTypedCheck(kind string, id string, check *CheckPatch) (*Check, error) {
 	path := fmt.Sprintf("/v1/checks/%s", id)
 	payload := check
 	if kind != "" {
 		path = fmt.Sprintf("/v1/checks/%s/%s", kind, id)
-		checkWithoutType := *check
+		checkWithoutType := *check.Check
 		checkWithoutType.Type = ""
-		payload = &checkWithoutType
+		payload = &CheckPatch{Check: &checkWithoutType, Paused: check.Paused, Muted: check.Muted}
 	}
 
 	respBody, err := c.Patch(path, payload)
