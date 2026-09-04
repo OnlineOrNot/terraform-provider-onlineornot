@@ -187,7 +187,7 @@ func (r *HeartbeatResource) Create(ctx context.Context, req resource.CreateReque
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 
 	for _, change := range changes {
-		patch := &client.HeartbeatPatch{Heartbeat: hb}
+		patch := &client.HeartbeatPatch{}
 		applyOperationalState(change, &patch.Paused, &patch.Muted)
 		created, err = r.client.UpdateHeartbeat(created.ID, patch)
 		if err != nil {
@@ -289,7 +289,7 @@ func (r *HeartbeatResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 	for _, change := range changes[1:] {
-		patch = &client.HeartbeatPatch{Heartbeat: hb}
+		patch = &client.HeartbeatPatch{}
 		applyOperationalState(change, &patch.Paused, &patch.Muted)
 		updated, err = r.client.UpdateHeartbeat(data.Id.ValueString(), patch)
 		if err != nil {

@@ -174,7 +174,7 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	for _, change := range changes {
-		patch := &client.CheckPatch{Check: check}
+		patch := &client.CheckPatch{}
 		applyOperationalState(change, &patch.Paused, &patch.Muted)
 		created, err = r.client.UpdateTypedCheck(r.endpointKind, created.ID, patch)
 		if err != nil {
@@ -567,7 +567,7 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 	for _, change := range changes[1:] {
-		patch = &client.CheckPatch{Check: check}
+		patch = &client.CheckPatch{}
 		applyOperationalState(change, &patch.Paused, &patch.Muted)
 		updated, err = r.client.UpdateTypedCheck(r.endpointKind, checkID, patch)
 		if err != nil {

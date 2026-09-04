@@ -234,7 +234,7 @@ func (r *DNSCheckResource) Create(ctx context.Context, req resource.CreateReques
 	populateDNSModel(ctx, &data, created, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 	for _, change := range changes {
-		patch := &client.DNSCheckPatch{DNSCheck: check}
+		patch := &client.DNSCheckPatch{}
 		applyOperationalState(change, &patch.Paused, &patch.Muted)
 		created, err = r.client.UpdateDNSCheck(created.ID, patch)
 		if err != nil {
@@ -287,7 +287,7 @@ func (r *DNSCheckResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	for _, change := range changes[1:] {
-		patch = &client.DNSCheckPatch{DNSCheck: check}
+		patch = &client.DNSCheckPatch{}
 		applyOperationalState(change, &patch.Paused, &patch.Muted)
 		updated, err = r.client.UpdateDNSCheck(state.Id.ValueString(), patch)
 		if err != nil {
@@ -335,7 +335,7 @@ func (r *TCPCheckResource) Create(ctx context.Context, req resource.CreateReques
 	populateTCPModel(ctx, &data, created, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 	for _, change := range changes {
-		patch := &client.TCPCheckPatch{TCPCheck: check}
+		patch := &client.TCPCheckPatch{}
 		applyOperationalState(change, &patch.Paused, &patch.Muted)
 		created, err = r.client.UpdateTCPCheck(created.ID, patch)
 		if err != nil {
@@ -388,7 +388,7 @@ func (r *TCPCheckResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	for _, change := range changes[1:] {
-		patch = &client.TCPCheckPatch{TCPCheck: check}
+		patch = &client.TCPCheckPatch{}
 		applyOperationalState(change, &patch.Paused, &patch.Muted)
 		updated, err = r.client.UpdateTCPCheck(state.Id.ValueString(), patch)
 		if err != nil {

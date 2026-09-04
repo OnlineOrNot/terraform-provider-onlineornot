@@ -43,10 +43,20 @@ func requireSingleOperationalState(t *testing.T, payload map[string]any, field s
 	}
 }
 
+func requireOnlyOperationalState(t *testing.T, value any, field string, expected bool) {
+	t.Helper()
+	payload := payloadMap(t, value)
+	requireSingleOperationalState(t, payload, field, expected)
+	if len(payload) != 1 {
+		t.Errorf("operational state PATCH must not replay configuration fields: %#v", payload)
+	}
+}
+
 func TestCheckCreateAndPatchPayloadsSeparateOperationalState(t *testing.T) {
 	check := &Check{Name: "API", URL: "https://example.com"}
 	requireNoOperationalState(t, payloadMap(t, check))
 	requireSingleOperationalState(t, payloadMap(t, &CheckPatch{Check: check, Paused: boolPointer(true)}), "paused", true)
+	requireOnlyOperationalState(t, &CheckPatch{Muted: boolPointer(false)}, "muted", false)
 }
 
 func TestTypedCheckPayloadsIncludePushoverOnlyOnSupportedBasePayload(t *testing.T) {
@@ -76,6 +86,9 @@ func TestTypedCheckPayloadsIncludePushoverOnlyOnSupportedBasePayload(t *testing.
 			}
 		})
 	}
+
+	requireOnlyOperationalState(t, &DNSCheckPatch{Paused: boolPointer(false)}, "paused", false)
+	requireOnlyOperationalState(t, &TCPCheckPatch{Muted: boolPointer(false)}, "muted", false)
 }
 
 func TestHeartbeatCreateAndPatchPayloadsSeparateOperationalState(t *testing.T) {
@@ -89,4 +102,5 @@ func TestHeartbeatCreateAndPatchPayloadsSeparateOperationalState(t *testing.T) {
 
 	patch := payloadMap(t, &HeartbeatPatch{Heartbeat: heartbeat, Muted: boolPointer(true)})
 	requireSingleOperationalState(t, patch, "muted", true)
+	requireOnlyOperationalState(t, &HeartbeatPatch{Paused: boolPointer(false)}, "paused", false)
 }
