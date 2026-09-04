@@ -21,8 +21,12 @@ description: |-
 
 ### Optional
 
+- `check_ids` (List of String) Uptime check IDs associated with this component.
 - `display_metrics` (Boolean) Show this component's response time metrics on the status page.
 - `display_uptime` (Boolean) Show this component's uptime and historical incidents on the status page.
+- `group_id` (String) Component group ID. Set to null to remove the component from its group.
+- `heartbeat_id` (String) Heartbeat ID associated with this component.
 - `id` (String) Status Page Component ID
+- `override_status` (Boolean) Override status derived from an external status page.
 - `status` (String) Status of the component. Must be one of: `DEGRADED_PERFORMANCE`, `MAINTENANCE`, `MAJOR_OUTAGE`, `NO_IMPACT`, `OPERATIONAL`, `PARTIAL_OUTAGE`.
 - `status_page_id` (String) Status Page ID

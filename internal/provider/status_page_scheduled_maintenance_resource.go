@@ -7,6 +7,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
@@ -29,7 +33,17 @@ func (r *StatusPageScheduledMaintenanceResource) Metadata(ctx context.Context, r
 }
 
 func (r *StatusPageScheduledMaintenanceResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = resource_status_page_scheduled_maintenance.StatusPageScheduledMaintenanceResourceSchema(ctx)
+	s := resource_status_page_scheduled_maintenance.StatusPageScheduledMaintenanceResourceSchema(ctx)
+	description := s.Attributes["description"].(schema.StringAttribute)
+	description.PlanModifiers = append(description.PlanModifiers, stringplanmodifier.RequiresReplace())
+	s.Attributes["description"] = description
+	components := s.Attributes["components_affected"].(schema.ListAttribute)
+	components.PlanModifiers = append(components.PlanModifiers, listplanmodifier.RequiresReplace())
+	s.Attributes["components_affected"] = components
+	notifications := s.Attributes["notifications"].(schema.SingleNestedAttribute)
+	notifications.PlanModifiers = append(notifications.PlanModifiers, objectplanmodifier.RequiresReplace())
+	s.Attributes["notifications"] = notifications
+	resp.Schema = s
 }
 
 func (r *StatusPageScheduledMaintenanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -112,7 +126,8 @@ func (r *StatusPageScheduledMaintenanceResource) Read(ctx context.Context, req r
 
 	data.Id = types.StringValue(sm.ID)
 	data.Title = types.StringValue(sm.Title)
-	data.Description = types.StringValue(sm.Description)
+	// Description, affected components, and notification settings are create-only
+	// and are not returned in a form that can be reconciled by this resource.
 	data.StartDate = types.StringValue(sm.StartDate)
 	data.DurationMinutes = types.Int64Value(int64(sm.DurationMinutes))
 
@@ -127,27 +142,13 @@ func (r *StatusPageScheduledMaintenanceResource) Update(ctx context.Context, req
 		return
 	}
 
-	sm := &client.StatusPageScheduledMaintenance{
+	patch := &client.StatusPageScheduledMaintenancePatch{
 		Title:           data.Title.ValueString(),
-		Description:     data.Description.ValueString(),
 		StartDate:       data.StartDate.ValueString(),
 		DurationMinutes: int(data.DurationMinutes.ValueInt64()),
 	}
 
-	if !data.ComponentsAffected.IsNull() {
-		data.ComponentsAffected.ElementsAs(ctx, &sm.ComponentsAffected, false)
-	}
-
-	// Handle notifications nested object
-	if !data.Notifications.IsNull() && !data.Notifications.IsUnknown() {
-		sm.Notifications = &client.ScheduledMaintenanceNotifications{
-			AnHourBefore: data.Notifications.AnHourBefore.ValueBool(),
-			AtStart:      data.Notifications.AtStart.ValueBool(),
-			AtEnd:        data.Notifications.AtEnd.ValueBool(),
-		}
-	}
-
-	_, err := r.client.UpdateStatusPageScheduledMaintenance(data.StatusPageId.ValueString(), data.Id.ValueString(), sm)
+	_, err := r.client.UpdateStatusPageScheduledMaintenance(data.StatusPageId.ValueString(), data.Id.ValueString(), patch)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update scheduled maintenance, got error: %s", err))
 		return
