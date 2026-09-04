@@ -15,11 +15,20 @@ test:
 testacc:
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
 
+# Fetch the exact OpenAPI revision shared with the generated API SDK.
+.PHONY: fetch-schema
+fetch-schema:
+	@echo "Fetching pinned OpenAPI spec..."
+	./scripts/fetch-openapi.sh openapi.json
+
+# Verify every pinned OpenAPI operation has a reviewed Terraform disposition.
+.PHONY: check-contract
+check-contract: fetch-schema
+	./scripts/check-operation-parity.py openapi.json operation-parity.json
+
 # Generate schemas from OpenAPI spec (Step 1 + 2)
 .PHONY: generate-schemas
-generate-schemas:
-	@echo "Fetching OpenAPI spec..."
-	curl -sSL -o openapi.json https://raw.githubusercontent.com/OnlineOrNot/api-schemas/main/openapi.json
+generate-schemas: fetch-schema
 	@echo "Generating provider code specification from OpenAPI..."
 	go run github.com/hashicorp/terraform-plugin-codegen-openapi/cmd/tfplugingen-openapi generate \
 		--config generator_config.yml \

@@ -181,3 +181,25 @@ terraform plan
 ## License
 
 [MIT](LICENSE)
+
+## OpenAPI contract
+
+The provider shares a pinned OpenAPI revision with the generated
+[`@onlineornot/api`](https://github.com/OnlineOrNot/onlineornot/tree/main/packages/api)
+SDK. `schema.lock.json` records the source revision and SHA-256 digest; schema
+generation fails if the downloaded bytes do not match that lock.
+
+`operation-parity.json` gives every OpenAPI `operationId` one reviewed status:
+
+- `implemented`: exposed by an existing Terraform resource or data source;
+- `planned`: has a proposed Terraform mapping but is not implemented yet; or
+- `waived`: intentionally omitted because it is not declarative infrastructure.
+
+Run the contract check with:
+
+```bash
+make check-contract
+```
+
+When updating `schema.lock.json`, update the parity manifest in the same change.
+CI rejects missing, duplicate, stale, or invalid operation mappings.

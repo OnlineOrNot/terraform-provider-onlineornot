@@ -25,6 +25,14 @@ jobs:
       - run: go mod download
       - run: go build -v .
 
+  contract:
+    name: OpenAPI contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: make check-contract
+
   generate:
     name: Generate
     runs-on: ubuntu-latest
