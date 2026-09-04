@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -74,6 +76,112 @@ func TestCheckModelToClientPreservesHeadersAndAssertions(t *testing.T) {
 	}
 	if check.Type != "UPTIME_CHECK" {
 		t.Errorf("expected forced type UPTIME_CHECK, got %s", check.Type)
+	}
+}
+
+func TestCheckModelToClientPreservesBasicAuthValues(t *testing.T) {
+	ctx := context.Background()
+	model := resource_check.CheckModel{
+		AuthUsername: types.StringValue(""),
+		AuthPassword: types.StringValue("secret"),
+	}
+	var diagnostics diag.Diagnostics
+
+	check := checkModelToClient(ctx, &model, "UPTIME_CHECK", &diagnostics)
+
+	if diagnostics.HasError() {
+		t.Fatalf("unexpected conversion diagnostics: %v", diagnostics.Errors())
+	}
+	if check.AuthUsername == nil || *check.AuthUsername != "" {
+		t.Errorf("expected explicit empty username, got %#v", check.AuthUsername)
+	}
+	if check.AuthPassword == nil || *check.AuthPassword != "secret" {
+		t.Errorf("expected password to be preserved, got %#v", check.AuthPassword)
+	}
+}
+
+func TestCheckResourceSchemaMarksAuthPasswordSensitive(t *testing.T) {
+	var response frameworkresource.SchemaResponse
+	resource := CheckResource{}
+
+	resource.Schema(context.Background(), frameworkresource.SchemaRequest{}, &response)
+
+	authPassword, ok := response.Schema.Attributes["auth_password"].(resourceschema.StringAttribute)
+	if !ok {
+		t.Fatalf("expected auth_password to be a string attribute, got %T", response.Schema.Attributes["auth_password"])
+	}
+	if !authPassword.Sensitive {
+		t.Error("expected auth_password to be sensitive")
+	}
+}
+
+func TestCheckResourcePopulateModelFromAPIReconcilesBasicAuthState(t *testing.T) {
+	empty := ""
+	user := "user"
+	secret := "secret"
+	tests := []struct {
+		name             string
+		username         types.String
+		password         types.String
+		check            *client.Check
+		expectedUsername types.String
+		expectedPassword types.String
+	}{
+		{
+			name:             "explicit empty values returned by API",
+			username:         types.StringValue("stale-user"),
+			password:         types.StringValue("stale-password"),
+			check:            &client.Check{AuthUsername: &empty, AuthPassword: &empty},
+			expectedUsername: types.StringValue(""),
+			expectedPassword: types.StringValue(""),
+		},
+		{
+			name:             "credentials removed outside Terraform",
+			username:         types.StringValue("user"),
+			password:         types.StringValue("secret"),
+			check:            &client.Check{},
+			expectedUsername: types.StringNull(),
+			expectedPassword: types.StringNull(),
+		},
+		{
+			name:             "computed values absent from API response",
+			username:         types.StringUnknown(),
+			password:         types.StringUnknown(),
+			check:            &client.Check{},
+			expectedUsername: types.StringNull(),
+			expectedPassword: types.StringNull(),
+		},
+		{
+			name:             "credentials returned by API",
+			username:         types.StringNull(),
+			password:         types.StringNull(),
+			check:            &client.Check{AuthUsername: &user, AuthPassword: &secret},
+			expectedUsername: types.StringValue("user"),
+			expectedPassword: types.StringValue("secret"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			model := resource_check.CheckModel{
+				AuthUsername: test.username,
+				AuthPassword: test.password,
+			}
+			var diagnostics diag.Diagnostics
+			resource := CheckResource{}
+
+			resource.populateModelFromAPI(context.Background(), &model, test.check, &diagnostics)
+
+			if diagnostics.HasError() {
+				t.Fatalf("unexpected diagnostics: %v", diagnostics.Errors())
+			}
+			if !model.AuthUsername.Equal(test.expectedUsername) {
+				t.Errorf("expected username %s, got %s", test.expectedUsername, model.AuthUsername)
+			}
+			if !model.AuthPassword.Equal(test.expectedPassword) {
+				t.Errorf("expected password %s, got %s", test.expectedPassword, model.AuthPassword)
+			}
+		})
 	}
 }
 

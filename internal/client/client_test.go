@@ -69,10 +69,14 @@ func TestClient_GetCheck(t *testing.T) {
 }
 
 func TestClient_CreateCheck(t *testing.T) {
+	authUsername := ""
+	authPassword := "secret"
 	input := &Check{
-		Name:    "New Check",
-		URL:     "https://example.com",
-		Headers: map[string]string{"Content-Type": "application/json"},
+		Name:         "New Check",
+		URL:          "https://example.com",
+		AuthUsername: &authUsername,
+		AuthPassword: &authPassword,
+		Headers:      map[string]string{"Content-Type": "application/json"},
 		Assertions: []Assertion{{
 			Type:       "JSON_BODY",
 			Property:   "$.status",
@@ -116,6 +120,12 @@ func TestClient_CreateCheck(t *testing.T) {
 		}
 		if !reflect.DeepEqual(reqBody.Assertions, input.Assertions) {
 			t.Errorf("expected Assertions %v, got %v", input.Assertions, reqBody.Assertions)
+		}
+		if reqBody.AuthUsername == nil || *reqBody.AuthUsername != "" {
+			t.Errorf("expected explicit empty auth username, got %#v", reqBody.AuthUsername)
+		}
+		if reqBody.AuthPassword == nil || *reqBody.AuthPassword != authPassword {
+			t.Errorf("expected auth password %q, got %#v", authPassword, reqBody.AuthPassword)
 		}
 
 		resp := APIResponse[Check]{

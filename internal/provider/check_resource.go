@@ -59,6 +59,18 @@ func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataReque
 func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_check.CheckResourceSchema(ctx)
 
+	if authUsernameAttr, ok := resp.Schema.Attributes["auth_username"].(schema.StringAttribute); ok {
+		authUsernameAttr.Description = "Username to use for URLs behind HTTP Basic Auth. Set this to an empty string for an empty user-id."
+		authUsernameAttr.MarkdownDescription = authUsernameAttr.Description
+		resp.Schema.Attributes["auth_username"] = authUsernameAttr
+	}
+	if authPasswordAttr, ok := resp.Schema.Attributes["auth_password"].(schema.StringAttribute); ok {
+		authPasswordAttr.Sensitive = true
+		authPasswordAttr.Description = "Password to use for URLs behind HTTP Basic Auth. Empty strings are preserved."
+		authPasswordAttr.MarkdownDescription = authPasswordAttr.Description
+		resp.Schema.Attributes["auth_password"] = authPasswordAttr
+	}
+
 	if r.forcedInputType != "" {
 		if typeAttr, ok := resp.Schema.Attributes["type"].(schema.StringAttribute); ok {
 			typeAttr.Default = stringdefault.StaticString(r.forcedInputType)
@@ -134,13 +146,19 @@ func checkModelToClient(ctx context.Context, data *resource_check.CheckModel, fo
 		Type:                         data.Type.ValueString(),
 		Version:                      data.Version.ValueString(),
 		Script:                       data.Script.ValueString(),
-		AuthUsername:                 data.AuthUsername.ValueString(),
-		AuthPassword:                 data.AuthPassword.ValueString(),
 	}
 	if forcedInputType != "" {
 		check.Type = forcedInputType
 	}
 
+	if !data.AuthUsername.IsNull() && !data.AuthUsername.IsUnknown() {
+		value := data.AuthUsername.ValueString()
+		check.AuthUsername = &value
+	}
+	if !data.AuthPassword.IsNull() && !data.AuthPassword.IsUnknown() {
+		value := data.AuthPassword.ValueString()
+		check.AuthPassword = &value
+	}
 	if !data.FollowRedirects.IsNull() {
 		value := data.FollowRedirects.ValueBool()
 		check.FollowRedirects = &value
@@ -255,13 +273,13 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource
 	} else {
 		data.Script = types.StringNull()
 	}
-	if check.AuthUsername != "" {
-		data.AuthUsername = types.StringValue(check.AuthUsername)
+	if check.AuthUsername != nil {
+		data.AuthUsername = types.StringValue(*check.AuthUsername)
 	} else {
 		data.AuthUsername = types.StringNull()
 	}
-	if check.AuthPassword != "" {
-		data.AuthPassword = types.StringValue(check.AuthPassword)
+	if check.AuthPassword != nil {
+		data.AuthPassword = types.StringValue(*check.AuthPassword)
 	} else {
 		data.AuthPassword = types.StringNull()
 	}
