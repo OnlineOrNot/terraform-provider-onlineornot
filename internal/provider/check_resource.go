@@ -134,13 +134,19 @@ func checkModelToClient(ctx context.Context, data *resource_check.CheckModel, fo
 		Type:                         data.Type.ValueString(),
 		Version:                      data.Version.ValueString(),
 		Script:                       data.Script.ValueString(),
-		AuthUsername:                 data.AuthUsername.ValueString(),
-		AuthPassword:                 data.AuthPassword.ValueString(),
 	}
 	if forcedInputType != "" {
 		check.Type = forcedInputType
 	}
 
+	if !data.AuthUsername.IsNull() && !data.AuthUsername.IsUnknown() {
+		value := data.AuthUsername.ValueString()
+		check.AuthUsername = &value
+	}
+	if !data.AuthPassword.IsNull() && !data.AuthPassword.IsUnknown() {
+		value := data.AuthPassword.ValueString()
+		check.AuthPassword = &value
+	}
 	if !data.FollowRedirects.IsNull() {
 		value := data.FollowRedirects.ValueBool()
 		check.FollowRedirects = &value
@@ -255,14 +261,14 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource
 	} else {
 		data.Script = types.StringNull()
 	}
-	if check.AuthUsername != "" {
-		data.AuthUsername = types.StringValue(check.AuthUsername)
-	} else {
+	if check.AuthUsername != nil {
+		data.AuthUsername = types.StringValue(*check.AuthUsername)
+	} else if data.AuthUsername.IsUnknown() {
 		data.AuthUsername = types.StringNull()
 	}
-	if check.AuthPassword != "" {
-		data.AuthPassword = types.StringValue(check.AuthPassword)
-	} else {
+	if check.AuthPassword != nil {
+		data.AuthPassword = types.StringValue(*check.AuthPassword)
+	} else if data.AuthPassword.IsUnknown() {
 		data.AuthPassword = types.StringNull()
 	}
 

@@ -77,6 +77,82 @@ func TestCheckModelToClientPreservesHeadersAndAssertions(t *testing.T) {
 	}
 }
 
+func TestCheckModelToClientPreservesBasicAuthValues(t *testing.T) {
+	ctx := context.Background()
+	model := resource_check.CheckModel{
+		AuthUsername: types.StringValue(""),
+		AuthPassword: types.StringValue("secret"),
+	}
+	var diagnostics diag.Diagnostics
+
+	check := checkModelToClient(ctx, &model, "UPTIME_CHECK", &diagnostics)
+
+	if diagnostics.HasError() {
+		t.Fatalf("unexpected conversion diagnostics: %v", diagnostics.Errors())
+	}
+	if check.AuthUsername == nil || *check.AuthUsername != "" {
+		t.Errorf("expected explicit empty username, got %#v", check.AuthUsername)
+	}
+	if check.AuthPassword == nil || *check.AuthPassword != "secret" {
+		t.Errorf("expected password to be preserved, got %#v", check.AuthPassword)
+	}
+}
+
+func TestCheckResourcePopulateModelFromAPIPreservesBasicAuthState(t *testing.T) {
+	tests := []struct {
+		name             string
+		username         types.String
+		password         types.String
+		expectedUsername types.String
+		expectedPassword types.String
+	}{
+		{
+			name:             "explicit empty values",
+			username:         types.StringValue(""),
+			password:         types.StringValue(""),
+			expectedUsername: types.StringValue(""),
+			expectedPassword: types.StringValue(""),
+		},
+		{
+			name:             "credentials omitted by API response",
+			username:         types.StringValue("user"),
+			password:         types.StringValue("secret"),
+			expectedUsername: types.StringValue("user"),
+			expectedPassword: types.StringValue("secret"),
+		},
+		{
+			name:             "computed values absent from API response",
+			username:         types.StringUnknown(),
+			password:         types.StringUnknown(),
+			expectedUsername: types.StringNull(),
+			expectedPassword: types.StringNull(),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			model := resource_check.CheckModel{
+				AuthUsername: test.username,
+				AuthPassword: test.password,
+			}
+			var diagnostics diag.Diagnostics
+			resource := CheckResource{}
+
+			resource.populateModelFromAPI(context.Background(), &model, &client.Check{}, &diagnostics)
+
+			if diagnostics.HasError() {
+				t.Fatalf("unexpected diagnostics: %v", diagnostics.Errors())
+			}
+			if !model.AuthUsername.Equal(test.expectedUsername) {
+				t.Errorf("expected username %s, got %s", test.expectedUsername, model.AuthUsername)
+			}
+			if !model.AuthPassword.Equal(test.expectedPassword) {
+				t.Errorf("expected password %s, got %s", test.expectedPassword, model.AuthPassword)
+			}
+		})
+	}
+}
+
 func TestCheckModelToClientSkipsUnknownCollections(t *testing.T) {
 	ctx := context.Background()
 	unknownStrings := types.ListUnknown(types.StringType)

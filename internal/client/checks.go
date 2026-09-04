@@ -24,8 +24,8 @@ type Check struct {
 	Headers                      map[string]string `json:"headers,omitempty"`
 	FollowRedirects              *bool             `json:"follow_redirects,omitempty"`
 	VerifySSL                    *bool             `json:"verify_ssl,omitempty"`
-	AuthUsername                 string            `json:"auth_username,omitempty"`
-	AuthPassword                 string            `json:"auth_password,omitempty"`
+	AuthUsername                 *string           `json:"auth_username,omitempty"`
+	AuthPassword                 *string           `json:"auth_password,omitempty"`
 	AlertPriority                string            `json:"alert_priority,omitempty"`
 	Type                         string            `json:"type,omitempty"`
 	Version                      string            `json:"version,omitempty"`
