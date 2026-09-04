@@ -17,17 +17,17 @@ type StatusPageComponent struct {
 	IsExternalComponent bool    `json:"is_external_component,omitempty"`
 }
 
-// StatusPageComponentPatch is the OpenAPI update payload. Relationship fields
-// are intentionally included without omitempty so Terraform can clear them.
+// StatusPageComponentPatch is the OpenAPI update payload. Pointer layers retain
+// the API's distinction between an omitted relationship and an explicit clear.
 type StatusPageComponentPatch struct {
-	Name           string   `json:"name,omitempty"`
-	Status         string   `json:"status,omitempty"`
-	DisplayUptime  *bool    `json:"display_uptime,omitempty"`
-	DisplayMetrics *bool    `json:"display_metrics,omitempty"`
-	GroupID        *string  `json:"group_id"`
-	CheckIDs       []string `json:"check_ids"`
-	HeartbeatID    *string  `json:"heartbeat_id"`
-	OverrideStatus bool     `json:"override_status"`
+	Name           string    `json:"name,omitempty"`
+	Status         string    `json:"status,omitempty"`
+	DisplayUptime  *bool     `json:"display_uptime,omitempty"`
+	DisplayMetrics *bool     `json:"display_metrics,omitempty"`
+	GroupID        **string  `json:"group_id,omitempty"`
+	CheckIDs       *[]string `json:"check_ids,omitempty"`
+	HeartbeatID    **string  `json:"heartbeat_id,omitempty"`
+	OverrideStatus *bool     `json:"override_status,omitempty"`
 }
 
 // CreateStatusPageComponent creates a new status page component

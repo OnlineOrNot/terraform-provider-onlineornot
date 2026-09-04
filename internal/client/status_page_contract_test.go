@@ -71,6 +71,10 @@ func TestStatusPageComponentGroupPathsMatchOpenAPI(t *testing.T) {
 func TestUpdateStatusPageComponentMatchesOpenAPIPayload(t *testing.T) {
 	displayUptime := true
 	displayMetrics := false
+	var groupID *string
+	checkIDs := []string{}
+	var heartbeatID *string
+	overrideStatus := false
 	server, apiClient := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPatch || r.URL.Path != "/v1/status_pages/page1234/components/comp1234" {
 			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
@@ -104,9 +108,34 @@ func TestUpdateStatusPageComponentMatchesOpenAPIPayload(t *testing.T) {
 		Status:         "OPERATIONAL",
 		DisplayUptime:  &displayUptime,
 		DisplayMetrics: &displayMetrics,
-		CheckIDs:       []string{},
+		GroupID:        &groupID,
+		CheckIDs:       &checkIDs,
+		HeartbeatID:    &heartbeatID,
+		OverrideStatus: &overrideStatus,
 	})
 	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUpdateStatusPageComponentOmitsUnmanagedRelationships(t *testing.T) {
+	server, apiClient := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		expected := map[string]any{"name": "API"}
+		if !reflect.DeepEqual(body, expected) {
+			t.Errorf("unexpected component patch\nwant: %#v\n got: %#v", expected, body)
+		}
+		writeJSON(t, w, APIResponse[StatusPageComponent]{
+			Result:  StatusPageComponent{ID: "comp1234", Name: "API", Status: "OPERATIONAL"},
+			Success: true,
+		})
+	})
+	defer server.Close()
+
+	if _, err := apiClient.UpdateStatusPageComponent("page1234", "comp1234", &StatusPageComponentPatch{Name: "API"}); err != nil {
 		t.Fatal(err)
 	}
 }

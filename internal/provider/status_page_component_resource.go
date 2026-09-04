@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
@@ -48,7 +47,6 @@ func (r *StatusPageComponentResource) Schema(ctx context.Context, req resource.S
 	s := resource_status_page_component.StatusPageComponentResourceSchema(ctx)
 	s.Attributes["group_id"] = schema.StringAttribute{
 		Optional:            true,
-		Computed:            true,
 		Description:         "Component group ID. Set to null to remove the component from its group.",
 		MarkdownDescription: "Component group ID. Set to null to remove the component from its group.",
 	}
@@ -65,8 +63,6 @@ func (r *StatusPageComponentResource) Schema(ctx context.Context, req resource.S
 	}
 	s.Attributes["override_status"] = schema.BoolAttribute{
 		Optional:            true,
-		Computed:            true,
-		Default:             booldefault.StaticBool(false),
 		Description:         "Override status derived from an external status page.",
 		MarkdownDescription: "Override status derived from an external status page.",
 	}
@@ -113,7 +109,7 @@ func (r *StatusPageComponentResource) Create(ctx context.Context, req resource.C
 	}
 
 	relationshipsConfigured := componentRelationshipsConfigured(&data)
-	requestedPatch := componentPatchFromModel(ctx, &data, &resp.Diagnostics)
+	requestedPatch := componentPatchFromModel(ctx, &data, nil, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -124,7 +120,7 @@ func (r *StatusPageComponentResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	populateStatusPageComponentModel(&data, created)
+	populateStatusPageComponentModel(&data, created, requestedPatch.GroupID != nil)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -136,7 +132,7 @@ func (r *StatusPageComponentResource) Create(ctx context.Context, req resource.C
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to configure status page component relationships, got error: %s", err))
 			return
 		}
-		populateStatusPageComponentModel(&data, updated)
+		populateStatusPageComponentModel(&data, updated, requestedPatch.GroupID != nil)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -156,7 +152,8 @@ func (r *StatusPageComponentResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	populateStatusPageComponentModel(&data, comp)
+	manageGroup := !data.GroupId.IsNull() && !data.GroupId.IsUnknown()
+	populateStatusPageComponentModel(&data, comp, manageGroup)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -169,12 +166,23 @@ func (r *StatusPageComponentResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	updated, err := r.client.UpdateStatusPageComponent(data.StatusPageId.ValueString(), data.Id.ValueString(), componentPatchFromModel(ctx, &data, &resp.Diagnostics))
+	var prior statusPageComponentModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	patch := componentPatchFromModel(ctx, &data, &prior, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	updated, err := r.client.UpdateStatusPageComponent(data.StatusPageId.ValueString(), data.Id.ValueString(), patch)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update status page component, got error: %s", err))
 		return
 	}
-	populateStatusPageComponentModel(&data, updated)
+	populateStatusPageComponentModel(&data, updated, patch.GroupID != nil)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -183,15 +191,13 @@ func componentRelationshipsConfigured(data *statusPageComponentModel) bool {
 	return (!data.GroupId.IsNull() && !data.GroupId.IsUnknown()) ||
 		(!data.CheckIds.IsNull() && !data.CheckIds.IsUnknown()) ||
 		(!data.HeartbeatId.IsNull() && !data.HeartbeatId.IsUnknown()) ||
-		(!data.OverrideStatus.IsNull() && !data.OverrideStatus.IsUnknown() && data.OverrideStatus.ValueBool())
+		(!data.OverrideStatus.IsNull() && !data.OverrideStatus.IsUnknown())
 }
 
-func componentPatchFromModel(ctx context.Context, data *statusPageComponentModel, diags *diag.Diagnostics) *client.StatusPageComponentPatch {
+func componentPatchFromModel(ctx context.Context, data, prior *statusPageComponentModel, diags *diag.Diagnostics) *client.StatusPageComponentPatch {
 	patch := &client.StatusPageComponentPatch{
-		Name:           data.Name.ValueString(),
-		Status:         data.Status.ValueString(),
-		OverrideStatus: data.OverrideStatus.ValueBool(),
-		CheckIDs:       []string{},
+		Name:   data.Name.ValueString(),
+		Status: data.Status.ValueString(),
 	}
 	if !data.DisplayUptime.IsNull() && !data.DisplayUptime.IsUnknown() {
 		v := data.DisplayUptime.ValueBool()
@@ -203,26 +209,48 @@ func componentPatchFromModel(ctx context.Context, data *statusPageComponentModel
 	}
 	if !data.GroupId.IsNull() && !data.GroupId.IsUnknown() {
 		v := data.GroupId.ValueString()
-		patch.GroupID = &v
+		value := &v
+		patch.GroupID = &value
+	} else if data.GroupId.IsNull() && prior != nil && !prior.GroupId.IsNull() && !prior.GroupId.IsUnknown() {
+		var cleared *string
+		patch.GroupID = &cleared
 	}
 	if !data.CheckIds.IsNull() && !data.CheckIds.IsUnknown() {
-		diags.Append(data.CheckIds.ElementsAs(ctx, &patch.CheckIDs, false)...)
+		checkIDs := []string{}
+		diags.Append(data.CheckIds.ElementsAs(ctx, &checkIDs, false)...)
+		patch.CheckIDs = &checkIDs
+	} else if data.CheckIds.IsNull() && prior != nil && !prior.CheckIds.IsNull() && !prior.CheckIds.IsUnknown() {
+		checkIDs := []string{}
+		patch.CheckIDs = &checkIDs
 	}
 	if !data.HeartbeatId.IsNull() && !data.HeartbeatId.IsUnknown() {
 		v := data.HeartbeatId.ValueString()
-		patch.HeartbeatID = &v
+		value := &v
+		patch.HeartbeatID = &value
+	} else if data.HeartbeatId.IsNull() && prior != nil && !prior.HeartbeatId.IsNull() && !prior.HeartbeatId.IsUnknown() {
+		var cleared *string
+		patch.HeartbeatID = &cleared
+	}
+	if !data.OverrideStatus.IsNull() && !data.OverrideStatus.IsUnknown() {
+		v := data.OverrideStatus.ValueBool()
+		patch.OverrideStatus = &v
+	} else if data.OverrideStatus.IsNull() && prior != nil && !prior.OverrideStatus.IsNull() && !prior.OverrideStatus.IsUnknown() {
+		v := false
+		patch.OverrideStatus = &v
 	}
 	return patch
 }
 
-func populateStatusPageComponentModel(data *statusPageComponentModel, comp *client.StatusPageComponent) {
+func populateStatusPageComponentModel(data *statusPageComponentModel, comp *client.StatusPageComponent, manageGroup bool) {
 	data.Id = types.StringValue(comp.ID)
 	data.Name = types.StringValue(comp.Name)
 	data.Status = types.StringValue(comp.Status)
-	if comp.GroupID == nil {
-		data.GroupId = types.StringNull()
-	} else {
-		data.GroupId = types.StringValue(*comp.GroupID)
+	if manageGroup {
+		if comp.GroupID == nil {
+			data.GroupId = types.StringNull()
+		} else {
+			data.GroupId = types.StringValue(*comp.GroupID)
+		}
 	}
 	if comp.DisplayUptime != nil {
 		data.DisplayUptime = types.BoolValue(*comp.DisplayUptime)
