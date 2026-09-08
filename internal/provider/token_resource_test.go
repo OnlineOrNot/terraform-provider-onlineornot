@@ -14,6 +14,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -216,6 +217,33 @@ func TestTokenResourceReadAndDeleteErrors(t *testing.T) {
 					t.Fatal("diagnostic leaked a secret")
 				}
 			}
+		})
+	}
+}
+
+func TestTokenResourceInvalidConfiguration(t *testing.T) {
+	for _, tc := range []struct{ name, extra, scope, permission, expected string }{
+		{"conflictingExpiry", `expires_at = "2030-01-01T00:00:00Z"
+ never_expires = true`, "UPTIME_CHECKS", "READ", "Conflicting expiration settings"},
+		{"scope", "", "INVALID", "READ", "Invalid Attribute Value Match"},
+		{"permission", "", "UPTIME_CHECKS", "WRITE", "Invalid Attribute Value Match"},
+		{"expiry", `expires_at = "tomorrow"`, "UPTIME_CHECKS", "READ", "Invalid expiration"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Error("invalid configuration reached API")
+				w.WriteHeader(500)
+			}))
+			defer server.Close()
+			resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{Config: fmt.Sprintf(`provider "onlineornot" {
+ api_key = "mock-provider-key"
+ base_url = %q
+}
+resource "onlineornot_token" "test" {
+ name = "invalid"
+ grants = [{scope=%q,permission=%q}]
+ %s
+}`, server.URL, tc.scope, tc.permission, tc.extra), ExpectError: regexp.MustCompile(tc.expected)}}})
 		})
 	}
 }

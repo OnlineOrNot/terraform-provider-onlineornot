@@ -39,21 +39,18 @@
     },
     {
       "operationId": "createToken",
-      "status": "planned",
-      "terraform": "onlineornot_token resource",
-      "reason": "Not yet implemented; tracked by the provider parity plan."
+      "status": "implemented",
+      "terraform": "onlineornot_token resource"
     },
     {
       "operationId": "getToken",
-      "status": "planned",
-      "terraform": "onlineornot_token resource",
-      "reason": "Not yet implemented; tracked by the provider parity plan."
+      "status": "implemented",
+      "terraform": "onlineornot_token resource"
     },
     {
       "operationId": "deleteToken",
-      "status": "planned",
-      "terraform": "onlineornot_token resource",
-      "reason": "Not yet implemented; tracked by the provider parity plan."
+      "status": "implemented",
+      "terraform": "onlineornot_token resource"
     },
     {
       "operationId": "createDnsCheck",
