@@ -72,6 +72,8 @@ Required:
 
 ## Import
 
+For an existing expiring token, set `expires_at` in configuration to its `expires_after` value returned by the API. The initial import reads that expiration into state; matching configuration does not replace the credential. For a non-expiring token, configure `never_expires = true`. Import cannot infer whether an existing expiry originally used the API default. Tokens created by this provider with omitted `expires_at` continue to preserve that omission on refresh.
+
 ```shell
 # Import by token ID, NOT the secret. Import cannot recover the secret.
 terraform import onlineornot_token.monitoring a1b2c3d4

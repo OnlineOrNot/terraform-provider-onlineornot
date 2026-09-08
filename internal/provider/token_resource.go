@@ -159,6 +159,9 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		resp.Diagnostics.AddError("Error reading token", tokenError(err))
 		return
 	}
+	// Import initializes only id. Name is required and always populated after
+	// creation/refresh, so its absence identifies the initial imported read.
+	initialImport := data.Name.IsNull()
 	data.ID = types.StringValue(token.ID)
 	data.Name = types.StringValue(token.Name)
 	grants := make([]tokenGrantModel, 0, len(token.Grants))
@@ -171,7 +174,9 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	data.ExpiresAfter = types.StringPointerValue(token.ExpiresAfter)
 	// Keep omitted expires_at as an input meaning "use the API default". The
 	// actual date is tracked separately to avoid a changing time-based default.
-	if !data.ExpiresAt.IsNull() {
+	// On import there is no creation intent to preserve: recover the existing
+	// expiration so matching configuration does not replace the credential.
+	if initialImport || !data.ExpiresAt.IsNull() {
 		if token.ExpiresAfter == nil {
 			data.ExpiresAt = types.StringNull()
 		} else if !sameTokenExpiry(data.ExpiresAt.ValueString(), *token.ExpiresAfter) {

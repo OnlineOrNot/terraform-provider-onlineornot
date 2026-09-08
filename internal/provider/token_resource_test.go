@@ -118,15 +118,15 @@ resource "onlineornot_token" "test" {
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			{Config: config("first", "READ", `expires_at = "2030-01-01T00:00:00Z"`), Check: resource.ComposeAggregateTestCheckFunc(check("token1"), resource.TestCheckResourceAttr("onlineornot_token.test", "expires_at", "2030-01-01T00:00:00Z"))},
+			{Config: config("first", "READ", `expires_at = "2030-01-01T00:00:00.000Z"`), Check: resource.ComposeAggregateTestCheckFunc(check("token1"), resource.TestCheckResourceAttr("onlineornot_token.test", "expires_at", "2030-01-01T00:00:00.000Z"))},
 			{RefreshState: true, Check: check("token1")},
-			{ResourceName: "onlineornot_token.test", ImportState: true, ImportStateVerify: true, ImportStateVerifyIgnore: []string{"token", "expires_at"}},
+			{ResourceName: "onlineornot_token.test", ImportState: true, ImportStateVerify: true, ImportStateVerifyIgnore: []string{"token"}},
 			{Config: config("renamed", "READ", `expires_at = "2030-01-01T00:00:00Z"`), Check: check("token2")},
 			{Config: config("renamed", "EDIT", `expires_at = "2030-01-01T00:00:00Z"`), Check: check("token3")},
 			{Config: config("renamed", "EDIT", `expires_at = "2031-01-01T00:00:00Z"`), Check: check("token4")},
 			{Config: config("renamed", "EDIT", "never_expires = true"), Check: resource.ComposeAggregateTestCheckFunc(check("token5"), resource.TestCheckNoResourceAttr("onlineornot_token.test", "expires_at"))},
 			{Config: config("renamed", "EDIT", "never_expires = true"), PreConfig: func() { mu.Lock(); delete(tokens, "token5"); mu.Unlock() }, Check: check("token6")},
-			{Config: config("default", "READ", ""), Check: resource.ComposeAggregateTestCheckFunc(check("token7"), resource.TestCheckResourceAttr("onlineornot_token.test", "expires_after", "2029-01-01T00:00:00.000Z"))},
+			{Config: config("default", "READ", ""), Check: resource.ComposeAggregateTestCheckFunc(check("token7"), resource.TestCheckResourceAttr("onlineornot_token.test", "expires_after", "2029-01-01T00:00:00.000Z"), resource.TestCheckNoResourceAttr("onlineornot_token.test", "expires_at"))},
 			{RefreshState: true, Check: check("token7")},
 		},
 	})
@@ -244,6 +244,53 @@ resource "onlineornot_token" "test" {
  grants = [{scope=%q,permission=%q}]
  %s
 }`, server.URL, tc.scope, tc.permission, tc.extra), ExpectError: regexp.MustCompile(tc.expected)}}})
+		})
+	}
+}
+
+// Persist imported state before planning: a verification-only import uses a
+// separate state and cannot detect replacement of the imported credential.
+func TestTokenResourceImportFollowedByPlan(t *testing.T) {
+	for _, tc := range []struct{ name, expiryJSON, config string }{
+		{"custom expiry", `"2030-01-01T00:00:00.000Z"`, `expires_at = "2030-01-01T00:00:00.000Z"`},
+		{"never expires", `null`, `never_expires = true`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				if r.URL.Path != "/v1/tokens/import123" {
+					t.Errorf("unexpected path: %s", r.URL.Path)
+					w.WriteHeader(404)
+					return
+				}
+				switch r.Method {
+				case "GET":
+					fmt.Fprintf(w, `{"success":true,"result":{"id":"import123","name":"existing","expiresAfter":%s,"grants":[]}}`, tc.expiryJSON)
+				case "DELETE": // Only the harness's final teardown may revoke it.
+					fmt.Fprint(w, `{"success":true,"result":{"deleted":true}}`)
+				default:
+					t.Errorf("import/plan must not create or update a token: %s", r.Method)
+					w.WriteHeader(405)
+				}
+			}))
+			defer server.Close()
+			config := fmt.Sprintf(`provider "onlineornot" {
+ api_key = "mock-provider-key"
+ base_url = %q
+}
+resource "onlineornot_token" "test" {
+ name = "existing"
+ grants = []
+ %s
+}`, server.URL, tc.config)
+			resource.UnitTest(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{Config: config, ResourceName: "onlineornot_token.test", ImportState: true, ImportStateId: "import123", ImportStatePersist: true},
+					{Config: config, PlanOnly: true, ExpectNonEmptyPlan: false},
+					{Config: config, PlanOnly: true, ExpectNonEmptyPlan: false},
+				},
+			})
 		})
 	}
 }
