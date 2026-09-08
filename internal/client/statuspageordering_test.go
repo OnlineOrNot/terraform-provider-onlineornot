@@ -13,56 +13,62 @@ import (
 
 func TestOrderPaginationAndScope(t *testing.T) {
 	for _, kind := range []string{"components", "groups", "group_components"} {
-		t.Run(kind, func(t *testing.T) {
-			pages := 0
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				pages++
-				page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-				if r.URL.Query().Get("per_page") != "100" || r.Method != "GET" {
-					t.Errorf("unexpected request %s", r.URL)
-				}
-				wantPath := "/v1/status_pages/page1234/components"
-				if kind == "groups" {
-					wantPath = "/v1/status_pages/page1234/groups"
-				}
-				if r.URL.Path != wantPath {
-					t.Errorf("path: %s", r.URL.Path)
-				}
-				// Simulate server clamping the requested page size to 20.
-				start, end := (page-1)*20, page*20
-				if end > 45 {
-					end = 45
-				}
-				items := []map[string]any{}
-				for i := start; i < end; i++ {
-					group := any(nil)
-					if i%2 == 1 {
-						group = "group123"
+		for _, stringPage := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/string-page=%t", kind, stringPage), func(t *testing.T) {
+				pages := 0
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					pages++
+					page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+					if r.URL.Query().Get("per_page") != "100" || r.Method != "GET" {
+						t.Errorf("unexpected request %s", r.URL)
 					}
-					items = append(items, map[string]any{"id": fmt.Sprintf("id%03d", 100-i), "group_id": group})
+					wantPath := "/v1/status_pages/page1234/components"
+					if kind == "groups" {
+						wantPath = "/v1/status_pages/page1234/groups"
+					}
+					if r.URL.Path != wantPath {
+						t.Errorf("path: %s", r.URL.Path)
+					}
+					// Simulate server clamping the requested page size to 20.
+					start, end := (page-1)*20, page*20
+					if end > 45 {
+						end = 45
+					}
+					items := []map[string]any{}
+					for i := start; i < end; i++ {
+						group := any(nil)
+						if i%2 == 1 {
+							group = "group123"
+						}
+						items = append(items, map[string]any{"id": fmt.Sprintf("id%03d", 100-i), "group_id": group})
+					}
+					var responsePage any = page
+					if stringPage {
+						responsePage = r.URL.Query().Get("page")
+					}
+					json.NewEncoder(w).Encode(map[string]any{"success": true, "result": items, "result_info": map[string]any{"page": responsePage, "per_page": r.URL.Query().Get("per_page"), "count": len(items), "total_count": 45}})
+				}))
+				defer server.Close()
+				c := NewClient(&Config{BaseURL: server.URL})
+				scope := StatusPageOrderScope{PageID: "page1234", Kind: kind}
+				if kind == "group_components" {
+					scope.GroupID = "group123"
 				}
-				json.NewEncoder(w).Encode(map[string]any{"success": true, "result": items, "result_info": map[string]int{"page": page, "count": len(items), "total_count": 45}})
-			}))
-			defer server.Close()
-			c := NewClient(&Config{BaseURL: server.URL})
-			scope := StatusPageOrderScope{PageID: "page1234", Kind: kind}
-			if kind == "group_components" {
-				scope.GroupID = "group123"
-			}
-			got, err := c.ListStatusPageOrder(scope)
-			if err != nil {
-				t.Fatal(err)
-			}
-			want := []string{}
-			for i := 0; i < 45; i++ {
-				if kind == "groups" || (kind == "components" && i%2 == 0) || (kind == "group_components" && i%2 == 1) {
-					want = append(want, fmt.Sprintf("id%03d", 100-i))
+				got, err := c.ListStatusPageOrder(scope)
+				if err != nil {
+					t.Fatal(err)
 				}
-			}
-			if !reflect.DeepEqual(got, want) || pages != 3 {
-				t.Fatalf("got %v pages %d", got, pages)
-			}
-		})
+				want := []string{}
+				for i := 0; i < 45; i++ {
+					if kind == "groups" || (kind == "components" && i%2 == 0) || (kind == "group_components" && i%2 == 1) {
+						want = append(want, fmt.Sprintf("id%03d", 100-i))
+					}
+				}
+				if !reflect.DeepEqual(got, want) || pages != 3 {
+					t.Fatalf("got %v pages %d", got, pages)
+				}
+			})
+		}
 	}
 }
 
@@ -197,5 +203,41 @@ func TestHTTPNotFoundClassification(t *testing.T) {
 	}
 	if IsNotFound(fmt.Errorf("404 not found")) {
 		t.Fatal("matched message")
+	}
+}
+
+func TestOrderEmptyScopePageFormats(t *testing.T) {
+	for _, kind := range []string{"components", "groups", "group_components"} {
+		for _, pageJSON := range []string{`1`, `"1"`} {
+			t.Run(kind+"/"+pageJSON, func(t *testing.T) {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					fmt.Fprintf(w, `{"success":true,"result":[],"result_info":{"page":%s,"per_page":"100","count":0,"total_count":0}}`, pageJSON)
+				}))
+				defer server.Close()
+				scope := StatusPageOrderScope{PageID: "page1234", Kind: kind}
+				if kind == "group_components" {
+					scope.GroupID = "group123"
+				}
+				ids, err := NewClient(&Config{BaseURL: server.URL}).ListStatusPageOrder(scope)
+				if err != nil || ids == nil || len(ids) != 0 {
+					t.Fatalf("expected empty scope, got %v, %v", ids, err)
+				}
+			})
+		}
+	}
+}
+
+func TestOrderRejectsInvalidPageFormats(t *testing.T) {
+	for _, pageJSON := range []string{`"2"`, `0`, `"0"`, `-1`, `"-1"`, `1.5`, `"1.5"`, `true`, `{}`, `[]`, `""`, `"abc"`, `"1e0"`, `1e0`, `"9223372036854775808"`} {
+		t.Run(pageJSON, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprintf(w, `{"success":true,"result":[],"result_info":{"page":%s,"count":0,"total_count":0}}`, pageJSON)
+			}))
+			defer server.Close()
+			_, err := NewClient(&Config{BaseURL: server.URL}).ListStatusPageOrder(StatusPageOrderScope{PageID: "page1234", Kind: "groups"})
+			if err == nil {
+				t.Fatal("expected pagination error")
+			}
+		})
 	}
 }

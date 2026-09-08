@@ -124,7 +124,7 @@ func (m *orderMock) serve(t *testing.T, w http.ResponseWriter, r *http.Request) 
 			group := any("othergroup")
 			items = append(items, map[string]any{"id": "outside1", "group_id": group})
 		}
-		json.NewEncoder(w).Encode(map[string]any{"success": true, "result": items, "result_info": map[string]int{"count": len(items), "total_count": len(items)}})
+		json.NewEncoder(w).Encode(map[string]any{"success": true, "result": items, "result_info": map[string]any{"page": r.URL.Query().Get("page"), "per_page": r.URL.Query().Get("per_page"), "count": len(items), "total_count": len(items)}})
 		return
 	}
 	if r.URL.Path != "/v1/status_pages/page1234" && r.URL.Path != "/v1/status_pages/page1234/groups/group123" {

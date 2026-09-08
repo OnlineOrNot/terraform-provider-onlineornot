@@ -76,9 +76,11 @@ func (c *Client) ListStatusPageOrder(s StatusPageOrderScope) ([]string, error) {
 				GroupID *string `json:"group_id"`
 			} `json:"result"`
 			ResultInfo *struct {
-				Page       int  `json:"page"`
-				Count      *int `json:"count"`
-				TotalCount *int `json:"total_count"`
+				// The API can echo the query string; json.Number accepts both
+				// numeric and quoted numeric JSON without float conversion.
+				Page       *json.Number `json:"page"`
+				Count      *int         `json:"count"`
+				TotalCount *int         `json:"total_count"`
 			} `json:"result_info"`
 			Success bool       `json:"success"`
 			Errors  []APIError `json:"errors"`
@@ -90,8 +92,14 @@ func (c *Client) ListStatusPageOrder(s StatusPageOrderScope) ([]string, error) {
 			return nil, fmt.Errorf("ordering list failed: %v", result.Errors)
 		}
 		info := result.ResultInfo
-		if info == nil || info.Count == nil || info.TotalCount == nil || *info.Count != len(result.Result) || *info.TotalCount < 0 || (info.Page != 0 && info.Page != page) {
+		if info == nil || info.Count == nil || info.TotalCount == nil || *info.Count != len(result.Result) || *info.TotalCount < 0 {
 			return nil, fmt.Errorf("invalid ordering pagination metadata")
+		}
+		if info.Page != nil {
+			responsePage, err := info.Page.Int64()
+			if err != nil || responsePage != int64(page) {
+				return nil, fmt.Errorf("invalid ordering pagination page: expected %d", page)
+			}
 		}
 		if total < 0 {
 			total = *info.TotalCount
