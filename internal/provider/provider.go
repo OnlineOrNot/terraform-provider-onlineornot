@@ -102,6 +102,9 @@ func (p *OnlineornotProvider) Resources(ctx context.Context) []func() resource.R
 		NewMaintenanceWindowResource,
 		NewStatusPageComponentResource,
 		NewStatusPageComponentGroupResource,
+		NewStatusPageComponentOrderResource,
+		NewStatusPageGroupOrderResource,
+		NewStatusPageGroupComponentOrderResource,
 		NewStatusPageIncidentResource,
 		NewStatusPageScheduledMaintenanceResource,
 	}

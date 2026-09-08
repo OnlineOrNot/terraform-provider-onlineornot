@@ -80,6 +80,9 @@ provider "onlineornot" {
 | `onlineornot_status_page` | Public status page |
 | `onlineornot_status_page_component` | Status page component |
 | `onlineornot_status_page_component_group` | Group of components |
+| `onlineornot_status_page_component_order` | Complete ungrouped component order |
+| `onlineornot_status_page_group_order` | Complete component group order |
+| `onlineornot_status_page_group_component_order` | Complete component order within a group |
 | `onlineornot_status_page_incident` | Status page incident |
 | `onlineornot_status_page_scheduled_maintenance` | Scheduled maintenance window |
 | `onlineornot_token` | API token (creation-only secret; edits replace) |

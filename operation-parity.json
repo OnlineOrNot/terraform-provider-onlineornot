@@ -337,9 +337,8 @@
     },
     {
       "operationId": "updateStatusPageComponentSortOrder",
-      "status": "planned",
-      "terraform": "onlineornot_status_page_component_order resource",
-      "reason": "Not yet implemented; tracked by the provider parity plan."
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_component_order resource"
     },
     {
       "operationId": "listStatusPageComponentGroups",
@@ -369,15 +368,13 @@
     },
     {
       "operationId": "updateStatusPageComponentGroupSortOrder",
-      "status": "planned",
-      "terraform": "onlineornot_status_page_group_order resource",
-      "reason": "Not yet implemented; tracked by the provider parity plan."
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_group_order resource"
     },
     {
       "operationId": "updateStatusPageGroupComponentSortOrder",
-      "status": "planned",
-      "terraform": "onlineornot_status_page_group_component_order resource",
-      "reason": "Not yet implemented; tracked by the provider parity plan."
+      "status": "implemented",
+      "terraform": "onlineornot_status_page_group_component_order resource"
     },
     {
       "operationId": "listStatusPageSubscribers",
