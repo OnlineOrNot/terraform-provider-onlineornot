@@ -8,6 +8,7 @@ Manage your [OnlineOrNot](https://onlineornot.com) uptime monitoring infrastruct
 - **Heartbeat Monitors** - Track cron jobs and background processes
 - **Status Pages** - Create and manage public status pages
 - **Incidents & Maintenance** - Declare incidents and scheduled maintenance windows
+- **API Tokens** - Manage scoped credentials with explicit expiration and sensitive state
 - **Webhooks** - Configure alert webhooks
 - **Alert Routing** - Assign users to receive alerts via email, Slack, Discord, PagerDuty, and more
 
@@ -81,6 +82,7 @@ provider "onlineornot" {
 | `onlineornot_status_page_component_group` | Group of components |
 | `onlineornot_status_page_incident` | Status page incident |
 | `onlineornot_status_page_scheduled_maintenance` | Scheduled maintenance window |
+| `onlineornot_token` | API token (creation-only secret; edits replace) |
 | `onlineornot_webhook` | Webhook for alerts |
 | `onlineornot_maintenance_window` | Maintenance window (suppresses alerts) |
 
