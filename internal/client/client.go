@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -82,6 +83,18 @@ type APIMessage struct {
 	Type    string `json:"type,omitempty"`
 }
 
+// HTTPError preserves status independently of API error codes or messages.
+type HTTPError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e *HTTPError) Error() string { return e.Message }
+func IsNotFound(err error) bool {
+	var httpErr *HTTPError
+	return errors.As(err, &httpErr) && httpErr.StatusCode == http.StatusNotFound
+}
+
 // doRequest performs an HTTP request with authentication
 func (c *Client) doRequest(method, path string, body interface{}) ([]byte, error) {
 	var reqBody io.Reader
@@ -118,9 +131,9 @@ func (c *Client) doRequest(method, path string, body interface{}) ([]byte, error
 	if resp.StatusCode >= 400 {
 		var apiResp APIResponse[interface{}]
 		if err := json.Unmarshal(respBody, &apiResp); err == nil && len(apiResp.Errors) > 0 {
-			return nil, fmt.Errorf("API error: %s (code: %d)", apiResp.Errors[0].Message, apiResp.Errors[0].Code)
+			return nil, &HTTPError{StatusCode: resp.StatusCode, Message: fmt.Sprintf("API error: %s (code: %d)", apiResp.Errors[0].Message, apiResp.Errors[0].Code)}
 		}
-		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(respBody))
+		return nil, &HTTPError{StatusCode: resp.StatusCode, Message: fmt.Sprintf("API request failed with status %d: %s", resp.StatusCode, string(respBody))}
 	}
 
 	return respBody, nil

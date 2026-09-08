@@ -2,6 +2,8 @@ provider:
   name: onlineornot
 
 resources:
+  # onlineornot_token is hand-written in token_resource.go: asymmetric
+  # create/read secret and expiry fields, and replacement-only lifecycle.
   # ===================
   # UPTIME CHECKS
   # ===================

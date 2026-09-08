@@ -1,0 +1,33 @@
+---
+{{.YAMLFrontMatter}}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{.Description | trimspace}}
+
+The provider credential needs `API_TOKENS` `EDIT` for creation/deletion (which implies `READ` for refresh). Requested grants must be a subset of the parent API token's grants; `EDIT` permits delegating `READ` or `EDIT`, while `READ` cannot delegate `EDIT`. Use a separate management credential, not the token being managed.
+
+## Expiration and replacement
+
+Omit `expires_at` and leave `never_expires = false` to use the API default of **365 days from creation**. `expires_after` records the actual date, so refresh does not recalculate this default. Set `expires_at` for a specific UTC timestamp, or explicitly set `never_expires = true` for no expiration. Do not combine those settings.
+
+The API has no update endpoint. Editing the name, grants, or expiration settings destroys and recreates the token. Replacement issues a new secret and revokes the old token. Consider `create_before_destroy` and coordinate consumers to avoid interruption; Terraform cannot automatically update external consumers. Revoked or expired provider credentials may prevent refresh or destruction.
+
+## Secret handling
+
+`token` is sensitive and computed, returned only on creation, and retained during refresh. **Sensitive does not encrypt state**: protect Terraform state, saved plans, backups, and outputs with access controls and encryption. Do not commit them or enable verbose logs around credentials.
+
+Import retrieves metadata only: the secret remains null and cannot be recovered. Keep the existing secret separately or deliberately replace the resource to issue a new one. Deleting an already-absent token succeeds; a read returning HTTP 404 removes it from state. Authentication and other API errors do not remove state.
+
+{{ if .HasExample -}}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{- end }}
+
+{{.SchemaMarkdown | trimspace}}
+
+## Import
+
+{{ codefile "shell" .ImportFile }}
