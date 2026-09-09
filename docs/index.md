@@ -34,6 +34,10 @@ provider "onlineornot" {}
 # }
 ```
 
+## Guides
+
+- [Deploy a Playwright check with Terraform](guides/deploy-playwright-check.md)
+
 ## Authentication
 
 The provider requires an API key for authentication. You can generate an API key from the [OnlineOrNot dashboard](https://onlineornot.com/app/api-tokens).

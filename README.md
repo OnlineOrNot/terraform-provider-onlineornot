@@ -12,6 +12,10 @@ Manage your [OnlineOrNot](https://onlineornot.com) uptime monitoring infrastruct
 - **Webhooks** - Configure alert webhooks
 - **Alert Routing** - Assign users to receive alerts via email, Slack, Discord, PagerDuty, and more
 
+## Guides
+
+- [Deploy a Playwright check with Terraform](docs/guides/deploy-playwright-check.md)
+
 ## Quick Start
 
 ```hcl

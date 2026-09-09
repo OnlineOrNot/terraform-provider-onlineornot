@@ -13,35 +13,51 @@ This resource uses the typed `/v1/checks/browser` API. Browser checks are separa
 
 ## Example Usage
 
-```terraform
-resource "onlineornot_browser_check" "checkout" {
-  name = "Checkout flow"
-  url  = "https://example.com/checkout"
+Each browser check accepts one self-contained JavaScript file. The file must
+use Playwright Test. Terraform uploads the file contents only. It does not
+upload local imports, configuration files, or dependencies. Playwright projects
+are not supported yet.
 
+Save this file as `homepage.spec.js` beside your Terraform configuration:
+
+```javascript
+import { test, expect } from '@playwright/test';
+
+test('homepage loads', async ({ page }) => {
+  await page.goto('https://example.com');
+  await expect(page.getByRole('heading', { name: 'Example Domain' })).toBeVisible();
+});
+```
+
+The first resource uses scripted mode. The second uses URL mode.
+
+```terraform
+# Scripted mode: upload one self-contained Playwright Test file.
+resource "onlineornot_browser_check" "homepage" {
+  name          = "Homepage Playwright check"
+  script        = file("${path.module}/homepage.spec.js")
   test_interval = 300
-  test_regions = [
-    "aws:us-east-1",
-  ]
+  test_regions  = ["aws:us-east-1"]
 }
 
-resource "onlineornot_browser_check" "scripted_checkout" {
-  name = "Scripted checkout flow"
-
-  script = <<-EOT
-    import { test, expect } from '@playwright/test';
-
-    test('checkout page loads', async ({ page }) => {
-      await page.goto('https://example.com/checkout');
-      await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
-    });
-  EOT
+# URL mode: load a page without a test file.
+resource "onlineornot_browser_check" "page_load" {
+  name          = "Homepage page load"
+  url           = "https://example.com"
+  test_interval = 300
+  test_regions  = ["aws:us-east-1"]
 }
 ```
 
 ## Notes
 
 - Provide `url` for a simple page-load browser check.
-- Provide `script` for a scripted Playwright check.
+- Provide `script` for a scripted Playwright check. Omit `timeout` in this mode.
+- Playwright controls test steps, browser assertions, and test timeouts. The service execution limit still applies.
+- Terraform controls monitor names, intervals, regions, and alert settings.
+- Terraform stores script contents in state and can display them in plans. Do not embed credentials or interpolate secrets into the source. Marking a value sensitive does not remove it from state.
+- Source files must exist before the Terraform run. Include them in remote Terraform execution environments.
+- See [Deploy a Playwright check with Terraform](../guides/deploy-playwright-check.md) for local setup, folder deployment, and verification.
 - `type` is managed by the provider and is always `BROWSER_CHECK` for this resource.
 - Importing a non-browser monitor ID fails because reads go through the typed browser endpoint.
 

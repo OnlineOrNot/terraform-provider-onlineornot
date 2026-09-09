@@ -20,7 +20,8 @@ const browserScript = "import { test, expect } from '@playwright/test';\n\ntest(
 func mockCheckAPI(t *testing.T, kind string) (*httptest.Server, func(string)) {
 	t.Helper()
 	var mu sync.Mutex
-	var stored map[string]any
+	checks := make(map[string]map[string]any)
+	nextID := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
@@ -28,11 +29,20 @@ func mockCheckAPI(t *testing.T, kind string) (*httptest.Server, func(string)) {
 		if kind != "" {
 			base += "/" + kind
 		}
-		if r.URL.Path != base && r.URL.Path != base+"/fixture" {
+		if r.URL.Path != base && !strings.HasPrefix(r.URL.Path, base+"/fixture") {
 			t.Errorf("unexpected path %s", r.URL.Path)
 			http.NotFound(w, r)
 			return
 		}
+		id := strings.TrimPrefix(r.URL.Path, base+"/")
+		if r.Method == "POST" {
+			nextID++
+			id = "fixture"
+			if nextID > 1 {
+				id = fmt.Sprintf("fixture-%d", nextID)
+			}
+		}
+		stored := checks[id]
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
 		case "POST", "PATCH":
@@ -66,11 +76,12 @@ func mockCheckAPI(t *testing.T, kind string) (*httptest.Server, func(string)) {
 			}
 			if r.Method == "POST" {
 				stored = make(map[string]any)
+				checks[id] = stored
 			}
 			for k, v := range input {
 				stored[k] = v
 			}
-			stored["id"] = "fixture"
+			stored["id"] = id
 			checkType := "UPTIME"
 			if kind == "browser" || stored["type"] == "BROWSER_CHECK" {
 				checkType = "BROWSER"
@@ -89,13 +100,13 @@ func mockCheckAPI(t *testing.T, kind string) (*httptest.Server, func(string)) {
 		case "GET":
 			json.NewEncoder(w).Encode(map[string]any{"success": true, "result": stored})
 		case "DELETE":
-			stored = nil
+			delete(checks, id)
 			json.NewEncoder(w).Encode(map[string]any{"success": true})
 		default:
 			t.Errorf("unexpected method %s", r.Method)
 		}
 	}))
-	return server, func(script string) { mu.Lock(); defer mu.Unlock(); stored["script"] = script }
+	return server, func(script string) { mu.Lock(); defer mu.Unlock(); checks["fixture"]["script"] = script }
 }
 
 func TestScriptedCheckTerraformLifecycle(t *testing.T) {
