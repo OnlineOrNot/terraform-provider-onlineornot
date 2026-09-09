@@ -18,6 +18,12 @@ use `@playwright/test`. Terraform uploads the file contents only. It does not
 upload local imports, configuration files, or dependencies. Playwright projects
 are not supported yet.
 
+Terraform does not require a `.js` file extension. For example,
+`script = file("${path.module}/homepage.spec.ts")` can read a `.ts` file.
+Only the contents are uploaded, not the file name. The source must currently be
+JavaScript-compatible: the standalone runtime executes it as `.mjs` or `.cjs`
+and does not parse TypeScript-only syntax such as type annotations.
+
 Save this file as `homepage.spec.js` beside your Terraform configuration:
 
 ```javascript
