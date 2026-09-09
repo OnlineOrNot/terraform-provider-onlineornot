@@ -14,7 +14,7 @@ This resource uses the typed `/v1/checks/browser` API. Browser checks are separa
 ## Example Usage
 
 Each browser check accepts one self-contained JavaScript file. The file must
-use Playwright Test. Terraform uploads the file contents only. It does not
+use `@playwright/test`. Terraform uploads the file contents only. It does not
 upload local imports, configuration files, or dependencies. Playwright projects
 are not supported yet.
 
