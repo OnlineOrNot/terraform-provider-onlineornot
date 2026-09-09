@@ -220,3 +220,41 @@ resource "onlineornot_browser_check" "test" {
 		)},
 	}})
 }
+
+func TestScriptedCheckUnknownTimeoutResolvesToNull(t *testing.T) {
+	for _, resourceType := range []string{"browser_check", "check"} {
+		t.Run(resourceType, func(t *testing.T) {
+			kind := "browser"
+			if resourceType == "check" {
+				kind = ""
+			}
+			server, _ := mockCheckAPI(t, kind)
+			defer server.Close()
+			address := "onlineornot_" + resourceType + ".test"
+			config := fmt.Sprintf(`
+provider "onlineornot" {
+ api_key = "fixture-key"
+ base_url = %q
+}
+resource "terraform_data" "settings" {
+ input = { timeout = null }
+}
+resource "onlineornot_%s" "test" {
+ name = "unknown timeout fixture"
+ type = "BROWSER_CHECK"
+ script = %q
+ timeout = terraform_data.settings.output.timeout
+}`, server.URL, resourceType, browserScript)
+			resource.UnitTest(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{Config: config, Check: resource.ComposeAggregateTestCheckFunc(
+						resource.TestCheckResourceAttr(address, "script", browserScript),
+						resource.TestCheckNoResourceAttr(address, "timeout"),
+					)},
+					{Config: config, PlanOnly: true},
+				},
+			})
+		})
+	}
+}

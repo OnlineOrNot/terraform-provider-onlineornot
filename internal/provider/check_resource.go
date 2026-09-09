@@ -131,7 +131,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var data checkModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-	if !data.Script.IsUnknown() && data.Script.ValueString() != "" && !data.Timeout.IsNull() {
+	if !data.Script.IsUnknown() && data.Script.ValueString() != "" && !data.Timeout.IsNull() && !data.Timeout.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(path.Root("timeout"), "Timeout is incompatible with scripted browser checks", "Omit timeout and configure timing in the Playwright script instead. The API stores no timeout for scripted browser checks.")
 	}
 }
@@ -145,7 +145,7 @@ func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if config.Script.ValueString() != "" && !config.Timeout.IsNull() {
+	if config.Script.ValueString() != "" && !config.Timeout.IsNull() && !config.Timeout.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(path.Root("timeout"), "Timeout is incompatible with scripted browser checks", "Omit timeout and configure timing in the Playwright script instead.")
 		return
 	}
