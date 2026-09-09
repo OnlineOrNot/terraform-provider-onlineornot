@@ -1,4 +1,4 @@
-# Scripted mode: upload one self-contained Playwright Test file.
+# Scripted mode: upload one self-contained `@playwright/test` file.
 resource "onlineornot_browser_check" "homepage" {
   name          = "Homepage Playwright check"
   script        = file("${path.module}/homepage.spec.js")

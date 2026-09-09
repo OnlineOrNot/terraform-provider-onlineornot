@@ -8,12 +8,12 @@ description: |-
 # Deploy a Playwright check with Terraform
 
 Use Terraform to create or update a monitor from a local test file.
-Use Playwright Test to define the test behaviour.
+Use `@playwright/test` to define the test behaviour.
 
 ## 1. Prepare the test file
 
 Each browser check accepts one self-contained JavaScript file. The file must
-use Playwright Test. Terraform uploads the file contents only. It does not
+use `@playwright/test`. Terraform uploads the file contents only. It does not
 upload local imports, configuration files, or dependencies. Playwright projects
 are not supported yet.
 
@@ -35,7 +35,7 @@ This guide does not add secret or environment-variable support to remote checks.
 
 ## 2. Run the test locally
 
-Install Node.js 22 and npm. Use Playwright Test 1.58.2 to match the current browser
+Install Node.js 22 and npm. Use `@playwright/test` 1.58.2 to match the current browser
 runtime package. In the working directory, run:
 
 ```shell
@@ -45,7 +45,7 @@ npx playwright install chromium
 npx playwright test homepage.spec.js --browser=chromium --workers=1
 ```
 
-Use [Playwright Test](https://playwright.dev/docs/writing-tests) for test steps,
+Use [`@playwright/test`](https://playwright.dev/docs/writing-tests) for test steps,
 browser assertions, and test timeouts. For example, use `test.setTimeout()` to
 set a test timeout. A script cannot extend the service's 120-second execution
 limit. Runtime settings, including action and navigation timeouts, still apply.
@@ -81,7 +81,7 @@ Save this configuration as `main.tf`. Keep the scripted resource. Use the URL-mo
 resource only if you also want a separate page-load monitor.
 
 ```terraform
-# Scripted mode: upload one self-contained Playwright Test file.
+# Scripted mode: upload one self-contained `@playwright/test` file.
 resource "onlineornot_browser_check" "homepage" {
   name          = "Homepage Playwright check"
   script        = file("${path.module}/homepage.spec.js")
