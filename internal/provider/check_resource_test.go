@@ -230,22 +230,24 @@ func TestCheckResourceUpdateWithoutOperationalStateChanges(t *testing.T) {
 	requestCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		requestCount++
-		if req.Method != http.MethodPatch {
-			t.Errorf("expected PATCH request, got %s", req.Method)
+		if (requestCount == 1 && req.Method != http.MethodPatch) || (requestCount == 2 && req.Method != http.MethodGet) {
+			t.Errorf("expected PATCH followed by GET, got %s for request %d", req.Method, requestCount)
 		}
 		if req.URL.Path != "/v1/checks/check-id" {
 			t.Errorf("expected check update path, got %s", req.URL.Path)
 		}
 
-		var payload map[string]any
-		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
-			t.Fatalf("failed to decode update payload: %v", err)
-		}
-		if _, ok := payload["paused"]; ok {
-			t.Error("expected ordinary update to omit paused")
-		}
-		if _, ok := payload["muted"]; ok {
-			t.Error("expected ordinary update to omit muted")
+		if req.Method == http.MethodPatch {
+			var payload map[string]any
+			if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+				t.Fatalf("failed to decode update payload: %v", err)
+			}
+			if _, ok := payload["paused"]; ok {
+				t.Error("expected ordinary update to omit paused")
+			}
+			if _, ok := payload["muted"]; ok {
+				t.Error("expected ordinary update to omit muted")
+			}
 		}
 
 		if err := json.NewEncoder(w).Encode(client.APIResponse[client.Check]{
@@ -296,8 +298,8 @@ func TestCheckResourceUpdateWithoutOperationalStateChanges(t *testing.T) {
 	if response.Diagnostics.HasError() {
 		t.Fatalf("unexpected update diagnostics: %v", response.Diagnostics.Errors())
 	}
-	if requestCount != 1 {
-		t.Fatalf("expected one update request, got %d", requestCount)
+	if requestCount != 2 {
+		t.Fatalf("expected an update and authoritative read, got %d requests", requestCount)
 	}
 }
 

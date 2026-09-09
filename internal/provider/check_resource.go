@@ -19,6 +19,8 @@ import (
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ resource.Resource = &CheckResource{}
 var _ resource.ResourceWithImportState = &CheckResource{}
+var _ resource.ResourceWithValidateConfig = &CheckResource{}
+var _ resource.ResourceWithModifyPlan = &CheckResource{}
 
 func NewCheckResource() resource.Resource {
 	return &CheckResource{}
@@ -94,6 +96,13 @@ func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataReque
 
 func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_check.CheckResourceSchema(ctx)
+	// The API stores NULL for script-controlled timing. A static schema default
+	// cannot distinguish scripted checks from URL-based checks.
+	timeout := resp.Schema.Attributes["timeout"].(schema.Int64Attribute)
+	timeout.Default = nil
+	timeout.Description = "Timeout in milliseconds. Defaults to 10000 for URL-based checks. Must be omitted for scripted browser checks; configure timing in the script instead."
+	timeout.MarkdownDescription = timeout.Description
+	resp.Schema.Attributes["timeout"] = timeout
 	resp.Schema.Attributes["paused"] = pausedAttribute("check")
 	resp.Schema.Attributes["muted"] = mutedAttribute("check")
 
@@ -116,6 +125,38 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			typeAttr.MarkdownDescription = typeAttr.Description
 			resp.Schema.Attributes["type"] = typeAttr
 		}
+	}
+}
+
+func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var data checkModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	if !data.Script.IsUnknown() && data.Script.ValueString() != "" && !data.Timeout.IsNull() && !data.Timeout.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(path.Root("timeout"), "Timeout is incompatible with scripted browser checks", "Omit timeout and configure timing in the Playwright script instead. The API stores no timeout for scripted browser checks.")
+	}
+}
+
+func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+	var config checkModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if config.Script.ValueString() != "" && !config.Timeout.IsNull() && !config.Timeout.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(path.Root("timeout"), "Timeout is incompatible with scripted browser checks", "Omit timeout and configure timing in the Playwright script instead.")
+		return
+	}
+	if config.Timeout.IsNull() {
+		timeout := types.Int64Value(10000)
+		if config.Script.IsUnknown() {
+			timeout = types.Int64Unknown()
+		} else if config.Script.ValueString() != "" {
+			timeout = types.Int64Null()
+		}
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("timeout"), timeout)...)
 	}
 }
 
@@ -166,7 +207,15 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Populate state from the API response (includes computed defaults).
+	// Persist the ID even if the authoritative read fails, avoiding an orphan.
+	data.Id = types.StringValue(created.ID)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	created, err = r.client.GetTypedCheck(r.endpointKind, created.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Check created but unable to read complete check: %s", err))
+		return
+	}
+	// Mutation responses omit R2-backed scripts; GET is authoritative.
 	r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -179,6 +228,11 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		created, err = r.client.UpdateTypedCheck(r.endpointKind, created.ID, patch)
 		if err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to set check operational state, got error: %s", err))
+			return
+		}
+		created, err = r.client.GetTypedCheck(r.endpointKind, created.ID)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read check after operational update: %s", err))
 			return
 		}
 		r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
@@ -281,7 +335,10 @@ func checkModelToClient(ctx context.Context, data *checkModel, forcedInputType s
 func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkModel, check *client.Check, diags *diag.Diagnostics) {
 	data.Id = types.StringValue(check.ID)
 	data.Name = types.StringValue(check.Name)
-	data.Url = types.StringValue(check.URL)
+	data.Url = types.StringNull()
+	if check.URL != "" {
+		data.Url = types.StringValue(check.URL)
+	}
 	data.Paused = types.BoolValue(check.Status == "PAUSED")
 	data.Muted = types.BoolValue(check.Status == "MUTED")
 
@@ -576,7 +633,12 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		}
 	}
 
-	// Populate state from the final API response.
+	// Mutation responses omit R2-backed scripts; GET is authoritative.
+	updated, err = r.client.GetTypedCheck(r.endpointKind, checkID)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Check updated but unable to read complete check: %s", err))
+		return
+	}
 	r.populateModelFromAPI(ctx, &data, updated, &resp.Diagnostics)
 
 	// Save updated data into Terraform state

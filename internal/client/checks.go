@@ -50,6 +50,20 @@ type CheckPatch struct {
 	Muted  *bool `json:"muted,omitempty"`
 }
 
+// checkRequest represents URL absence as JSON null, including on PATCH so a
+// URL can be cleared when converting a URL-based check to a scripted check.
+// Keep the response model's string URL for existing client consumers.
+func checkRequest(check *Check) any {
+	var url *string
+	if check.URL != "" {
+		url = &check.URL
+	}
+	return struct {
+		*Check
+		URL *string `json:"url"`
+	}{Check: check, URL: url}
+}
+
 // Assertion represents a check assertion
 type Assertion struct {
 	Type       string `json:"type"`
@@ -70,7 +84,7 @@ func (c *Client) CreateTypedCheck(kind string, check *Check) (*Check, error) {
 		path = fmt.Sprintf("/v1/checks/%s", kind)
 	}
 
-	respBody, err := c.Post(path, check)
+	respBody, err := c.Post(path, checkRequest(check))
 	if err != nil {
 		return nil, err
 	}
@@ -133,12 +147,25 @@ func (c *Client) UpdateTypedCheck(kind string, id string, check *CheckPatch) (*C
 	payload := check
 	if kind != "" {
 		path = fmt.Sprintf("/v1/checks/%s/%s", kind, id)
-		checkWithoutType := *check.Check
-		checkWithoutType.Type = ""
-		payload = &CheckPatch{Check: &checkWithoutType, Paused: check.Paused, Muted: check.Muted}
+		if check.Check != nil {
+			checkWithoutType := *check.Check
+			checkWithoutType.Type = ""
+			payload = &CheckPatch{Check: &checkWithoutType, Paused: check.Paused, Muted: check.Muted}
+		}
 	}
 
-	respBody, err := c.Patch(path, payload)
+	var request any = payload
+	if payload.Check != nil {
+		var url *string
+		if payload.URL != "" {
+			url = &payload.URL
+		}
+		request = struct {
+			*CheckPatch
+			URL *string `json:"url"`
+		}{CheckPatch: payload, URL: url}
+	}
+	respBody, err := c.Patch(path, request)
 	if err != nil {
 		return nil, err
 	}

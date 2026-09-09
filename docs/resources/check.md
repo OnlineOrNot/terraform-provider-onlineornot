@@ -84,7 +84,7 @@ resource "onlineornot_check" "browser" {
 - `test_interval` (Number) Interval in seconds between checks
 - `test_regions` (List of String) Regions to run checks from. Valid regions: aws:us-east-1, aws:us-east-2, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1
 - `text_to_search_for` (String) Text to search for in the response
-- `timeout` (Number) Timeout in milliseconds
+- `timeout` (Number) Timeout in milliseconds. Defaults to 10000 for URL-based checks. Must be omitted for scripted browser checks; configure timing in the script instead.
 - `type` (String) Type of check. Must be one of: `BROWSER_CHECK`, `UPTIME_CHECK`.
 - `url` (String) URL to check. Required for URL-based checks, optional for script-based checks.
 - `user_alerts` (List of String)
