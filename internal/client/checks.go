@@ -24,8 +24,8 @@ type Check struct {
 	Headers                      map[string]string `json:"headers,omitempty"`
 	FollowRedirects              *bool             `json:"follow_redirects,omitempty"`
 	VerifySSL                    *bool             `json:"verify_ssl,omitempty"`
-	AuthUsername                 string            `json:"auth_username,omitempty"`
-	AuthPassword                 string            `json:"auth_password,omitempty"`
+	AuthUsername                 *string           `json:"auth_username,omitempty"`
+	AuthPassword                 *string           `json:"auth_password,omitempty"`
 	AlertPriority                string            `json:"alert_priority,omitempty"`
 	Type                         string            `json:"type,omitempty"`
 	Version                      string            `json:"version,omitempty"`
@@ -34,13 +34,20 @@ type Check struct {
 	UserAlerts                   []string          `json:"user_alerts,omitempty"`
 	SlackAlerts                  []string          `json:"slack_alerts,omitempty"`
 	DiscordAlerts                []string          `json:"discord_alerts,omitempty"`
-	PushoverAlerts               []string          `json:"pushover_alerts,omitempty"`
 	TelegramAlerts               []string          `json:"telegram_alerts,omitempty"`
+	PushoverAlerts               []string          `json:"pushover_alerts,omitempty"`
 	WebhookAlerts                []string          `json:"webhook_alerts,omitempty"`
 	OncallAlerts                 []string          `json:"oncall_alerts,omitempty"`
 	IncidentIOAlerts             []string          `json:"incident_io_alerts,omitempty"`
 	MicrosoftTeamsAlerts         []string          `json:"microsoft_teams_alerts,omitempty"`
 	Assertions                   []Assertion       `json:"assertions,omitempty"`
+}
+
+// CheckPatch contains check fields accepted by PATCH plus operational state.
+type CheckPatch struct {
+	*Check
+	Paused *bool `json:"paused,omitempty"`
+	Muted  *bool `json:"muted,omitempty"`
 }
 
 // checkRequest represents URL absence as JSON null, including on PATCH so a
@@ -130,23 +137,35 @@ func (c *Client) GetTypedCheck(kind string, id string) (*Check, error) {
 }
 
 // UpdateCheck updates an existing check
-func (c *Client) UpdateCheck(id string, check *Check) (*Check, error) {
+func (c *Client) UpdateCheck(id string, check *CheckPatch) (*Check, error) {
 	return c.UpdateTypedCheck("", id, check)
 }
 
 // UpdateTypedCheck updates a check using a typed check endpoint when kind is set.
-func (c *Client) UpdateTypedCheck(kind string, id string, check *Check) (*Check, error) {
+func (c *Client) UpdateTypedCheck(kind string, id string, check *CheckPatch) (*Check, error) {
 	path := fmt.Sprintf("/v1/checks/%s", id)
+	payload := check
 	if kind != "" {
 		path = fmt.Sprintf("/v1/checks/%s/%s", kind, id)
+		if check.Check != nil {
+			checkWithoutType := *check.Check
+			checkWithoutType.Type = ""
+			payload = &CheckPatch{Check: &checkWithoutType, Paused: check.Paused, Muted: check.Muted}
+		}
 	}
 
-	// Typed PATCH schemas reject type; the endpoint already fixes the kind.
-	request := *check
-	if kind != "" {
-		request.Type = ""
+	var request any = payload
+	if payload.Check != nil {
+		var url *string
+		if payload.URL != "" {
+			url = &payload.URL
+		}
+		request = struct {
+			*CheckPatch
+			URL *string `json:"url"`
+		}{CheckPatch: payload, URL: url}
 	}
-	respBody, err := c.Patch(path, checkRequest(&request))
+	respBody, err := c.Patch(path, request)
 	if err != nil {
 		return nil, err
 	}

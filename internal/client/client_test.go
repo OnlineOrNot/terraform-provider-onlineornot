@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -68,9 +69,20 @@ func TestClient_GetCheck(t *testing.T) {
 }
 
 func TestClient_CreateCheck(t *testing.T) {
+	authUsername := ""
+	authPassword := "secret"
 	input := &Check{
-		Name: "New Check",
-		URL:  "https://example.com",
+		Name:         "New Check",
+		URL:          "https://example.com",
+		AuthUsername: &authUsername,
+		AuthPassword: &authPassword,
+		Headers:      map[string]string{"Content-Type": "application/json"},
+		Assertions: []Assertion{{
+			Type:       "JSON_BODY",
+			Property:   "$.status",
+			Comparison: "EQUALS",
+			Expected:   "ok",
+		}},
 	}
 
 	createdCheck := Check{
@@ -91,12 +103,29 @@ func TestClient_CreateCheck(t *testing.T) {
 		if r.URL.Path != "/v1/checks" {
 			t.Errorf("expected /v1/checks, got %s", r.URL.Path)
 		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("expected application/json Content-Type, got %s", r.Header.Get("Content-Type"))
+		}
 
 		// Decode and verify request body
 		var reqBody Check
-		json.NewDecoder(r.Body).Decode(&reqBody)
+		if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
 		if reqBody.Name != input.Name {
 			t.Errorf("expected Name %s, got %s", input.Name, reqBody.Name)
+		}
+		if !reflect.DeepEqual(reqBody.Headers, input.Headers) {
+			t.Errorf("expected Headers %v, got %v", input.Headers, reqBody.Headers)
+		}
+		if !reflect.DeepEqual(reqBody.Assertions, input.Assertions) {
+			t.Errorf("expected Assertions %v, got %v", input.Assertions, reqBody.Assertions)
+		}
+		if reqBody.AuthUsername == nil || *reqBody.AuthUsername != "" {
+			t.Errorf("expected explicit empty auth username, got %#v", reqBody.AuthUsername)
+		}
+		if reqBody.AuthPassword == nil || *reqBody.AuthPassword != authPassword {
+			t.Errorf("expected auth password %q, got %#v", authPassword, reqBody.AuthPassword)
 		}
 
 		resp := APIResponse[Check]{
@@ -213,7 +242,15 @@ func TestClient_CreateDNSCheck(t *testing.T) {
 
 func TestClient_UpdateCheck(t *testing.T) {
 	input := &Check{
-		Name: "Updated Check",
+		Name:    "Updated Check",
+		Type:    "UPTIME_CHECK",
+		Headers: map[string]string{"X-Request-ID": "terraform"},
+		Assertions: []Assertion{{
+			Type:       "RESPONSE_HEADERS",
+			Property:   "Content-Type",
+			Comparison: "CONTAINS",
+			Expected:   "application/json",
+		}},
 	}
 
 	updatedCheck := Check{
@@ -230,6 +267,23 @@ func TestClient_UpdateCheck(t *testing.T) {
 		if r.URL.Path != "/v1/checks/abc123" {
 			t.Errorf("expected /v1/checks/abc123, got %s", r.URL.Path)
 		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("expected application/json Content-Type, got %s", r.Header.Get("Content-Type"))
+		}
+
+		var reqBody Check
+		if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+		if !reflect.DeepEqual(reqBody.Headers, input.Headers) {
+			t.Errorf("expected Headers %v, got %v", input.Headers, reqBody.Headers)
+		}
+		if !reflect.DeepEqual(reqBody.Assertions, input.Assertions) {
+			t.Errorf("expected Assertions %v, got %v", input.Assertions, reqBody.Assertions)
+		}
+		if reqBody.Type != input.Type {
+			t.Errorf("expected Type %s, got %s", input.Type, reqBody.Type)
+		}
 
 		resp := APIResponse[Check]{
 			Result:  updatedCheck,
@@ -240,7 +294,7 @@ func TestClient_UpdateCheck(t *testing.T) {
 	})
 	defer server.Close()
 
-	result, err := client.UpdateCheck("abc123", input)
+	result, err := client.UpdateCheck("abc123", &CheckPatch{Check: input})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -251,7 +305,16 @@ func TestClient_UpdateCheck(t *testing.T) {
 }
 
 func TestClient_UpdateTypedCheck(t *testing.T) {
-	input := &Check{Name: "Updated Uptime Check"}
+	input := &Check{
+		Name: "Updated Uptime Check",
+		Type: "UPTIME_CHECK",
+		Assertions: []Assertion{{
+			Type:       "TEXT_BODY",
+			Property:   "",
+			Comparison: "CONTAINS",
+			Expected:   "Example Domain",
+		}},
+	}
 	updatedCheck := Check{ID: "abc123", Name: "Updated Uptime Check", CheckType: "UPTIME"}
 
 	server, client := newTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -262,13 +325,29 @@ func TestClient_UpdateTypedCheck(t *testing.T) {
 			t.Errorf("expected /v1/checks/uptime/abc123, got %s", r.URL.Path)
 		}
 
+		var reqBody map[string]json.RawMessage
+		if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+		if _, ok := reqBody["type"]; ok {
+			t.Error("expected top-level type to be omitted from typed update request")
+		}
+
+		var assertions []Assertion
+		if err := json.Unmarshal(reqBody["assertions"], &assertions); err != nil {
+			t.Fatalf("failed to decode assertions: %v", err)
+		}
+		if !reflect.DeepEqual(assertions, input.Assertions) {
+			t.Errorf("expected Assertions %v, got %v", input.Assertions, assertions)
+		}
+
 		resp := APIResponse[Check]{Result: updatedCheck, Success: true}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
-	result, err := client.UpdateTypedCheck("uptime", "abc123", input)
+	result, err := client.UpdateTypedCheck("uptime", "abc123", &CheckPatch{Check: input})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -295,7 +374,7 @@ func TestClient_UpdateTCPCheck(t *testing.T) {
 	})
 	defer server.Close()
 
-	result, err := client.UpdateTCPCheck("tcp123", input)
+	result, err := client.UpdateTCPCheck("tcp123", &TCPCheckPatch{TCPCheck: input})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

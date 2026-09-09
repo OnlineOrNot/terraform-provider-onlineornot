@@ -25,6 +25,7 @@ description: |-
 
 - `components` (Attributes List) Components affected by this incident with their status (see [below for nested schema](#nestedatt--components))
 - `id` (String) Status Page Incident ID
+- `impact` (String) Impact of the incident.
 - `notify_subscribers` (Boolean) Whether to notify status page subscribers
 - `status_page_id` (String) Status Page ID
 

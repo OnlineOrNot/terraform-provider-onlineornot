@@ -82,9 +82,36 @@ func (st *SchemaType) UnmarshalJSON(data []byte) error {
 	return nil // Ignore if neither works
 }
 
+// OpenAPIEnumValues accepts enum members of any valid JSON type and preserves
+// their JSON representation for documentation output.
+type OpenAPIEnumValues []string
+
+func (values *OpenAPIEnumValues) UnmarshalJSON(data []byte) error {
+	var rawValues []json.RawMessage
+	if err := json.Unmarshal(data, &rawValues); err != nil {
+		return err
+	}
+
+	*values = make(OpenAPIEnumValues, 0, len(rawValues))
+	for _, rawValue := range rawValues {
+		if len(rawValue) > 0 && rawValue[0] == '"' {
+			var stringValue string
+			if err := json.Unmarshal(rawValue, &stringValue); err != nil {
+				return err
+			}
+			*values = append(*values, stringValue)
+			continue
+		}
+
+		*values = append(*values, string(rawValue))
+	}
+
+	return nil
+}
+
 type Schema struct {
 	Type        SchemaType        `json:"type,omitempty"`
-	Enum        []string          `json:"enum,omitempty"`
+	Enum        OpenAPIEnumValues `json:"enum,omitempty"`
 	Description string            `json:"description,omitempty"`
 	Properties  map[string]Schema `json:"properties,omitempty"`
 	Items       *Schema           `json:"items,omitempty"`
@@ -306,7 +333,7 @@ func extractEnumsFromSchemaFlat(schema *Schema, enums map[string]EnumInfo, spec 
 
 		// Record enum if present
 		if len(propSchema.Enum) > 0 {
-			enums[qualifiedName] = EnumInfo{Values: propSchema.Enum}
+			enums[qualifiedName] = EnumInfo{Values: []string(propSchema.Enum)}
 		}
 
 		// Recurse into nested objects (like assertions)

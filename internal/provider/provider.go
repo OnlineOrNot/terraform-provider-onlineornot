@@ -90,6 +90,7 @@ func (p *OnlineornotProvider) Configure(ctx context.Context, req provider.Config
 
 func (p *OnlineornotProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		NewTokenResource,
 		NewCheckResource,
 		NewUptimeCheckResource,
 		NewBrowserCheckResource,
@@ -101,6 +102,9 @@ func (p *OnlineornotProvider) Resources(ctx context.Context) []func() resource.R
 		NewMaintenanceWindowResource,
 		NewStatusPageComponentResource,
 		NewStatusPageComponentGroupResource,
+		NewStatusPageComponentOrderResource,
+		NewStatusPageGroupOrderResource,
+		NewStatusPageGroupComponentOrderResource,
 		NewStatusPageIncidentResource,
 		NewStatusPageScheduledMaintenanceResource,
 	}

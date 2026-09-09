@@ -33,6 +33,7 @@ type DNSCheck struct {
 	SlackAlerts                  []string           `json:"slack_alerts,omitempty"`
 	DiscordAlerts                []string           `json:"discord_alerts,omitempty"`
 	TelegramAlerts               []string           `json:"telegram_alerts,omitempty"`
+	PushoverAlerts               []string           `json:"pushover_alerts,omitempty"`
 	WebhookAlerts                []string           `json:"webhook_alerts,omitempty"`
 	OncallAlerts                 []string           `json:"oncall_alerts,omitempty"`
 	IncidentIOAlerts             []string           `json:"incident_io_alerts,omitempty"`
@@ -62,11 +63,24 @@ type TCPCheck struct {
 	SlackAlerts                  []string           `json:"slack_alerts,omitempty"`
 	DiscordAlerts                []string           `json:"discord_alerts,omitempty"`
 	TelegramAlerts               []string           `json:"telegram_alerts,omitempty"`
+	PushoverAlerts               []string           `json:"pushover_alerts,omitempty"`
 	WebhookAlerts                []string           `json:"webhook_alerts,omitempty"`
 	OncallAlerts                 []string           `json:"oncall_alerts,omitempty"`
 	IncidentIOAlerts             []string           `json:"incident_io_alerts,omitempty"`
 	MicrosoftTeamsAlerts         []string           `json:"microsoft_teams_alerts,omitempty"`
 	Assertions                   []MonitorAssertion `json:"assertions,omitempty"`
+}
+
+type DNSCheckPatch struct {
+	*DNSCheck
+	Paused *bool `json:"paused,omitempty"`
+	Muted  *bool `json:"muted,omitempty"`
+}
+
+type TCPCheckPatch struct {
+	*TCPCheck
+	Paused *bool `json:"paused,omitempty"`
+	Muted  *bool `json:"muted,omitempty"`
 }
 
 func parseAPIResponse[T any](respBody []byte) (*T, error) {
@@ -101,7 +115,7 @@ func (c *Client) GetDNSCheck(id string) (*DNSCheck, error) {
 	return parseAPIResponse[DNSCheck](respBody)
 }
 
-func (c *Client) UpdateDNSCheck(id string, check *DNSCheck) (*DNSCheck, error) {
+func (c *Client) UpdateDNSCheck(id string, check *DNSCheckPatch) (*DNSCheck, error) {
 	respBody, err := c.Patch(fmt.Sprintf("/v1/checks/dns/%s", id), check)
 	if err != nil {
 		return nil, err
@@ -130,7 +144,7 @@ func (c *Client) GetTCPCheck(id string) (*TCPCheck, error) {
 	return parseAPIResponse[TCPCheck](respBody)
 }
 
-func (c *Client) UpdateTCPCheck(id string, check *TCPCheck) (*TCPCheck, error) {
+func (c *Client) UpdateTCPCheck(id string, check *TCPCheckPatch) (*TCPCheck, error) {
 	respBody, err := c.Patch(fmt.Sprintf("/v1/checks/tcp/%s", id), check)
 	if err != nil {
 		return nil, err

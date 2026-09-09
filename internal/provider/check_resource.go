@@ -42,6 +42,42 @@ func NewBrowserCheckResource() resource.Resource {
 	}
 }
 
+type checkModel struct {
+	AlertPriority                types.String `tfsdk:"alert_priority"`
+	Assertions                   types.List   `tfsdk:"assertions"`
+	AuthPassword                 types.String `tfsdk:"auth_password"`
+	AuthUsername                 types.String `tfsdk:"auth_username"`
+	Body                         types.String `tfsdk:"body"`
+	ConfirmationPeriodSeconds    types.Int64  `tfsdk:"confirmation_period_seconds"`
+	DiscordAlerts                types.List   `tfsdk:"discord_alerts"`
+	FollowRedirects              types.Bool   `tfsdk:"follow_redirects"`
+	Headers                      types.Map    `tfsdk:"headers"`
+	Id                           types.String `tfsdk:"id"`
+	IncidentIoAlerts             types.List   `tfsdk:"incident_io_alerts"`
+	Method                       types.String `tfsdk:"method"`
+	MicrosoftTeamsAlerts         types.List   `tfsdk:"microsoft_teams_alerts"`
+	Muted                        types.Bool   `tfsdk:"muted"`
+	Name                         types.String `tfsdk:"name"`
+	OncallAlerts                 types.List   `tfsdk:"oncall_alerts"`
+	Paused                       types.Bool   `tfsdk:"paused"`
+	PushoverAlerts               types.List   `tfsdk:"pushover_alerts"`
+	RecoveryPeriodSeconds        types.Int64  `tfsdk:"recovery_period_seconds"`
+	ReminderAlertIntervalMinutes types.Int64  `tfsdk:"reminder_alert_interval_minutes"`
+	Script                       types.String `tfsdk:"script"`
+	SlackAlerts                  types.List   `tfsdk:"slack_alerts"`
+	TelegramAlerts               types.List   `tfsdk:"telegram_alerts"`
+	TestInterval                 types.Int64  `tfsdk:"test_interval"`
+	TestRegions                  types.List   `tfsdk:"test_regions"`
+	TextToSearchFor              types.String `tfsdk:"text_to_search_for"`
+	Timeout                      types.Int64  `tfsdk:"timeout"`
+	Type                         types.String `tfsdk:"type"`
+	Url                          types.String `tfsdk:"url"`
+	UserAlerts                   types.List   `tfsdk:"user_alerts"`
+	VerifySsl                    types.Bool   `tfsdk:"verify_ssl"`
+	Version                      types.String `tfsdk:"version"`
+	WebhookAlerts                types.List   `tfsdk:"webhook_alerts"`
+}
+
 // CheckResource defines the resource implementation.
 type CheckResource struct {
 	client          *client.Client
@@ -67,6 +103,20 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 	timeout.Description = "Timeout in milliseconds. Defaults to 10000 for URL-based checks. Must be omitted for scripted browser checks; configure timing in the script instead."
 	timeout.MarkdownDescription = timeout.Description
 	resp.Schema.Attributes["timeout"] = timeout
+	resp.Schema.Attributes["paused"] = pausedAttribute("check")
+	resp.Schema.Attributes["muted"] = mutedAttribute("check")
+
+	if authUsernameAttr, ok := resp.Schema.Attributes["auth_username"].(schema.StringAttribute); ok {
+		authUsernameAttr.Description = "Username to use for URLs behind HTTP Basic Auth. Set this to an empty string for an empty user-id."
+		authUsernameAttr.MarkdownDescription = authUsernameAttr.Description
+		resp.Schema.Attributes["auth_username"] = authUsernameAttr
+	}
+	if authPasswordAttr, ok := resp.Schema.Attributes["auth_password"].(schema.StringAttribute); ok {
+		authPasswordAttr.Sensitive = true
+		authPasswordAttr.Description = "Password to use for URLs behind HTTP Basic Auth. Empty strings are preserved."
+		authPasswordAttr.MarkdownDescription = authPasswordAttr.Description
+		resp.Schema.Attributes["auth_password"] = authPasswordAttr
+	}
 
 	if r.forcedInputType != "" {
 		if typeAttr, ok := resp.Schema.Attributes["type"].(schema.StringAttribute); ok {
@@ -79,7 +129,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 }
 
 func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var data resource_check.CheckModel
+	var data checkModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if !data.Script.IsUnknown() && data.Script.ValueString() != "" && !data.Timeout.IsNull() {
 		resp.Diagnostics.AddAttributeError(path.Root("timeout"), "Timeout is incompatible with scripted browser checks", "Omit timeout and configure timing in the Playwright script instead. The API stores no timeout for scripted browser checks.")
@@ -90,7 +140,7 @@ func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	if req.Plan.Raw.IsNull() {
 		return
 	}
-	var config resource_check.CheckModel
+	var config checkModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -130,7 +180,7 @@ func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureReq
 }
 
 func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data resource_check.CheckModel
+	var data checkModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -139,7 +189,61 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Convert to API model
+	check := checkModelToClient(ctx, &data, r.forcedInputType, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	changes, err := operationalStateChanges(data.Paused, data.Muted, types.BoolValue(false), types.BoolValue(false))
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Operational State", err.Error())
+		return
+	}
+
+	// Create the check without PATCH-only operational fields.
+	created, err := r.client.CreateTypedCheck(r.endpointKind, check)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create check, got error: %s", err))
+		return
+	}
+
+	// Persist the ID even if the authoritative read fails, avoiding an orphan.
+	data.Id = types.StringValue(created.ID)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	created, err = r.client.GetTypedCheck(r.endpointKind, created.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Check created but unable to read complete check: %s", err))
+		return
+	}
+	// Mutation responses omit R2-backed scripts; GET is authoritative.
+	r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	for _, change := range changes {
+		patch := &client.CheckPatch{}
+		applyOperationalState(change, &patch.Paused, &patch.Muted)
+		created, err = r.client.UpdateTypedCheck(r.endpointKind, created.ID, patch)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to set check operational state, got error: %s", err))
+			return
+		}
+		created, err = r.client.GetTypedCheck(r.endpointKind, created.ID)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read check after operational update: %s", err))
+			return
+		}
+		r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
+	}
+
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// checkModelToClient converts a Terraform check model into the API request model.
+func checkModelToClient(ctx context.Context, data *checkModel, forcedInputType string, diags *diag.Diagnostics) *client.Check {
 	check := &client.Check{
 		Name:                         data.Name.ValueString(),
 		URL:                          data.Url.ValueString(),
@@ -155,86 +259,88 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		Type:                         data.Type.ValueString(),
 		Version:                      data.Version.ValueString(),
 		Script:                       data.Script.ValueString(),
-		AuthUsername:                 data.AuthUsername.ValueString(),
-		AuthPassword:                 data.AuthPassword.ValueString(),
 	}
-	if r.forcedInputType != "" {
-		check.Type = r.forcedInputType
+	if forcedInputType != "" {
+		check.Type = forcedInputType
 	}
 
+	if !data.AuthUsername.IsNull() && !data.AuthUsername.IsUnknown() {
+		value := data.AuthUsername.ValueString()
+		check.AuthUsername = &value
+	}
+	if !data.AuthPassword.IsNull() && !data.AuthPassword.IsUnknown() {
+		value := data.AuthPassword.ValueString()
+		check.AuthPassword = &value
+	}
 	if !data.FollowRedirects.IsNull() {
-		v := data.FollowRedirects.ValueBool()
-		check.FollowRedirects = &v
+		value := data.FollowRedirects.ValueBool()
+		check.FollowRedirects = &value
 	}
-
 	if !data.VerifySsl.IsNull() {
-		v := data.VerifySsl.ValueBool()
-		check.VerifySSL = &v
+		value := data.VerifySsl.ValueBool()
+		check.VerifySSL = &value
 	}
 
-	// Convert string lists
-	if !data.TestRegions.IsNull() {
-		data.TestRegions.ElementsAs(ctx, &check.TestRegions, false)
+	if !data.TestRegions.IsNull() && !data.TestRegions.IsUnknown() {
+		diags.Append(data.TestRegions.ElementsAs(ctx, &check.TestRegions, false)...)
 	}
-	if !data.UserAlerts.IsNull() {
-		data.UserAlerts.ElementsAs(ctx, &check.UserAlerts, false)
+	if !data.UserAlerts.IsNull() && !data.UserAlerts.IsUnknown() {
+		diags.Append(data.UserAlerts.ElementsAs(ctx, &check.UserAlerts, false)...)
 	}
-	if !data.SlackAlerts.IsNull() {
-		data.SlackAlerts.ElementsAs(ctx, &check.SlackAlerts, false)
+	if !data.SlackAlerts.IsNull() && !data.SlackAlerts.IsUnknown() {
+		diags.Append(data.SlackAlerts.ElementsAs(ctx, &check.SlackAlerts, false)...)
 	}
-	if !data.DiscordAlerts.IsNull() {
-		data.DiscordAlerts.ElementsAs(ctx, &check.DiscordAlerts, false)
+	if !data.DiscordAlerts.IsNull() && !data.DiscordAlerts.IsUnknown() {
+		diags.Append(data.DiscordAlerts.ElementsAs(ctx, &check.DiscordAlerts, false)...)
 	}
-	if !data.PushoverAlerts.IsNull() {
-		data.PushoverAlerts.ElementsAs(ctx, &check.PushoverAlerts, false)
+	if !data.TelegramAlerts.IsNull() && !data.TelegramAlerts.IsUnknown() {
+		diags.Append(data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)...)
 	}
-	if !data.TelegramAlerts.IsNull() {
-		data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)
+	if !data.PushoverAlerts.IsNull() && !data.PushoverAlerts.IsUnknown() {
+		diags.Append(data.PushoverAlerts.ElementsAs(ctx, &check.PushoverAlerts, false)...)
 	}
-	if !data.WebhookAlerts.IsNull() {
-		data.WebhookAlerts.ElementsAs(ctx, &check.WebhookAlerts, false)
+	if !data.WebhookAlerts.IsNull() && !data.WebhookAlerts.IsUnknown() {
+		diags.Append(data.WebhookAlerts.ElementsAs(ctx, &check.WebhookAlerts, false)...)
 	}
-	if !data.OncallAlerts.IsNull() {
-		data.OncallAlerts.ElementsAs(ctx, &check.OncallAlerts, false)
+	if !data.OncallAlerts.IsNull() && !data.OncallAlerts.IsUnknown() {
+		diags.Append(data.OncallAlerts.ElementsAs(ctx, &check.OncallAlerts, false)...)
 	}
-	if !data.IncidentIoAlerts.IsNull() {
-		data.IncidentIoAlerts.ElementsAs(ctx, &check.IncidentIOAlerts, false)
+	if !data.IncidentIoAlerts.IsNull() && !data.IncidentIoAlerts.IsUnknown() {
+		diags.Append(data.IncidentIoAlerts.ElementsAs(ctx, &check.IncidentIOAlerts, false)...)
 	}
-	if !data.MicrosoftTeamsAlerts.IsNull() {
-		data.MicrosoftTeamsAlerts.ElementsAs(ctx, &check.MicrosoftTeamsAlerts, false)
+	if !data.MicrosoftTeamsAlerts.IsNull() && !data.MicrosoftTeamsAlerts.IsUnknown() {
+		diags.Append(data.MicrosoftTeamsAlerts.ElementsAs(ctx, &check.MicrosoftTeamsAlerts, false)...)
 	}
-
-	// Create the check
-	created, err := r.client.CreateTypedCheck(r.endpointKind, check)
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create check, got error: %s", err))
-		return
+	if !data.Headers.IsNull() && !data.Headers.IsUnknown() {
+		diags.Append(data.Headers.ElementsAs(ctx, &check.Headers, false)...)
 	}
 
-	// Persist the ID even if the authoritative read fails, avoiding an orphan.
-	data.Id = types.StringValue(created.ID)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-	created, err = r.client.GetTypedCheck(r.endpointKind, created.ID)
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Check created but unable to read complete check: %s", err))
-		return
+	if !data.Assertions.IsNull() && !data.Assertions.IsUnknown() {
+		var assertionValues []resource_check.AssertionsValue
+		diags.Append(data.Assertions.ElementsAs(ctx, &assertionValues, false)...)
+		for _, assertion := range assertionValues {
+			check.Assertions = append(check.Assertions, client.Assertion{
+				Type:       assertion.AssertionsType.ValueString(),
+				Property:   assertion.Property.ValueString(),
+				Comparison: assertion.Comparison.ValueString(),
+				Expected:   assertion.Expected.ValueString(),
+			})
+		}
 	}
 
-	// Mutation responses omit R2-backed scripts; GET is authoritative.
-	r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
-
-	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	return check
 }
 
 // populateModelFromAPI updates a CheckModel with values from the API response
-func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource_check.CheckModel, check *client.Check, diags *diag.Diagnostics) {
+func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkModel, check *client.Check, diags *diag.Diagnostics) {
 	data.Id = types.StringValue(check.ID)
 	data.Name = types.StringValue(check.Name)
 	data.Url = types.StringNull()
 	if check.URL != "" {
 		data.Url = types.StringValue(check.URL)
 	}
+	data.Paused = types.BoolValue(check.Status == "PAUSED")
+	data.Muted = types.BoolValue(check.Status == "MUTED")
 
 	// String fields with defaults
 	if check.Method != "" {
@@ -285,13 +391,13 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource
 	} else {
 		data.Script = types.StringNull()
 	}
-	if check.AuthUsername != "" {
-		data.AuthUsername = types.StringValue(check.AuthUsername)
+	if check.AuthUsername != nil {
+		data.AuthUsername = types.StringValue(*check.AuthUsername)
 	} else {
 		data.AuthUsername = types.StringNull()
 	}
-	if check.AuthPassword != "" {
-		data.AuthPassword = types.StringValue(check.AuthPassword)
+	if check.AuthPassword != nil {
+		data.AuthPassword = types.StringValue(*check.AuthPassword)
 	} else {
 		data.AuthPassword = types.StringNull()
 	}
@@ -368,20 +474,20 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource
 		data.DiscordAlerts = types.ListNull(types.StringType)
 	}
 
-	if len(check.PushoverAlerts) > 0 {
-		alerts, d := types.ListValueFrom(ctx, types.StringType, check.PushoverAlerts)
-		diags.Append(d...)
-		data.PushoverAlerts = alerts
-	} else {
-		data.PushoverAlerts = types.ListNull(types.StringType)
-	}
-
 	if len(check.TelegramAlerts) > 0 {
 		telegramAlerts, d := types.ListValueFrom(ctx, types.StringType, check.TelegramAlerts)
 		diags.Append(d...)
 		data.TelegramAlerts = telegramAlerts
 	} else {
 		data.TelegramAlerts = types.ListNull(types.StringType)
+	}
+
+	if len(check.PushoverAlerts) > 0 {
+		pushoverAlerts, d := types.ListValueFrom(ctx, types.StringType, check.PushoverAlerts)
+		diags.Append(d...)
+		data.PushoverAlerts = pushoverAlerts
+	} else {
+		data.PushoverAlerts = types.ListNull(types.StringType)
 	}
 
 	if len(check.WebhookAlerts) > 0 {
@@ -458,7 +564,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource
 }
 
 func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data resource_check.CheckModel
+	var data checkModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -482,8 +588,8 @@ func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp
 }
 
 func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data resource_check.CheckModel
-	var state resource_check.CheckModel
+	var data checkModel
+	var state checkModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -497,75 +603,34 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Use the ID from state (it's stable), data from plan (user's desired state)
 	checkID := state.Id.ValueString()
 
-	// Convert to API model
-	check := &client.Check{
-		Name:                         data.Name.ValueString(),
-		URL:                          data.Url.ValueString(),
-		TestInterval:                 int(data.TestInterval.ValueInt64()),
-		TextToSearchFor:              data.TextToSearchFor.ValueString(),
-		ReminderAlertIntervalMinutes: int(data.ReminderAlertIntervalMinutes.ValueInt64()),
-		ConfirmationPeriodSeconds:    int(data.ConfirmationPeriodSeconds.ValueInt64()),
-		RecoveryPeriodSeconds:        int(data.RecoveryPeriodSeconds.ValueInt64()),
-		Timeout:                      int(data.Timeout.ValueInt64()),
-		Method:                       data.Method.ValueString(),
-		Body:                         data.Body.ValueString(),
-		AlertPriority:                data.AlertPriority.ValueString(),
-		Type:                         data.Type.ValueString(),
-		Version:                      data.Version.ValueString(),
-		Script:                       data.Script.ValueString(),
-		AuthUsername:                 data.AuthUsername.ValueString(),
-		AuthPassword:                 data.AuthPassword.ValueString(),
-	}
-	if r.forcedInputType != "" {
-		check.Type = r.forcedInputType
+	check := checkModelToClient(ctx, &data, r.forcedInputType, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	if !data.FollowRedirects.IsNull() {
-		v := data.FollowRedirects.ValueBool()
-		check.FollowRedirects = &v
+	changes, err := operationalStateChanges(data.Paused, data.Muted, state.Paused, state.Muted)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Operational State", err.Error())
+		return
 	}
 
-	if !data.VerifySsl.IsNull() {
-		v := data.VerifySsl.ValueBool()
-		check.VerifySSL = &v
+	patch := &client.CheckPatch{Check: check}
+	if len(changes) > 0 {
+		applyOperationalState(changes[0], &patch.Paused, &patch.Muted)
 	}
-
-	if !data.TestRegions.IsNull() {
-		data.TestRegions.ElementsAs(ctx, &check.TestRegions, false)
-	}
-	if !data.UserAlerts.IsNull() {
-		data.UserAlerts.ElementsAs(ctx, &check.UserAlerts, false)
-	}
-	if !data.SlackAlerts.IsNull() {
-		data.SlackAlerts.ElementsAs(ctx, &check.SlackAlerts, false)
-	}
-	if !data.DiscordAlerts.IsNull() {
-		data.DiscordAlerts.ElementsAs(ctx, &check.DiscordAlerts, false)
-	}
-	if !data.PushoverAlerts.IsNull() {
-		data.PushoverAlerts.ElementsAs(ctx, &check.PushoverAlerts, false)
-	}
-	if !data.TelegramAlerts.IsNull() {
-		data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)
-	}
-	if !data.WebhookAlerts.IsNull() {
-		data.WebhookAlerts.ElementsAs(ctx, &check.WebhookAlerts, false)
-	}
-	if !data.OncallAlerts.IsNull() {
-		data.OncallAlerts.ElementsAs(ctx, &check.OncallAlerts, false)
-	}
-	if !data.IncidentIoAlerts.IsNull() {
-		data.IncidentIoAlerts.ElementsAs(ctx, &check.IncidentIOAlerts, false)
-	}
-	if !data.MicrosoftTeamsAlerts.IsNull() {
-		data.MicrosoftTeamsAlerts.ElementsAs(ctx, &check.MicrosoftTeamsAlerts, false)
-	}
-
-	// Update the check using the ID from state
-	updated, err := r.client.UpdateTypedCheck(r.endpointKind, checkID, check)
+	updated, err := r.client.UpdateTypedCheck(r.endpointKind, checkID, patch)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update check, got error: %s", err))
 		return
+	}
+	for i := 1; i < len(changes); i++ {
+		patch = &client.CheckPatch{}
+		applyOperationalState(changes[i], &patch.Paused, &patch.Muted)
+		updated, err = r.client.UpdateTypedCheck(r.endpointKind, checkID, patch)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update check operational state, got error: %s", err))
+			return
+		}
 	}
 
 	// Mutation responses omit R2-backed scripts; GET is authoritative.
@@ -581,7 +646,7 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 }
 
 func (r *CheckResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data resource_check.CheckModel
+	var data checkModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)

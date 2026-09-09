@@ -8,6 +8,7 @@ Manage your [OnlineOrNot](https://onlineornot.com) uptime monitoring infrastruct
 - **Heartbeat Monitors** - Track cron jobs and background processes
 - **Status Pages** - Create and manage public status pages
 - **Incidents & Maintenance** - Declare incidents and scheduled maintenance windows
+- **API Tokens** - Manage scoped credentials with explicit expiration and sensitive state
 - **Webhooks** - Configure alert webhooks
 - **Alert Routing** - Assign users to receive alerts via email, Slack, Discord, PagerDuty, and more
 
@@ -79,8 +80,12 @@ provider "onlineornot" {
 | `onlineornot_status_page` | Public status page |
 | `onlineornot_status_page_component` | Status page component |
 | `onlineornot_status_page_component_group` | Group of components |
+| `onlineornot_status_page_component_order` | Complete ungrouped component order |
+| `onlineornot_status_page_group_order` | Complete component group order |
+| `onlineornot_status_page_group_component_order` | Complete component order within a group |
 | `onlineornot_status_page_incident` | Status page incident |
 | `onlineornot_status_page_scheduled_maintenance` | Scheduled maintenance window |
+| `onlineornot_token` | API token (creation-only secret; edits replace) |
 | `onlineornot_webhook` | Webhook for alerts |
 | `onlineornot_maintenance_window` | Maintenance window (suppresses alerts) |
 
@@ -181,3 +186,25 @@ terraform plan
 ## License
 
 [MIT](LICENSE)
+
+## OpenAPI contract
+
+The provider shares a pinned OpenAPI revision with the generated
+[`@onlineornot/api`](https://github.com/OnlineOrNot/onlineornot/tree/main/packages/api)
+SDK. `schema.lock.json` records the source revision and SHA-256 digest; schema
+generation fails if the downloaded bytes do not match that lock.
+
+`operation-parity.json` gives every OpenAPI `operationId` one reviewed status:
+
+- `implemented`: exposed by an existing Terraform resource or data source;
+- `planned`: has a proposed Terraform mapping but is not implemented yet; or
+- `waived`: intentionally omitted because it is not declarative infrastructure.
+
+Run the contract check with:
+
+```bash
+make check-contract
+```
+
+When updating `schema.lock.json`, update the parity manifest in the same change.
+CI rejects missing, duplicate, stale, or invalid operation mappings.

@@ -27,7 +27,9 @@ description: |-
 - `id` (String) Heartbeat ID
 - `incident_io_alerts` (List of String) Array of incident.io integration IDs to alert
 - `microsoft_teams_alerts` (List of String) Array of Microsoft Teams integration IDs to alert
+- `muted` (Boolean) Whether alerts for the heartbeat are muted. Cannot be true when paused is true.
 - `oncall_alerts` (List of String) IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)
+- `paused` (Boolean) Whether the heartbeat is paused. Cannot be true when muted is true.
 - `pushover_alerts` (List of String) Array of Pushover integration IDs to alert
 - `reminder_alert_interval_minutes` (Number) Interval in minutes between reminder alerts (-1 for never)
 - `report_period` (Number) Expected interval in seconds between heartbeat pings (for simple schedule)
