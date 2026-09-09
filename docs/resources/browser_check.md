@@ -59,6 +59,16 @@ resource "onlineornot_browser_check" "page_load" {
 }
 ```
 
+## Script validation
+
+The API checks JavaScript syntax before it saves the script.
+Syntax errors stop the save operation and identify the line and column.
+Line and column numbers start from 1.
+Terraform reports the API error during the apply operation.
+The `terraform validate` command does not check JavaScript syntax.
+The runtime must still find tests, resolve imports, and execute assertions.
+A successful save operation does not show that the test passed.
+
 ## Monitor settings
 
 - For URL mode, supply `url` to load a page.

@@ -115,10 +115,16 @@ The operator who manages the monitors must do these steps.
 The apply operation creates or updates a monitor.
 A successful apply operation does not show that the browser test passed.
 
-The API checks the script input.
-It does not check JavaScript syntax or find tests.
-The runtime does these checks during execution.
-Invalid syntax, no tests, or an unavailable module cause an execution failure.
+The API checks JavaScript syntax before it saves the script.
+A syntax error stops the save operation.
+The error identifies the line and column, starting from 1.
+Correct the source and try again.
+Terraform reports this API error during the apply operation.
+The `terraform validate` command does not check JavaScript syntax.
+
+A successful syntax check does not show that the script contains a test or that the test will pass.
+The runtime finds tests, resolves imports, and executes assertions.
+No tests, an unavailable module, or a failed assertion can cause an execution failure.
 Read the remote result to find the error.
 Keep each file self-contained.
 Do not upload a local project to correct a missing import.
