@@ -34,12 +34,27 @@ type Check struct {
 	UserAlerts                   []string          `json:"user_alerts,omitempty"`
 	SlackAlerts                  []string          `json:"slack_alerts,omitempty"`
 	DiscordAlerts                []string          `json:"discord_alerts,omitempty"`
+	PushoverAlerts               []string          `json:"pushover_alerts,omitempty"`
 	TelegramAlerts               []string          `json:"telegram_alerts,omitempty"`
 	WebhookAlerts                []string          `json:"webhook_alerts,omitempty"`
 	OncallAlerts                 []string          `json:"oncall_alerts,omitempty"`
 	IncidentIOAlerts             []string          `json:"incident_io_alerts,omitempty"`
 	MicrosoftTeamsAlerts         []string          `json:"microsoft_teams_alerts,omitempty"`
 	Assertions                   []Assertion       `json:"assertions,omitempty"`
+}
+
+// checkRequest represents URL absence as JSON null, including on PATCH so a
+// URL can be cleared when converting a URL-based check to a scripted check.
+// Keep the response model's string URL for existing client consumers.
+func checkRequest(check *Check) any {
+	var url *string
+	if check.URL != "" {
+		url = &check.URL
+	}
+	return struct {
+		*Check
+		URL *string `json:"url"`
+	}{Check: check, URL: url}
 }
 
 // Assertion represents a check assertion
@@ -62,7 +77,7 @@ func (c *Client) CreateTypedCheck(kind string, check *Check) (*Check, error) {
 		path = fmt.Sprintf("/v1/checks/%s", kind)
 	}
 
-	respBody, err := c.Post(path, check)
+	respBody, err := c.Post(path, checkRequest(check))
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +141,12 @@ func (c *Client) UpdateTypedCheck(kind string, id string, check *Check) (*Check,
 		path = fmt.Sprintf("/v1/checks/%s/%s", kind, id)
 	}
 
-	respBody, err := c.Patch(path, check)
+	// Typed PATCH schemas reject type; the endpoint already fixes the kind.
+	request := *check
+	if kind != "" {
+		request.Type = ""
+	}
+	respBody, err := c.Patch(path, checkRequest(&request))
 	if err != nil {
 		return nil, err
 	}

@@ -19,6 +19,8 @@ import (
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ resource.Resource = &CheckResource{}
 var _ resource.ResourceWithImportState = &CheckResource{}
+var _ resource.ResourceWithValidateConfig = &CheckResource{}
+var _ resource.ResourceWithModifyPlan = &CheckResource{}
 
 func NewCheckResource() resource.Resource {
 	return &CheckResource{}
@@ -58,6 +60,13 @@ func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataReque
 
 func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_check.CheckResourceSchema(ctx)
+	// The API stores NULL for script-controlled timing. A static schema default
+	// cannot distinguish scripted checks from URL-based checks.
+	timeout := resp.Schema.Attributes["timeout"].(schema.Int64Attribute)
+	timeout.Default = nil
+	timeout.Description = "Timeout in milliseconds. Defaults to 10000 for URL-based checks. Must be omitted for scripted browser checks; configure timing in the script instead."
+	timeout.MarkdownDescription = timeout.Description
+	resp.Schema.Attributes["timeout"] = timeout
 
 	if r.forcedInputType != "" {
 		if typeAttr, ok := resp.Schema.Attributes["type"].(schema.StringAttribute); ok {
@@ -66,6 +75,38 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			typeAttr.MarkdownDescription = typeAttr.Description
 			resp.Schema.Attributes["type"] = typeAttr
 		}
+	}
+}
+
+func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var data resource_check.CheckModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	if !data.Script.IsUnknown() && data.Script.ValueString() != "" && !data.Timeout.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("timeout"), "Timeout is incompatible with scripted browser checks", "Omit timeout and configure timing in the Playwright script instead. The API stores no timeout for scripted browser checks.")
+	}
+}
+
+func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+	var config resource_check.CheckModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if config.Script.ValueString() != "" && !config.Timeout.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("timeout"), "Timeout is incompatible with scripted browser checks", "Omit timeout and configure timing in the Playwright script instead.")
+		return
+	}
+	if config.Timeout.IsNull() {
+		timeout := types.Int64Value(10000)
+		if config.Script.IsUnknown() {
+			timeout = types.Int64Unknown()
+		} else if config.Script.ValueString() != "" {
+			timeout = types.Int64Null()
+		}
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("timeout"), timeout)...)
 	}
 }
 
@@ -144,6 +185,9 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if !data.DiscordAlerts.IsNull() {
 		data.DiscordAlerts.ElementsAs(ctx, &check.DiscordAlerts, false)
 	}
+	if !data.PushoverAlerts.IsNull() {
+		data.PushoverAlerts.ElementsAs(ctx, &check.PushoverAlerts, false)
+	}
 	if !data.TelegramAlerts.IsNull() {
 		data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)
 	}
@@ -167,7 +211,16 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Populate state from the API response (includes computed defaults)
+	// Persist the ID even if the authoritative read fails, avoiding an orphan.
+	data.Id = types.StringValue(created.ID)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	created, err = r.client.GetTypedCheck(r.endpointKind, created.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Check created but unable to read complete check: %s", err))
+		return
+	}
+
+	// Mutation responses omit R2-backed scripts; GET is authoritative.
 	r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
 
 	// Save data into Terraform state
@@ -178,7 +231,10 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource_check.CheckModel, check *client.Check, diags *diag.Diagnostics) {
 	data.Id = types.StringValue(check.ID)
 	data.Name = types.StringValue(check.Name)
-	data.Url = types.StringValue(check.URL)
+	data.Url = types.StringNull()
+	if check.URL != "" {
+		data.Url = types.StringValue(check.URL)
+	}
 
 	// String fields with defaults
 	if check.Method != "" {
@@ -310,6 +366,14 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *resource
 		data.DiscordAlerts = discordAlerts
 	} else {
 		data.DiscordAlerts = types.ListNull(types.StringType)
+	}
+
+	if len(check.PushoverAlerts) > 0 {
+		alerts, d := types.ListValueFrom(ctx, types.StringType, check.PushoverAlerts)
+		diags.Append(d...)
+		data.PushoverAlerts = alerts
+	} else {
+		data.PushoverAlerts = types.ListNull(types.StringType)
 	}
 
 	if len(check.TelegramAlerts) > 0 {
@@ -478,6 +542,9 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	if !data.DiscordAlerts.IsNull() {
 		data.DiscordAlerts.ElementsAs(ctx, &check.DiscordAlerts, false)
 	}
+	if !data.PushoverAlerts.IsNull() {
+		data.PushoverAlerts.ElementsAs(ctx, &check.PushoverAlerts, false)
+	}
 	if !data.TelegramAlerts.IsNull() {
 		data.TelegramAlerts.ElementsAs(ctx, &check.TelegramAlerts, false)
 	}
@@ -501,7 +568,12 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Populate state from the API response
+	// Mutation responses omit R2-backed scripts; GET is authoritative.
+	updated, err = r.client.GetTypedCheck(r.endpointKind, checkID)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Check updated but unable to read complete check: %s", err))
+		return
+	}
 	r.populateModelFromAPI(ctx, &data, updated, &resp.Diagnostics)
 
 	// Save updated data into Terraform state
