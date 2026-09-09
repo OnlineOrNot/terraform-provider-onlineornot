@@ -96,6 +96,12 @@ func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataReque
 
 func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_check.CheckResourceSchema(ctx)
+	// Keep generated documentation aligned with the package name used in scripts.
+	if scriptAttr, ok := resp.Schema.Attributes["script"].(schema.StringAttribute); ok {
+		scriptAttr.Description = "@playwright/test script for browser checks. Scripted checks require this field. URL-based checks do not require this field."
+		scriptAttr.MarkdownDescription = "`@playwright/test` script for browser checks. Scripted checks require this field. URL-based checks do not require this field."
+		resp.Schema.Attributes["script"] = scriptAttr
+	}
 	// The API stores NULL for script-controlled timing. A static schema default
 	// cannot distinguish scripted checks from URL-based checks.
 	timeout := resp.Schema.Attributes["timeout"].(schema.Int64Attribute)
