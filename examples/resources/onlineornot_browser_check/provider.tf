@@ -8,5 +8,5 @@ terraform {
 }
 
 provider "onlineornot" {
-  # Supply the token through ONLINEORNOT_API_KEY.
+  # Set ONLINEORNOT_API_KEY to your API token.
 }

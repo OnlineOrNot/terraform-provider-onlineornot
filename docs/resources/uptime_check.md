@@ -71,7 +71,7 @@ resource "onlineornot_uptime_check" "api" {
 - `pushover_alerts` (List of String)
 - `recovery_period_seconds` (Number) Recovery period in seconds
 - `reminder_alert_interval_minutes` (Number) Interval in minutes between reminders (-1 for never)
-- `script` (String) `@playwright/test` script for scripted browser checks. Required for script-based checks, optional for URL-based checks.
+- `script` (String) `@playwright/test` script for browser checks. Scripted checks require this field. URL-based checks do not require this field.
 - `slack_alerts` (List of String)
 - `telegram_alerts` (List of String)
 - `test_interval` (Number) Interval in seconds between checks

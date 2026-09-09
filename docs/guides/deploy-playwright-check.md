@@ -2,22 +2,32 @@
 page_title: "Deploy a Playwright check with Terraform"
 subcategory: "Checks"
 description: |-
-  Run a standalone Playwright test locally, then deploy it as an OnlineOrNot monitor.
+  Run a test on your computer. Use Terraform to create an OnlineOrNot monitor from the test file.
 ---
 
 # Deploy a Playwright check with Terraform
 
-Use Terraform to create or update a monitor from a local test file.
-Use `@playwright/test` to define the test behaviour.
+Use Terraform to create or update a monitor from a test file.
+Use `@playwright/test` to specify the test steps.
 
 ## 1. Prepare the test file
 
-Each browser check accepts one self-contained JavaScript file. The file must
-use `@playwright/test`. Terraform uploads the file contents only. It does not
-upload local imports, configuration files, or dependencies. Playwright projects
-are not supported yet.
+Each browser check accepts one self-contained JavaScript file.
+The file must use `@playwright/test`.
+Terraform uploads only the file contents.
+It does not upload local imports, configuration files, or dependencies.
+OnlineOrNot does not support Playwright projects.
 
-Create a working directory. Save this source as `homepage.spec.js`:
+**WARNING:** Do not put credentials in the test file.
+Do not insert secret values into the script, including through Terraform expressions.
+Terraform stores the script contents in state.
+Terraform can also show the script contents in plans.
+A `sensitive` setting does not remove a value from state.
+Restrict access to state and plan files.
+This procedure does not supply secrets or environment variables to remote tests.
+
+Create a folder for the test and the Terraform configuration.
+Save this source as `homepage.spec.js`:
 
 ```javascript
 import { test, expect } from '@playwright/test';
@@ -28,15 +38,18 @@ test('homepage loads', async ({ page }) => {
 });
 ```
 
-Do not embed credentials in the file. Do not interpolate secrets into test source.
-Terraform stores the full script in state and can display it in plans.
-A sensitive value is still stored in state. Restrict access to state and plan files.
-This guide does not add secret or environment-variable support to remote checks.
+The `.js` file extension is not required.
+Terraform can read a `.ts` file with `file()`.
+But the standalone runtime executes the contents as `.mjs` or `.cjs`.
+It does not parse TypeScript-only syntax, such as type annotations.
+The source must be valid JavaScript.
 
-## 2. Run the test locally
+## 2. Run the test on your computer
 
-Install Node.js 22 and npm. Use `@playwright/test` 1.58.2 to match the current browser
-runtime package. In the working directory, run:
+Install Node.js 22 and npm.
+Use `@playwright/test` version 1.58.2.
+This version matches the package in the current browser runtime.
+Run these commands in the folder that contains your test:
 
 ```shell
 npm init -y
@@ -45,13 +58,16 @@ npx playwright install chromium
 npx playwright test homepage.spec.js --browser=chromium --workers=1
 ```
 
-Use [`@playwright/test`](https://playwright.dev/docs/writing-tests) for test steps,
-browser assertions, and test timeouts. For example, use `test.setTimeout()` to
-set a test timeout. A script cannot extend the service's 120-second execution
-limit. Runtime settings, including action and navigation timeouts, still apply.
+Use [`@playwright/test`](https://playwright.dev/docs/writing-tests) for test steps, browser assertions, and test timeouts.
+For example, use `test.setTimeout()` to set a test timeout.
+The service execution limit is 120 seconds.
+A script cannot increase this limit.
+The runtime also applies action and navigation timeouts.
 
-Local success does not prove remote success. Network access, browser settings,
-and service limits can differ. The local npm package is not uploaded.
+A test that passes on your computer can fail on the service.
+Network access and browser settings can be different.
+Service limits still apply.
+Terraform does not upload the local npm package.
 
 ## 3. Configure Terraform
 
@@ -69,16 +85,17 @@ terraform {
 }
 
 provider "onlineornot" {
-  # Supply the token through ONLINEORNOT_API_KEY.
+  # Set ONLINEORNOT_API_KEY to your API token.
 }
 ```
 
 Create a token in the [OnlineOrNot dashboard](https://onlineornot.com/app/api-tokens).
-Supply it through `ONLINEORNOT_API_KEY` in your shell or CI secret store.
-Do not add the token to HCL or the test source.
+Set the `ONLINEORNOT_API_KEY` environment variable to this token in your shell or CI secret store.
+Do not put the token in HCL or in the test file.
 
-Save this configuration as `main.tf`. Keep the scripted resource. Use the URL-mode
-resource only if you also want a separate page-load monitor.
+Save this configuration as `main.tf`.
+Keep the resource for the scripted check.
+Keep the URL-mode resource only if you also need a separate monitor that loads the page.
 
 ```terraform
 # Scripted mode: upload one self-contained `@playwright/test` file.
@@ -98,54 +115,71 @@ resource "onlineornot_browser_check" "page_load" {
 }
 ```
 
-Terraform controls the monitor name, interval, regions, and alert settings.
-Playwright controls navigation, test steps, assertions, and test timeouts.
-Omit `url` and `timeout` for this scripted example. The URL-mode resource requires
-`url`; its `timeout` remains a millisecond setting with a default of 10000.
+Terraform controls monitor names, intervals, regions, and alert settings.
+`@playwright/test` controls navigation, test steps, browser assertions, and test timeouts.
+Do not set `url` or `timeout` for the scripted example.
+The URL-mode resource requires `url`.
+For URL mode, `timeout` uses milliseconds and has a default value of 10000.
 
-Use Playwright for scripted request behaviour. Do not use the `method`,
-`body`, `follow_redirects`, `text_to_search_for`, or `assertions` fields to define
-Playwright steps. These attributes remain available for existing clients.
-See the [browser-check resource](../resources/browser_check.md) for all fields.
+Use the script to specify browser actions.
+Do not use these resource fields to specify test steps:
 
-The source file must exist before Terraform starts. Include it in the files
-available to a remote Terraform execution environment. `file()` does not run
-JavaScript or build a project.
+- `method`
+- `body`
+- `follow_redirects`
+- `text_to_search_for`
+- `assertions`
+
+These fields remain available for existing clients.
+See the [browser-check resource](../resources/browser_check.md) for the full list of fields.
+
+The source file must exist before Terraform starts.
+For remote Terraform runs, include the file in the remote execution environment.
+The `file()` function reads file contents.
+It does not execute JavaScript or build a project.
 
 ## 4. Review and apply the plan
 
-Run these commands as the operator who manages the monitors:
+The operator who manages the monitors must do these steps.
 
-```shell
-terraform init
-terraform plan
-terraform apply
-```
+1. Run `terraform init` to initialize Terraform.
+2. Run `terraform plan` to see the proposed changes.
+3. Review the plan. Make sure that all proposed changes are correct.
+4. Run `terraform apply`. Review the displayed plan before you approve it.
+5. Open the monitor in OnlineOrNot. Examine the next remote test result.
 
-Review the plan before you approve the apply. Deployment creates or updates a
-monitor. A successful apply does not prove that the browser test passed.
-Open the monitor in OnlineOrNot and inspect its next remote result.
+The apply operation creates or updates a monitor.
+A successful apply operation does not show that the browser test passed.
 
-The API checks the script input, not JavaScript syntax or test discovery.
-Malformed source, no discovered tests, or an unavailable module fail during
-execution. Read the remote result for the error. Keep every uploaded file
-self-contained. Do not try to fix missing imports by uploading a local project.
+The API checks the script input.
+It does not check JavaScript syntax or find tests.
+The runtime does these checks during execution.
+Invalid syntax, no tests, or an unavailable module cause an execution failure.
+Read the remote result to find the error.
+Keep each file self-contained.
+Do not upload a local project to correct a missing import.
 
 ## 5. Update the same monitor
 
-Edit `homepage.spec.js`. Run `terraform plan`, then review and apply the change.
-The resource address stays `onlineornot_browser_check.homepage`. Terraform updates
-the same monitor ID, so its history stays with the monitor.
+1. Edit `homepage.spec.js`.
+2. Run `terraform plan`. Review the proposed changes.
+3. Run `terraform apply`. Approve only the intended changes.
+4. Run `terraform plan` again. Make sure that the plan shows no changes.
 
-Run `terraform plan` again. An unchanged configuration must produce an empty plan.
-If someone changes the script in the dashboard, Terraform refresh detects the
-difference. A reviewed apply restores the source declared by your file.
+The resource address stays `onlineornot_browser_check.homepage`.
+Terraform updates the same monitor ID.
+The monitor keeps its history.
+
+Terraform refresh detects script changes made in the dashboard.
+The next plan shows the difference from your file.
+After approval, the apply operation restores the script contents from your file.
 
 ## Deploy independent files from a folder
 
-Use this alternative when each `.spec.js` file is independent. Put the files in
-`checks/` beside the Terraform configuration. Keep the provider setup above.
-Do not add this alternative if you want to retain the single resource's address.
+Use this example instead of the single-file resource when each test file is independent.
+Put the test files in `checks/`, next to the Terraform configuration.
+Keep the provider configuration from step 3.
+Do not switch examples if you must keep the single-file resource address.
 
 ```terraform
 # Each matched file creates one monitor. These files must be independent.
@@ -160,27 +194,55 @@ resource "onlineornot_browser_check" "files" {
 ```
 
 The [complete folder example](https://github.com/OnlineOrNot/terraform-provider-onlineornot/tree/main/examples/playwright-folder)
-includes two independent test files and provider setup.
+contains two independent test files and a provider configuration.
 
-- Each matched file creates one monitor. Individual `test()` calls do not create separate monitors.
-- `*.spec.js` matches test files, not every JavaScript helper in the folder.
-- Terraform uploads each file's contents only. This is not Playwright project support.
-- Removing a matched file plans deletion of its monitor.
-- Renaming a file changes its resource address. For example, renaming `homepage.spec.js` to `landing.spec.js` changes `onlineornot_browser_check.files["homepage.spec.js"]` to `onlineornot_browser_check.files["landing.spec.js"]`. The plan can delete the old monitor and create a new one.
-- Use explicit resources or stable map keys when monitor identity must not depend on a file name. With a stable key, update the file path without changing the key.
-- Files must exist before the run and must be available in remote Terraform execution environments.
-- Script contents are stored in Terraform state and can appear in plans. Do not put credentials or interpolated secrets in these files.
+Each matched file creates one monitor.
+Individual `test()` calls do not create separate monitors.
+The `*.spec.js` pattern matches test files.
+It does not match all JavaScript helper files in the folder.
+Terraform uploads only the contents of each matched file.
+This example does not add support for Playwright projects.
 
-## Human-run smoke check
+**WARNING:** Removal of a matched file causes Terraform to plan deletion of its monitor.
+A file name change also changes the resource address.
+The plan can delete the old monitor and create a new monitor.
 
-Use a read-only test and an approved account. Do not use a production-mutating test.
+For example, the original file name is `homepage.spec.js`.
+Its resource address is:
 
-1. Deploy the single-file example. Record its monitor ID with `terraform state show onlineornot_browser_check.homepage`.
-2. Inspect the next remote result in OnlineOrNot. Confirm that the test passed.
-3. Change the assertion or test name in the file. Review and apply the update.
-4. Confirm that the monitor ID is unchanged. Inspect the next remote result.
-5. Run `terraform plan` again. Confirm that it reports no changes.
-6. If you created a temporary monitor, review a removal plan and remove it when you finish.
+```text
+onlineornot_browser_check.files["homepage.spec.js"]
+```
 
-Local automated tests do not complete this smoke check. Remote execution remains
-unverified until a human performs these steps.
+If you change the file name to `landing.spec.js`, the resource address becomes:
+
+```text
+onlineornot_browser_check.files["landing.spec.js"]
+```
+
+Use separate resource blocks or stable map keys if monitor identity must not depend on file names.
+With a stable map key, change the file path but keep the key unchanged.
+
+Files must exist before Terraform starts.
+For remote Terraform runs, include the files in the remote execution environment.
+Terraform stores script contents in state and can show them in plans.
+Do not put credentials in the files or insert secret values through Terraform expressions.
+
+## Verify remote execution
+
+A human must do these steps with an approved account.
+Use a test that only reads data.
+Do not use a test that changes production data.
+
+1. Deploy the single-file example.
+2. Run `terraform state show onlineornot_browser_check.homepage`. Record the monitor ID.
+3. Examine the next remote result in OnlineOrNot. Make sure that the test passed.
+4. Change an assertion or the test name in the file.
+5. Review and apply the update.
+6. Make sure that the monitor ID is unchanged.
+7. Examine the next remote result. Make sure that the test passed.
+8. Run `terraform plan`. Make sure that the plan shows no changes.
+9. If the monitor is temporary, review a removal plan. Remove the monitor when you finish.
+
+Local automated tests do not verify remote execution.
+Remote execution remains unverified until a human completes these steps.
