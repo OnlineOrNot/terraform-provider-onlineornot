@@ -196,3 +196,27 @@ url = "https://example.com"
 		})
 	}
 }
+
+func TestBrowserCheckURLToScript(t *testing.T) {
+	server, _ := mockCheckAPI(t, "browser")
+	defer server.Close()
+	config := func(fields string) string {
+		return fmt.Sprintf(`
+provider "onlineornot" {
+ api_key = "fixture-key"
+ base_url = %q
+}
+resource "onlineornot_browser_check" "test" {
+ name = "conversion fixture"
+ %s
+}`, server.URL, fields)
+	}
+	resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+		{Config: config(`url = "https://example.com"`), Check: resource.TestCheckResourceAttr("onlineornot_browser_check.test", "timeout", "10000")},
+		{Config: config(fmt.Sprintf("url = null\ntimeout = null\nscript = %q", browserScript)), Check: resource.ComposeAggregateTestCheckFunc(
+			resource.TestCheckNoResourceAttr("onlineornot_browser_check.test", "url"),
+			resource.TestCheckNoResourceAttr("onlineornot_browser_check.test", "timeout"),
+			resource.TestCheckResourceAttr("onlineornot_browser_check.test", "script", browserScript),
+		)},
+	}})
+}
