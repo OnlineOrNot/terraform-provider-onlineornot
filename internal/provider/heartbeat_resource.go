@@ -218,6 +218,8 @@ func (r *HeartbeatResource) Read(ctx context.Context, req resource.ReadRequest, 
 	data.Id = types.StringValue(hb.ID)
 	data.Name = types.StringValue(hb.Name)
 	data.GracePeriod = types.Int64Value(int64(hb.GracePeriod))
+	data.ReminderAlertIntervalMinutes = types.Int64Value(int64(hb.ReminderAlertIntervalMinutes))
+	data.AlertPriority = types.StringValue(hb.AlertPriority)
 	populateHeartbeatPushoverAlerts(ctx, &data, hb.PushoverAlerts, &resp.Diagnostics)
 	data.TelegramAlerts = stringListValue(ctx, hb.TelegramAlerts, &resp.Diagnostics)
 	data.Paused = types.BoolValue(hb.Status == "PAUSED")

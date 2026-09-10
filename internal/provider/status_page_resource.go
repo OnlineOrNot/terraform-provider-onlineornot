@@ -3,9 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
@@ -31,6 +34,22 @@ func (r *StatusPageResource) Metadata(ctx context.Context, req resource.Metadata
 
 func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_status_page.StatusPageResourceSchema(ctx)
+	for _, name := range []string{"description", "custom_domain", "password"} {
+		a := resp.Schema.Attributes[name].(schema.StringAttribute)
+		a.Computed = false
+		if name == "password" {
+			a.Sensitive = true
+		}
+		resp.Schema.Attributes[name] = a
+	}
+	ips := resp.Schema.Attributes["allowed_ips"].(schema.ListAttribute)
+	ips.Computed = false
+	resp.Schema.Attributes["allowed_ips"] = ips
+	id := resp.Schema.Attributes["id"].(schema.StringAttribute)
+	id.Optional = false
+	id.PlanModifiers = append(id.PlanModifiers, stringplanmodifier.UseStateForUnknown())
+	resp.Schema.Attributes["id"] = id
+
 }
 
 func (r *StatusPageResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -58,18 +77,7 @@ func (r *StatusPageResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	sp := &client.StatusPage{
-		Name:                  data.Name.ValueString(),
-		Subdomain:             data.Subdomain.ValueString(),
-		Description:           data.Description.ValueString(),
-		CustomDomain:          data.CustomDomain.ValueString(),
-		Password:              data.Password.ValueString(),
-		HideFromSearchEngines: data.HideFromSearchEngines.ValueBool(),
-	}
-
-	if !data.AllowedIps.IsNull() {
-		data.AllowedIps.ElementsAs(ctx, &sp.AllowedIPs, false)
-	}
+	sp := statusPageInput(ctx, &data)
 
 	created, err := r.client.CreateStatusPage(sp)
 	if err != nil {
@@ -97,6 +105,14 @@ func (r *StatusPageResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	// The create endpoint ignores these inputs. Apply them through the update
+	// endpoint after saving the ID so a failed update does not orphan the page.
+	if sp.Description != nil || sp.AllowedIPs != nil || sp.HideFromSearchEngines != nil {
+		if _, err := r.client.UpdateStatusPage(created.ID, sp); err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Status page created, but unable to configure settings: %s", err))
+		}
+	}
+
 }
 
 func (r *StatusPageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -116,40 +132,57 @@ func (r *StatusPageResource) Read(ctx context.Context, req resource.ReadRequest,
 	data.Id = types.StringValue(sp.ID)
 	data.Name = types.StringValue(sp.Name)
 	data.Subdomain = types.StringValue(sp.Subdomain)
-	data.Description = types.StringValue(sp.Description)
-	data.CustomDomain = types.StringValue(sp.CustomDomain)
+	data.Description = statusPageString(sp.Description, data.Description)
+	if normalizedStatusPageDomain(sp.CustomDomain) != normalizedStatusPageDomain(data.CustomDomain.ValueString()) {
+		data.CustomDomain = statusPageString(sp.CustomDomain, data.CustomDomain)
+	}
 	data.HideFromSearchEngines = types.BoolValue(sp.HideFromSearchEngines)
+	if len(sp.AllowedIPs) == 0 && data.AllowedIps.IsNull() {
+		data.AllowedIps = types.ListNull(types.StringType)
+	} else {
+		ips := sp.AllowedIPs
+		if ips == nil {
+			ips = []string{}
+		}
+		data.AllowedIps, _ = types.ListValueFrom(ctx, types.StringType, ips)
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *StatusPageResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data resource_status_page.StatusPageModel
+	var data, prior resource_status_page.StatusPageModel
 
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	sp := &client.StatusPage{
-		Name:                  data.Name.ValueString(),
-		Subdomain:             data.Subdomain.ValueString(),
-		Description:           data.Description.ValueString(),
-		CustomDomain:          data.CustomDomain.ValueString(),
-		Password:              data.Password.ValueString(),
-		HideFromSearchEngines: data.HideFromSearchEngines.ValueBool(),
+	sp := statusPageInput(ctx, &data)
+	if data.Password.IsNull() && !prior.Password.IsNull() {
+		empty := ""
+		sp.Password = &empty
 	}
 
-	if !data.AllowedIps.IsNull() {
-		data.AllowedIps.ElementsAs(ctx, &sp.AllowedIPs, false)
+	// Removal from configuration must clear fields whose API omission preserves them.
+	if sp.Description == nil {
+		empty := ""
+		sp.Description = &empty
 	}
-
-	_, err := r.client.UpdateStatusPage(data.Id.ValueString(), sp)
+	if sp.AllowedIPs == nil {
+		empty := []string{}
+		sp.AllowedIPs = &empty
+	}
+	updated, err := r.client.UpdateStatusPage(data.Id.ValueString(), sp)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update status page, got error: %s", err))
 		return
 	}
 
+	if data.HideFromSearchEngines.IsUnknown() {
+		data.HideFromSearchEngines = types.BoolValue(updated.HideFromSearchEngines)
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -170,4 +203,45 @@ func (r *StatusPageResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 func (r *StatusPageResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func statusPageInput(ctx context.Context, data *resource_status_page.StatusPageModel) *client.StatusPageInput {
+	input := &client.StatusPageInput{Name: data.Name.ValueString(), Subdomain: data.Subdomain.ValueString()}
+	if !data.Description.IsNull() && !data.Description.IsUnknown() {
+		v := data.Description.ValueString()
+		input.Description = &v
+	}
+	if !data.CustomDomain.IsNull() && !data.CustomDomain.IsUnknown() {
+		v := data.CustomDomain.ValueString()
+		input.CustomDomain = &v
+	}
+	if !data.Password.IsNull() && !data.Password.IsUnknown() {
+		v := data.Password.ValueString()
+		input.Password = &v
+	}
+	if !data.HideFromSearchEngines.IsNull() && !data.HideFromSearchEngines.IsUnknown() {
+		v := data.HideFromSearchEngines.ValueBool()
+		input.HideFromSearchEngines = &v
+	}
+	if !data.AllowedIps.IsNull() && !data.AllowedIps.IsUnknown() {
+		ips := make([]string, 0, len(data.AllowedIps.Elements()))
+		data.AllowedIps.ElementsAs(ctx, &ips, false)
+		input.AllowedIPs = &ips
+	}
+	return input
+}
+
+// The API returns null for absent strings and IP lists. Preserve configured
+// empty values, but retain null for omitted values and imports.
+func statusPageString(value string, prior types.String) types.String {
+	if value == "" && prior.IsNull() {
+		return types.StringNull()
+	}
+	return types.StringValue(value)
+}
+
+func normalizedStatusPageDomain(domain string) string {
+	domain = strings.ToLower(domain)
+	domain = strings.TrimPrefix(strings.TrimPrefix(domain, "https://"), "http://")
+	return strings.TrimSuffix(domain, "/")
 }

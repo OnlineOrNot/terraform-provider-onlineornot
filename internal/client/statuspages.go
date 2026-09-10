@@ -17,8 +17,19 @@ type StatusPage struct {
 	AllowedIPs            []string `json:"allowed_ips,omitempty"`
 }
 
+// StatusPageInput preserves explicit zero values while allowing omission.
+type StatusPageInput struct {
+	Name                  string    `json:"name"`
+	Subdomain             string    `json:"subdomain"`
+	Description           *string   `json:"description,omitempty"`
+	CustomDomain          *string   `json:"custom_domain,omitempty"`
+	Password              *string   `json:"password,omitempty"`
+	HideFromSearchEngines *bool     `json:"hide_from_search_engines,omitempty"`
+	AllowedIPs            *[]string `json:"allowed_ips,omitempty"`
+}
+
 // CreateStatusPage creates a new status page
-func (c *Client) CreateStatusPage(sp *StatusPage) (*StatusPage, error) {
+func (c *Client) CreateStatusPage(sp *StatusPageInput) (*StatusPage, error) {
 	respBody, err := c.Post("/v1/status_pages", sp)
 	if err != nil {
 		return nil, err
@@ -62,8 +73,8 @@ func (c *Client) GetStatusPage(id string) (*StatusPage, error) {
 }
 
 // UpdateStatusPage updates an existing status page
-func (c *Client) UpdateStatusPage(id string, sp *StatusPage) (*StatusPage, error) {
-	respBody, err := c.Patch(fmt.Sprintf("/v1/status_pages/%s", id), sp)
+func (c *Client) UpdateStatusPage(id string, sp *StatusPageInput) (*StatusPage, error) {
+	respBody, err := c.Post(fmt.Sprintf("/v1/status_pages/%s", id), sp)
 	if err != nil {
 		return nil, err
 	}
