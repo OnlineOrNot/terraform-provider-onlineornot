@@ -78,6 +78,9 @@ func (r *StatusPageResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	data.Id = types.StringValue(created.ID)
+	if data.HideFromSearchEngines.IsUnknown() {
+		data.HideFromSearchEngines = types.BoolValue(created.HideFromSearchEngines)
+	}
 
 	// Set computed fields to null to avoid "unknown after apply" errors
 	if data.AllowedIps.IsUnknown() {
