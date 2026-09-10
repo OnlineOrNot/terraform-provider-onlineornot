@@ -26,5 +26,8 @@ description: |-
 - `custom_domain` (String) The custom domain your status page is hosted at.
 - `description` (String) A description of your status page
 - `hide_from_search_engines` (Boolean) Whether to hide the status page from search engines
+- `password` (String, Sensitive) The password required to view your status page. If omitted, keeps existing password. If null or empty string, removes password protection. If non-empty string, sets new password.
+
+### Read-Only
+
 - `id` (String) Status Page ID
-- `password` (String) The password required to view your status page. If omitted, keeps existing password. If null or empty string, removes password protection. If non-empty string, sets new password.

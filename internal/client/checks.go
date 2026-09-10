@@ -15,9 +15,9 @@ type Check struct {
 	LastQueued                   string            `json:"last_queued,omitempty"`
 	TestInterval                 int               `json:"test_interval,omitempty"`
 	TextToSearchFor              string            `json:"text_to_search_for,omitempty"`
-	ReminderAlertIntervalMinutes int               `json:"reminder_alert_interval_minutes,omitempty"`
-	ConfirmationPeriodSeconds    int               `json:"confirmation_period_seconds,omitempty"`
-	RecoveryPeriodSeconds        int               `json:"recovery_period_seconds,omitempty"`
+	ReminderAlertIntervalMinutes int               `json:"reminder_alert_interval_minutes"`
+	ConfirmationPeriodSeconds    int               `json:"confirmation_period_seconds"`
+	RecoveryPeriodSeconds        int               `json:"recovery_period_seconds"`
 	Timeout                      int               `json:"timeout,omitempty"`
 	Method                       string            `json:"method,omitempty"`
 	Body                         string            `json:"body,omitempty"`

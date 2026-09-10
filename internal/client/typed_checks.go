@@ -19,9 +19,9 @@ type DNSCheck struct {
 	Status                       string             `json:"status,omitempty"`
 	LastQueued                   string             `json:"last_queued,omitempty"`
 	TestInterval                 int                `json:"test_interval,omitempty"`
-	ReminderAlertIntervalMinutes int                `json:"reminder_alert_interval_minutes,omitempty"`
-	ConfirmationPeriodSeconds    int                `json:"confirmation_period_seconds,omitempty"`
-	RecoveryPeriodSeconds        int                `json:"recovery_period_seconds,omitempty"`
+	ReminderAlertIntervalMinutes int                `json:"reminder_alert_interval_minutes"`
+	ConfirmationPeriodSeconds    int                `json:"confirmation_period_seconds"`
+	RecoveryPeriodSeconds        int                `json:"recovery_period_seconds"`
 	Timeout                      int                `json:"timeout,omitempty"`
 	AlertPriority                string             `json:"alert_priority,omitempty"`
 	DNSDomain                    string             `json:"dns_domain"`
@@ -48,9 +48,9 @@ type TCPCheck struct {
 	Status                       string             `json:"status,omitempty"`
 	LastQueued                   string             `json:"last_queued,omitempty"`
 	TestInterval                 int                `json:"test_interval,omitempty"`
-	ReminderAlertIntervalMinutes int                `json:"reminder_alert_interval_minutes,omitempty"`
-	ConfirmationPeriodSeconds    int                `json:"confirmation_period_seconds,omitempty"`
-	RecoveryPeriodSeconds        int                `json:"recovery_period_seconds,omitempty"`
+	ReminderAlertIntervalMinutes int                `json:"reminder_alert_interval_minutes"`
+	ConfirmationPeriodSeconds    int                `json:"confirmation_period_seconds"`
+	RecoveryPeriodSeconds        int                `json:"recovery_period_seconds"`
 	Timeout                      int                `json:"timeout,omitempty"`
 	AlertPriority                string             `json:"alert_priority,omitempty"`
 	TCPHostname                  string             `json:"tcp_hostname"`

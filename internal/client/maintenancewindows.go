@@ -13,8 +13,8 @@ type MaintenanceWindow struct {
 	DurationMinutes int      `json:"duration_minutes"`
 	DaysOfWeek      []string `json:"days_of_week"`
 	Timezone        string   `json:"timezone"`
-	Checks          []string `json:"checks,omitempty"`
-	Heartbeats      []string `json:"heartbeats,omitempty"`
+	Checks          []string `json:"checks"`
+	Heartbeats      []string `json:"heartbeats"`
 }
 
 // CreateMaintenanceWindow creates a new maintenance window

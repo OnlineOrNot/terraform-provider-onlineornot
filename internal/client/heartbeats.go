@@ -15,7 +15,7 @@ type Heartbeat struct {
 	GracePeriod                  int      `json:"grace_period"`
 	Timezone                     string   `json:"timezone,omitempty"`
 	AlertPriority                string   `json:"alert_priority,omitempty"`
-	ReminderAlertIntervalMinutes int      `json:"reminder_alert_interval_minutes,omitempty"`
+	ReminderAlertIntervalMinutes int      `json:"reminder_alert_interval_minutes"`
 	UserAlerts                   []string `json:"user_alerts,omitempty"`
 	SlackAlerts                  []string `json:"slack_alerts,omitempty"`
 	DiscordAlerts                []string `json:"discord_alerts,omitempty"`

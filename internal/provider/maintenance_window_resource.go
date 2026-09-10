@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
@@ -29,6 +32,13 @@ func (r *MaintenanceWindowResource) Metadata(ctx context.Context, req resource.M
 
 func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_maintenance_window.MaintenanceWindowResourceSchema(ctx)
+	// The generator drops array defaults. Keep overrides outside generated code.
+	for _, name := range []string{"checks", "heartbeats"} {
+		a := resp.Schema.Attributes[name].(schema.ListAttribute)
+		a.Default = listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{}))
+		resp.Schema.Attributes[name] = a
+	}
+
 }
 
 func (r *MaintenanceWindowResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -111,6 +121,17 @@ func (r *MaintenanceWindowResource) Read(ctx context.Context, req resource.ReadR
 	data.StartDate = types.StringValue(mw.StartDate)
 	data.DurationMinutes = types.Int64Value(int64(mw.DurationMinutes))
 	data.Timezone = types.StringValue(mw.Timezone)
+	data.DaysOfWeek, _ = types.ListValueFrom(ctx, types.StringType, mw.DaysOfWeek)
+	checks := mw.Checks
+	if checks == nil {
+		checks = []string{}
+	}
+	heartbeats := mw.Heartbeats
+	if heartbeats == nil {
+		heartbeats = []string{}
+	}
+	data.Checks, _ = types.ListValueFrom(ctx, types.StringType, checks)
+	data.Heartbeats, _ = types.ListValueFrom(ctx, types.StringType, heartbeats)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

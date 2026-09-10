@@ -419,21 +419,9 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 	} else {
 		data.Timeout = types.Int64Null()
 	}
-	if check.ConfirmationPeriodSeconds > 0 {
-		data.ConfirmationPeriodSeconds = types.Int64Value(int64(check.ConfirmationPeriodSeconds))
-	} else {
-		data.ConfirmationPeriodSeconds = types.Int64Null()
-	}
-	if check.RecoveryPeriodSeconds > 0 {
-		data.RecoveryPeriodSeconds = types.Int64Value(int64(check.RecoveryPeriodSeconds))
-	} else {
-		data.RecoveryPeriodSeconds = types.Int64Null()
-	}
-	if check.ReminderAlertIntervalMinutes > 0 {
-		data.ReminderAlertIntervalMinutes = types.Int64Value(int64(check.ReminderAlertIntervalMinutes))
-	} else {
-		data.ReminderAlertIntervalMinutes = types.Int64Null()
-	}
+	data.ConfirmationPeriodSeconds = types.Int64Value(int64(check.ConfirmationPeriodSeconds))
+	data.RecoveryPeriodSeconds = types.Int64Value(int64(check.RecoveryPeriodSeconds))
+	data.ReminderAlertIntervalMinutes = types.Int64Value(int64(check.ReminderAlertIntervalMinutes))
 
 	// Boolean fields
 	if check.FollowRedirects != nil {

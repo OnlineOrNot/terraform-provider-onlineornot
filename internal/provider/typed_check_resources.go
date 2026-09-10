@@ -129,7 +129,7 @@ func (r *TCPCheckResource) Schema(ctx context.Context, req resource.SchemaReques
 		Description:         "IP family to use",
 		MarkdownDescription: "IP family to use",
 		Validators:          []validator.String{stringvalidator.OneOf("IPv4", "IPv6", "Any")},
-		Default:             stringdefault.StaticString("Any"),
+		Default:             stringdefault.StaticString("IPv4"),
 	}
 	s.Attributes["tcp_data"] = schema.StringAttribute{Optional: true, Computed: true, Description: "Data to send after connecting", MarkdownDescription: "Data to send after connecting"}
 	s.Attributes["tcp_should_fail"] = schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether the connection is expected to fail", MarkdownDescription: "Whether the connection is expected to fail", Default: booldefault.StaticBool(false)}
@@ -528,9 +528,9 @@ func populateCommonModel(ctx context.Context, data *typedCheckModel, id, name, s
 	data.Paused = types.BoolValue(status == "PAUSED")
 	data.Muted = types.BoolValue(status == "MUTED")
 	data.TestInterval = optionalInt64Value(testInterval)
-	data.ReminderAlertIntervalMinutes = optionalInt64Value(reminderInterval)
-	data.ConfirmationPeriodSeconds = optionalInt64Value(confirmationPeriod)
-	data.RecoveryPeriodSeconds = optionalInt64Value(recoveryPeriod)
+	data.ReminderAlertIntervalMinutes = types.Int64Value(int64(reminderInterval))
+	data.ConfirmationPeriodSeconds = types.Int64Value(int64(confirmationPeriod))
+	data.RecoveryPeriodSeconds = types.Int64Value(int64(recoveryPeriod))
 	data.Timeout = optionalInt64Value(timeout)
 	data.AlertPriority = optionalStringValue(alertPriority)
 	data.TestRegions = stringListValue(ctx, testRegions, diags)
