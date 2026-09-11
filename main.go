@@ -15,12 +15,8 @@ import (
 // 3. Format example terraform files
 // 4. Generate documentation
 
-// Step 1: Fetch OpenAPI spec and convert to Provider Code Specification
-//go:generate curl -sSL -o openapi.json https://raw.githubusercontent.com/OnlineOrNot/api-schemas/main/openapi.json
-//go:generate go run github.com/hashicorp/terraform-plugin-codegen-openapi/cmd/tfplugingen-openapi generate --config generator_config.yml --output provider_code_spec.json openapi.json
-
-// Step 2: Generate framework code (resources) from the specification
-//go:generate go run github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework generate resources --input provider_code_spec.json --output internal/provider
+// Steps 1 + 2: Verify the pinned schema, project success envelopes, generate code.
+//go:generate make generate-schemas
 
 // Step 3: Format example terraform files
 //go:generate terraform fmt -recursive ./examples/

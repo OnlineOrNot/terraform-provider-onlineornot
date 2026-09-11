@@ -31,6 +31,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - run: make test-generation
       - run: make check-contract
 
   generate:

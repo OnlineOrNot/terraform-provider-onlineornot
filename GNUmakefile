@@ -26,14 +26,20 @@ fetch-schema:
 check-contract: fetch-schema
 	./scripts/check-operation-parity.py openapi.json operation-parity.json
 
+# Test the generation-only projection without network access.
+.PHONY: test-generation
+test-generation:
+	python3 -m unittest discover -s scripts -p 'test_*.py' -v
+
 # Generate schemas from OpenAPI spec (Step 1 + 2)
 .PHONY: generate-schemas
-generate-schemas: fetch-schema
+generate-schemas: check-contract
+	python3 scripts/project-generation-openapi.py openapi.json openapi.generation.json
 	@echo "Generating provider code specification from OpenAPI..."
 	go run github.com/hashicorp/terraform-plugin-codegen-openapi/cmd/tfplugingen-openapi generate \
 		--config generator_config.yml \
 		--output provider_code_spec.json \
-		openapi.json
+		openapi.generation.json
 	@echo "Generating framework code from specification..."
 	go run github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework generate resources \
 		--input provider_code_spec.json \
