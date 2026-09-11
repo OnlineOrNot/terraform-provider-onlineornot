@@ -37,7 +37,11 @@ func TestStatusPageComponentGroupPathsMatchOpenAPI(t *testing.T) {
 			t.Errorf("expected %s %s, got %s %s", want.method, want.path, r.Method, r.URL.Path)
 		}
 		if request == len(expected) {
-			writeJSON(t, w, APIListResponse[StatusPageComponentGroup]{Success: true})
+			writeJSON(t, w, APIListResponse[StatusPageComponentGroup]{
+				Success:    true,
+				Result:     []StatusPageComponentGroup{},
+				ResultInfo: ResultInfo{Page: 1, PerPage: 100, Count: 0, TotalCount: 0},
+			})
 			return
 		}
 		writeJSON(t, w, APIResponse[StatusPageComponentGroup]{

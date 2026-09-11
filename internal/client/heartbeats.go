@@ -108,22 +108,5 @@ func (c *Client) DeleteHeartbeat(id string) error {
 
 // ListHeartbeats retrieves all heartbeats
 func (c *Client) ListHeartbeats() ([]Heartbeat, error) {
-	respBody, err := c.Get("/v1/heartbeats")
-	if err != nil {
-		return nil, err
-	}
-
-	var apiResp APIListResponse[Heartbeat]
-	if err := json.Unmarshal(respBody, &apiResp); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	if !apiResp.Success {
-		if len(apiResp.Errors) > 0 {
-			return nil, fmt.Errorf("API error: %s", apiResp.Errors[0].Message)
-		}
-		return nil, fmt.Errorf("API request failed")
-	}
-
-	return apiResp.Result, nil
+	return listAll[Heartbeat](c, "/v1/heartbeats")
 }
