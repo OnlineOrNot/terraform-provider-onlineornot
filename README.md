@@ -212,3 +212,25 @@ make check-contract
 
 When updating `schema.lock.json`, update the parity manifest in the same change.
 CI rejects missing, duplicate, stale, or invalid operation mappings.
+
+### DNS and TCP assertion validation
+
+`onlineornot_dns_check` supports record types `A`, `AAAA`, `CNAME`, `MX`, `NS`,
+`SOA`, and `TXT`, using `UDP` or `TCP`. Its assertion types are
+`DNS_RESPONSE_CODE`, `DNS_TEXT_ANSWER`, and `DNS_JSON_ANSWER`.
+Use `status`, an empty string, or a JSONPath respectively for `property`.
+
+`onlineornot_tcp_check` supports `IPv4` and `IPv6`. Its assertion types are
+`TCP_RESPONSE_TIME` and `TCP_RESPONSE_DATA`. Use `responseTime` or an empty
+string respectively for `property`.
+
+Every assertion requires string fields `type`, `property`, `comparison`, and
+`expected`. Empty `property` and `expected` strings are preserved in requests.
+Both resources accept comparisons `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`,
+`LESS_THAN`, `NULL`, `NOT_NULL`, `EMPTY`, `NOT_EMPTY`, `CONTAINS`, `NOT_CONTAINS`,
+`FALSE`, and `TRUE`.
+
+Previously accepted DNS record types `PTR`, `SRV`, and `CAA`, DNS protocol
+`HTTPS`, TCP IP family `Any`, and HTTP assertion types were invalid for these
+API endpoints. They now fail Terraform validation. HTTP check validation is
+unchanged.

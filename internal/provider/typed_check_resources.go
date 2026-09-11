@@ -92,14 +92,14 @@ func (r *TCPCheckResource) Metadata(ctx context.Context, req resource.MetadataRe
 }
 
 func (r *DNSCheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	s := typedCheckSchema(ctx, "DNS check ID")
+	s := typedCheckSchema(ctx, "DNS check ID", []string{"DNS_RESPONSE_CODE", "DNS_TEXT_ANSWER", "DNS_JSON_ANSWER"}, "Use status for DNS_RESPONSE_CODE, an empty string for DNS_TEXT_ANSWER, or JSONPath for DNS_JSON_ANSWER.")
 	s.Attributes["dns_domain"] = schema.StringAttribute{Required: true, Description: "Domain name to query", MarkdownDescription: "Domain name to query"}
 	s.Attributes["dns_record_type"] = schema.StringAttribute{
 		Required:            true,
 		Description:         "DNS record type to query",
 		MarkdownDescription: "DNS record type to query",
 		Validators: []validator.String{stringvalidator.OneOf(
-			"A", "AAAA", "CNAME", "MX", "NS", "PTR", "SOA", "SRV", "TXT", "CAA",
+			"A", "AAAA", "CNAME", "MX", "NS", "SOA", "TXT",
 		)},
 	}
 	s.Attributes["dns_resolver"] = schema.StringAttribute{Optional: true, Computed: true, Description: "DNS resolver to use", MarkdownDescription: "DNS resolver to use"}
@@ -108,14 +108,14 @@ func (r *DNSCheckResource) Schema(ctx context.Context, req resource.SchemaReques
 		Computed:            true,
 		Description:         "DNS protocol to use",
 		MarkdownDescription: "DNS protocol to use",
-		Validators:          []validator.String{stringvalidator.OneOf("UDP", "TCP", "HTTPS")},
+		Validators:          []validator.String{stringvalidator.OneOf("UDP", "TCP")},
 		Default:             stringdefault.StaticString("UDP"),
 	}
 	resp.Schema = s
 }
 
 func (r *TCPCheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	s := typedCheckSchema(ctx, "TCP check ID")
+	s := typedCheckSchema(ctx, "TCP check ID", []string{"TCP_RESPONSE_TIME", "TCP_RESPONSE_DATA"}, "Use responseTime for TCP_RESPONSE_TIME or an empty string for TCP_RESPONSE_DATA.")
 	s.Attributes["tcp_hostname"] = schema.StringAttribute{Required: true, Description: "Hostname to connect to", MarkdownDescription: "Hostname to connect to"}
 	s.Attributes["tcp_port"] = schema.Int64Attribute{
 		Required:            true,
@@ -128,7 +128,7 @@ func (r *TCPCheckResource) Schema(ctx context.Context, req resource.SchemaReques
 		Computed:            true,
 		Description:         "IP family to use",
 		MarkdownDescription: "IP family to use",
-		Validators:          []validator.String{stringvalidator.OneOf("IPv4", "IPv6", "Any")},
+		Validators:          []validator.String{stringvalidator.OneOf("IPv4", "IPv6")},
 		Default:             stringdefault.StaticString("IPv4"),
 	}
 	s.Attributes["tcp_data"] = schema.StringAttribute{Optional: true, Computed: true, Description: "Data to send after connecting", MarkdownDescription: "Data to send after connecting"}
@@ -136,7 +136,7 @@ func (r *TCPCheckResource) Schema(ctx context.Context, req resource.SchemaReques
 	resp.Schema = s
 }
 
-func typedCheckSchema(ctx context.Context, idDescription string) schema.Schema {
+func typedCheckSchema(ctx context.Context, idDescription string, assertionTypes []string, propertyDescription string) schema.Schema {
 	return schema.Schema{Attributes: map[string]schema.Attribute{
 		"alert_priority": schema.StringAttribute{
 			Optional:            true,
@@ -151,8 +151,8 @@ func typedCheckSchema(ctx context.Context, idDescription string) schema.Schema {
 				Attributes: map[string]schema.Attribute{
 					"comparison": schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN", "NULL", "NOT_NULL", "EMPTY", "NOT_EMPTY", "CONTAINS", "NOT_CONTAINS", "FALSE", "TRUE")}},
 					"expected":   schema.StringAttribute{Required: true},
-					"property":   schema.StringAttribute{Required: true},
-					"type":       schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.OneOf("JSON_BODY", "TEXT_BODY", "RESPONSE_HEADERS", "HTML_BODY")}},
+					"property":   schema.StringAttribute{Required: true, Description: propertyDescription, MarkdownDescription: propertyDescription},
+					"type":       schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.OneOf(assertionTypes...)}},
 				},
 				CustomType: resource_check.AssertionsType{ObjectType: types.ObjectType{AttrTypes: resource_check.AssertionsValue{}.AttributeTypes(ctx)}},
 			},
