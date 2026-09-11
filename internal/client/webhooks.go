@@ -5,19 +5,60 @@ import (
 	"fmt"
 )
 
-// Webhook represents a webhook
+// Webhook is the API response with associations flattened to IDs.
 type Webhook struct {
 	ID            string   `json:"id,omitempty"`
 	URL           string   `json:"url"`
 	Description   string   `json:"description,omitempty"`
 	Events        []string `json:"events"`
-	CheckIDs      []string `json:"check_ids,omitempty"`
-	HeartbeatIDs  []string `json:"heartbeat_ids,omitempty"`
-	StatusPageIDs []string `json:"status_page_ids,omitempty"`
+	CheckIDs      []string `json:"-"`
+	HeartbeatIDs  []string `json:"-"`
+	StatusPageIDs []string `json:"-"`
+}
+
+// WebhookRequest uses write-only association names. A nil pointer omits an
+// association, while a pointer to an empty slice explicitly clears it on PATCH.
+type WebhookRequest struct {
+	URL           string    `json:"url,omitempty"`
+	Description   *string   `json:"description,omitempty"`
+	Events        []string  `json:"events,omitempty"`
+	CheckIDs      *[]string `json:"check_ids,omitempty"`
+	HeartbeatIDs  *[]string `json:"heartbeat_ids,omitempty"`
+	StatusPageIDs *[]string `json:"status_page_ids,omitempty"`
+}
+
+// UnmarshalJSON maps the API's association objects to Terraform's ID lists.
+// Requests deliberately use WebhookRequest instead of this response model.
+func (w *Webhook) UnmarshalJSON(data []byte) error {
+	type webhookFields Webhook
+	type reference struct {
+		ID string `json:"id"`
+	}
+	var response struct {
+		webhookFields
+		Checks      []reference `json:"checks"`
+		Heartbeats  []reference `json:"heartbeats"`
+		StatusPages []reference `json:"status_pages"`
+	}
+	if err := json.Unmarshal(data, &response); err != nil {
+		return err
+	}
+	ids := func(refs []reference) []string {
+		result := make([]string, len(refs))
+		for i, ref := range refs {
+			result[i] = ref.ID
+		}
+		return result
+	}
+	*w = Webhook(response.webhookFields)
+	w.CheckIDs = ids(response.Checks)
+	w.HeartbeatIDs = ids(response.Heartbeats)
+	w.StatusPageIDs = ids(response.StatusPages)
+	return nil
 }
 
 // CreateWebhook creates a new webhook
-func (c *Client) CreateWebhook(wh *Webhook) (*Webhook, error) {
+func (c *Client) CreateWebhook(wh *WebhookRequest) (*Webhook, error) {
 	respBody, err := c.Post("/v1/webhooks", wh)
 	if err != nil {
 		return nil, err
@@ -61,7 +102,7 @@ func (c *Client) GetWebhook(id string) (*Webhook, error) {
 }
 
 // UpdateWebhook updates an existing webhook
-func (c *Client) UpdateWebhook(id string, wh *Webhook) (*Webhook, error) {
+func (c *Client) UpdateWebhook(id string, wh *WebhookRequest) (*Webhook, error) {
 	respBody, err := c.Patch(fmt.Sprintf("/v1/webhooks/%s", id), wh)
 	if err != nil {
 		return nil, err
