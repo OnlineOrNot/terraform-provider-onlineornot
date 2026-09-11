@@ -3,6 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
+
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -56,22 +59,10 @@ func (r *WebhookResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	wh := &client.Webhook{
-		URL:         data.Url.ValueString(),
-		Description: data.Description.ValueString(),
-	}
-
-	if !data.Events.IsNull() {
-		data.Events.ElementsAs(ctx, &wh.Events, false)
-	}
-	if !data.CheckIds.IsNull() {
-		data.CheckIds.ElementsAs(ctx, &wh.CheckIDs, false)
-	}
-	if !data.HeartbeatIds.IsNull() {
-		data.HeartbeatIds.ElementsAs(ctx, &wh.HeartbeatIDs, false)
-	}
-	if !data.StatusPageIds.IsNull() {
-		data.StatusPageIds.ElementsAs(ctx, &wh.StatusPageIDs, false)
+	wh, diags := webhookRequestFromModel(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	created, err := r.client.CreateWebhook(wh)
@@ -80,21 +71,7 @@ func (r *WebhookResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	data.Id = types.StringValue(created.ID)
-
-	// Set computed fields to null if not provided by user to avoid "unknown after apply" errors
-	if data.CheckIds.IsUnknown() {
-		data.CheckIds = types.ListNull(types.StringType)
-	}
-	if data.Description.IsUnknown() {
-		data.Description = types.StringNull()
-	}
-	if data.HeartbeatIds.IsUnknown() {
-		data.HeartbeatIds = types.ListNull(types.StringType)
-	}
-	if data.StatusPageIds.IsUnknown() {
-		data.StatusPageIds = types.ListNull(types.StringType)
-	}
+	resp.Diagnostics.Append(populateWebhookModel(ctx, &data, created)...)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -109,13 +86,16 @@ func (r *WebhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	wh, err := r.client.GetWebhook(data.Id.ValueString())
 	if err != nil {
+		if client.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read webhook, got error: %s", err))
 		return
 	}
 
-	data.Id = types.StringValue(wh.ID)
-	data.Url = types.StringValue(wh.URL)
-	data.Description = types.StringValue(wh.Description)
+	resp.Diagnostics.Append(populateWebhookModel(ctx, &data, wh)...)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -128,29 +108,19 @@ func (r *WebhookResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	wh := &client.Webhook{
-		URL:         data.Url.ValueString(),
-		Description: data.Description.ValueString(),
+	wh, diags := webhookRequestFromModel(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	if !data.Events.IsNull() {
-		data.Events.ElementsAs(ctx, &wh.Events, false)
-	}
-	if !data.CheckIds.IsNull() {
-		data.CheckIds.ElementsAs(ctx, &wh.CheckIDs, false)
-	}
-	if !data.HeartbeatIds.IsNull() {
-		data.HeartbeatIds.ElementsAs(ctx, &wh.HeartbeatIDs, false)
-	}
-	if !data.StatusPageIds.IsNull() {
-		data.StatusPageIds.ElementsAs(ctx, &wh.StatusPageIDs, false)
-	}
-
-	_, err := r.client.UpdateWebhook(data.Id.ValueString(), wh)
+	updated, err := r.client.UpdateWebhook(data.Id.ValueString(), wh)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update webhook, got error: %s", err))
 		return
 	}
+
+	resp.Diagnostics.Append(populateWebhookModel(ctx, &data, updated)...)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -164,7 +134,7 @@ func (r *WebhookResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 
 	err := r.client.DeleteWebhook(data.Id.ValueString())
-	if err != nil {
+	if err != nil && !client.IsNotFound(err) {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete webhook, got error: %s", err))
 		return
 	}
@@ -172,4 +142,70 @@ func (r *WebhookResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 func (r *WebhookResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func webhookRequestFromModel(ctx context.Context, data *resource_webhook.WebhookModel) (*client.WebhookRequest, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	wh := &client.WebhookRequest{URL: data.Url.ValueString()}
+	if !data.Description.IsNull() && !data.Description.IsUnknown() {
+		description := data.Description.ValueString()
+		wh.Description = &description
+	}
+	diags.Append(data.Events.ElementsAs(ctx, &wh.Events, false)...)
+	associations := []struct {
+		value  types.List
+		target **[]string
+	}{
+		{data.CheckIds, &wh.CheckIDs}, {data.HeartbeatIds, &wh.HeartbeatIDs}, {data.StatusPageIds, &wh.StatusPageIDs},
+	}
+	for _, association := range associations {
+		if association.value.IsNull() || association.value.IsUnknown() {
+			continue
+		}
+		ids := []string{}
+		diags.Append(association.value.ElementsAs(ctx, &ids, false)...)
+		*association.target = &ids
+	}
+	return wh, diags
+}
+
+func populateWebhookModel(ctx context.Context, data *resource_webhook.WebhookModel, wh *client.Webhook) diag.Diagnostics {
+	var diags diag.Diagnostics
+	data.Id = types.StringValue(wh.ID)
+	data.Url = types.StringValue(wh.URL)
+	// The API stores an omitted create description as null. Preserve Terraform's
+	// null rather than introducing an empty-string diff on every refresh.
+	if wh.Description == "" && (data.Description.IsNull() || data.Description.IsUnknown()) {
+		data.Description = types.StringNull()
+	} else {
+		data.Description = types.StringValue(wh.Description)
+	}
+	lists := []struct {
+		target *types.List
+		ids    []string
+	}{
+		{&data.Events, wh.Events}, {&data.CheckIds, wh.CheckIDs},
+		{&data.HeartbeatIds, wh.HeartbeatIDs}, {&data.StatusPageIds, wh.StatusPageIDs},
+	}
+	for _, list := range lists {
+		// SQL aggregates do not promise order. Retain configured ordering only when
+		// membership matches; changed membership must still appear as drift.
+		if !list.target.IsNull() && !list.target.IsUnknown() {
+			var previous []string
+			diags.Append(list.target.ElementsAs(ctx, &previous, false)...)
+			actual := slices.Clone(list.ids)
+			slices.Sort(previous)
+			slices.Sort(actual)
+			if slices.Equal(previous, actual) {
+				continue
+			}
+		}
+		if len(list.ids) == 0 && list.target.IsNull() {
+			continue
+		}
+		value, ds := types.ListValueFrom(ctx, types.StringType, list.ids)
+		diags.Append(ds...)
+		*list.target = value
+	}
+	return diags
 }
