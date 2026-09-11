@@ -88,24 +88,7 @@ func (c *Client) DeleteWebhook(id string) error {
 	return err
 }
 
-// ListWebhooks retrieves all webhooks
+// ListWebhooks retrieves every numbered page, including when the server caps page size.
 func (c *Client) ListWebhooks() ([]Webhook, error) {
-	respBody, err := c.Get("/v1/webhooks")
-	if err != nil {
-		return nil, err
-	}
-
-	var apiResp APIListResponse[Webhook]
-	if err := json.Unmarshal(respBody, &apiResp); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	if !apiResp.Success {
-		if len(apiResp.Errors) > 0 {
-			return nil, fmt.Errorf("API error: %s", apiResp.Errors[0].Message)
-		}
-		return nil, fmt.Errorf("API request failed")
-	}
-
-	return apiResp.Result, nil
+	return listAll[Webhook](c, "/v1/webhooks")
 }

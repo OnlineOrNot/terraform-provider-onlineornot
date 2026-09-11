@@ -203,22 +203,5 @@ func (c *Client) DeleteTypedCheck(kind string, id string) error {
 
 // ListChecks retrieves all checks
 func (c *Client) ListChecks() ([]Check, error) {
-	respBody, err := c.Get("/v1/checks")
-	if err != nil {
-		return nil, err
-	}
-
-	var apiResp APIListResponse[Check]
-	if err := json.Unmarshal(respBody, &apiResp); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	if !apiResp.Success {
-		if len(apiResp.Errors) > 0 {
-			return nil, fmt.Errorf("API error: %s", apiResp.Errors[0].Message)
-		}
-		return nil, fmt.Errorf("API request failed")
-	}
-
-	return apiResp.Result, nil
+	return listAll[Check](c, "/v1/checks")
 }

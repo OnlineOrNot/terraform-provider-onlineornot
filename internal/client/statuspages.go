@@ -102,22 +102,5 @@ func (c *Client) DeleteStatusPage(id string) error {
 
 // ListStatusPages retrieves all status pages
 func (c *Client) ListStatusPages() ([]StatusPage, error) {
-	respBody, err := c.Get("/v1/status_pages")
-	if err != nil {
-		return nil, err
-	}
-
-	var apiResp APIListResponse[StatusPage]
-	if err := json.Unmarshal(respBody, &apiResp); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	if !apiResp.Success {
-		if len(apiResp.Errors) > 0 {
-			return nil, fmt.Errorf("API error: %s", apiResp.Errors[0].Message)
-		}
-		return nil, fmt.Errorf("API request failed")
-	}
-
-	return apiResp.Result, nil
+	return listAll[StatusPage](c, "/v1/status_pages")
 }
