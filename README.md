@@ -58,6 +58,12 @@ resource "onlineornot_status_page_component" "api" {
 }
 ```
 
+## Omitted check settings
+
+For existing checks, omitted Optional+Computed settings retain the values read from OnlineOrNot. Defaults such as `alert_priority = "HIGH"` apply only at creation. Editing assertions or timing does not reset omitted alert settings or change check IDs.
+
+Set a value explicitly to manage it, including `0`, `false`, or an empty collection where supported. Removing an Optional+Computed setting relinquishes management rather than clearing it. Script/URL transitions still recompute timeout and runtime as needed. Omitted component status follows the API instead of resetting to `OPERATIONAL` on unrelated edits.
+
 ## Authentication
 
 Get your API key from [OnlineOrNot API Tokens](https://onlineornot.com/app/api-tokens).

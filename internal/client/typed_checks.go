@@ -73,14 +73,16 @@ type TCPCheck struct {
 
 type DNSCheckPatch struct {
 	*DNSCheck
-	Paused *bool `json:"paused,omitempty"`
-	Muted  *bool `json:"muted,omitempty"`
+	Fields map[string]any `json:"-"`
+	Paused *bool          `json:"paused,omitempty"`
+	Muted  *bool          `json:"muted,omitempty"`
 }
 
 type TCPCheckPatch struct {
 	*TCPCheck
-	Paused *bool `json:"paused,omitempty"`
-	Muted  *bool `json:"muted,omitempty"`
+	Fields map[string]any `json:"-"`
+	Paused *bool          `json:"paused,omitempty"`
+	Muted  *bool          `json:"muted,omitempty"`
 }
 
 func parseAPIResponse[T any](respBody []byte) (*T, error) {
@@ -116,7 +118,11 @@ func (c *Client) GetDNSCheck(id string) (*DNSCheck, error) {
 }
 
 func (c *Client) UpdateDNSCheck(id string, check *DNSCheckPatch) (*DNSCheck, error) {
-	respBody, err := c.Patch(fmt.Sprintf("/v1/checks/dns/%s", id), check)
+	var request any = check
+	if check.Fields != nil {
+		request = configuredMonitorRequest(check.Fields, check.Paused, check.Muted)
+	}
+	respBody, err := c.Patch(fmt.Sprintf("/v1/checks/dns/%s", id), request)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +151,11 @@ func (c *Client) GetTCPCheck(id string) (*TCPCheck, error) {
 }
 
 func (c *Client) UpdateTCPCheck(id string, check *TCPCheckPatch) (*TCPCheck, error) {
-	respBody, err := c.Patch(fmt.Sprintf("/v1/checks/tcp/%s", id), check)
+	var request any = check
+	if check.Fields != nil {
+		request = configuredMonitorRequest(check.Fields, check.Paused, check.Muted)
+	}
+	respBody, err := c.Patch(fmt.Sprintf("/v1/checks/tcp/%s", id), request)
 	if err != nil {
 		return nil, err
 	}

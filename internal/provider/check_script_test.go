@@ -229,6 +229,11 @@ resource "onlineornot_browser_check" "test" {
 			resource.TestCheckNoResourceAttr("onlineornot_browser_check.test", "timeout"),
 			resource.TestCheckResourceAttr("onlineornot_browser_check.test", "script", browserScript),
 		)},
+		{Config: config(`url = "https://example.com"
+script = ""`), Check: resource.ComposeAggregateTestCheckFunc(
+			resource.TestCheckResourceAttr("onlineornot_browser_check.test", "timeout", "10000"),
+			resource.TestCheckResourceAttr("onlineornot_browser_check.test", "script", ""),
+		)},
 	}})
 }
 

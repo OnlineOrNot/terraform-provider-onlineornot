@@ -111,6 +111,7 @@ func (r *DNSCheckResource) Schema(ctx context.Context, req resource.SchemaReques
 		Validators:          []validator.String{stringvalidator.OneOf("UDP", "TCP", "HTTPS")},
 		Default:             stringdefault.StaticString("UDP"),
 	}
+	preserveCheckConfiguration(&s)
 	resp.Schema = s
 }
 
@@ -133,6 +134,7 @@ func (r *TCPCheckResource) Schema(ctx context.Context, req resource.SchemaReques
 	}
 	s.Attributes["tcp_data"] = schema.StringAttribute{Optional: true, Computed: true, Description: "Data to send after connecting", MarkdownDescription: "Data to send after connecting"}
 	s.Attributes["tcp_should_fail"] = schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether the connection is expected to fail", MarkdownDescription: "Whether the connection is expected to fail", Default: booldefault.StaticBool(false)}
+	preserveCheckConfiguration(&s)
 	resp.Schema = s
 }
 
@@ -277,7 +279,11 @@ func (r *DNSCheckResource) Update(ctx context.Context, req resource.UpdateReques
 		resp.Diagnostics.AddError("Invalid Operational State", err.Error())
 		return
 	}
-	patch := &client.DNSCheckPatch{DNSCheck: check}
+	fields := configuredCheckPatch(req.Config, check, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	patch := &client.DNSCheckPatch{Fields: fields}
 	if len(changes) > 0 {
 		applyOperationalState(changes[0], &patch.Paused, &patch.Muted)
 	}
@@ -378,7 +384,11 @@ func (r *TCPCheckResource) Update(ctx context.Context, req resource.UpdateReques
 		resp.Diagnostics.AddError("Invalid Operational State", err.Error())
 		return
 	}
-	patch := &client.TCPCheckPatch{TCPCheck: check}
+	fields := configuredCheckPatch(req.Config, check, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	patch := &client.TCPCheckPatch{Fields: fields}
 	if len(changes) > 0 {
 		applyOperationalState(changes[0], &patch.Paused, &patch.Muted)
 	}
@@ -428,7 +438,7 @@ func dnsModelToClient(ctx context.Context, data *DNSCheckModel, diags *diag.Diag
 		DNSRecordType:                data.DNSRecordType.ValueString(),
 		DNSProtocol:                  data.DNSProtocol.ValueString(),
 	}
-	if !data.DNSResolver.IsNull() {
+	if !data.DNSResolver.IsNull() && !data.DNSResolver.IsUnknown() {
 		v := data.DNSResolver.ValueString()
 		check.DNSResolver = &v
 	}
@@ -449,11 +459,11 @@ func tcpModelToClient(ctx context.Context, data *TCPCheckModel, diags *diag.Diag
 		TCPPort:                      int(data.TCPPort.ValueInt64()),
 		TCPIPFamily:                  data.TCPIPFamily.ValueString(),
 	}
-	if !data.TCPData.IsNull() {
+	if !data.TCPData.IsNull() && !data.TCPData.IsUnknown() {
 		v := data.TCPData.ValueString()
 		check.TCPData = &v
 	}
-	if !data.TCPShouldFail.IsNull() {
+	if !data.TCPShouldFail.IsNull() && !data.TCPShouldFail.IsUnknown() {
 		v := data.TCPShouldFail.ValueBool()
 		check.TCPShouldFail = &v
 	}
@@ -473,7 +483,7 @@ func populateClientCommon(ctx context.Context, data *typedCheckModel, testRegion
 	listElementsAs(ctx, data.IncidentIoAlerts, incidentIOAlerts, diags)
 	listElementsAs(ctx, data.MicrosoftTeamsAlerts, microsoftTeamsAlerts, diags)
 
-	if !data.Assertions.IsNull() {
+	if !data.Assertions.IsNull() && !data.Assertions.IsUnknown() {
 		var values []resource_check.AssertionsValue
 		diags.Append(data.Assertions.ElementsAs(ctx, &values, false)...)
 		for _, value := range values {
@@ -488,7 +498,7 @@ func populateClientCommon(ctx context.Context, data *typedCheckModel, testRegion
 }
 
 func listElementsAs(ctx context.Context, value types.List, target *[]string, diags *diag.Diagnostics) {
-	if !value.IsNull() {
+	if !value.IsNull() && !value.IsUnknown() {
 		diags.Append(value.ElementsAs(ctx, target, false)...)
 	}
 }
@@ -533,17 +543,39 @@ func populateCommonModel(ctx context.Context, data *typedCheckModel, id, name, s
 	data.RecoveryPeriodSeconds = types.Int64Value(int64(recoveryPeriod))
 	data.Timeout = optionalInt64Value(timeout)
 	data.AlertPriority = optionalStringValue(alertPriority)
-	data.TestRegions = stringListValue(ctx, testRegions, diags)
-	data.UserAlerts = stringListValue(ctx, userAlerts, diags)
-	data.SlackAlerts = stringListValue(ctx, slackAlerts, diags)
-	data.DiscordAlerts = stringListValue(ctx, discordAlerts, diags)
-	data.TelegramAlerts = stringListValue(ctx, telegramAlerts, diags)
-	data.PushoverAlerts = stringListValue(ctx, pushoverAlerts, diags)
-	data.WebhookAlerts = stringListValue(ctx, webhookAlerts, diags)
-	data.OncallAlerts = stringListValue(ctx, oncallAlerts, diags)
-	data.IncidentIoAlerts = stringListValue(ctx, incidentIOAlerts, diags)
-	data.MicrosoftTeamsAlerts = stringListValue(ctx, microsoftTeamsAlerts, diags)
-	data.Assertions = assertionListValue(ctx, assertions, diags)
+	if len(testRegions) != 0 || data.TestRegions.IsNull() || data.TestRegions.IsUnknown() || len(data.TestRegions.Elements()) != 0 {
+		data.TestRegions = stringListValue(ctx, testRegions, diags)
+	}
+	if len(userAlerts) != 0 || data.UserAlerts.IsNull() || data.UserAlerts.IsUnknown() || len(data.UserAlerts.Elements()) != 0 {
+		data.UserAlerts = stringListValue(ctx, userAlerts, diags)
+	}
+	if len(slackAlerts) != 0 || data.SlackAlerts.IsNull() || data.SlackAlerts.IsUnknown() || len(data.SlackAlerts.Elements()) != 0 {
+		data.SlackAlerts = stringListValue(ctx, slackAlerts, diags)
+	}
+	if len(discordAlerts) != 0 || data.DiscordAlerts.IsNull() || data.DiscordAlerts.IsUnknown() || len(data.DiscordAlerts.Elements()) != 0 {
+		data.DiscordAlerts = stringListValue(ctx, discordAlerts, diags)
+	}
+	if len(telegramAlerts) != 0 || data.TelegramAlerts.IsNull() || data.TelegramAlerts.IsUnknown() || len(data.TelegramAlerts.Elements()) != 0 {
+		data.TelegramAlerts = stringListValue(ctx, telegramAlerts, diags)
+	}
+	if len(pushoverAlerts) != 0 || data.PushoverAlerts.IsNull() || data.PushoverAlerts.IsUnknown() || len(data.PushoverAlerts.Elements()) != 0 {
+		data.PushoverAlerts = stringListValue(ctx, pushoverAlerts, diags)
+	}
+	if len(webhookAlerts) != 0 || data.WebhookAlerts.IsNull() || data.WebhookAlerts.IsUnknown() || len(data.WebhookAlerts.Elements()) != 0 {
+		data.WebhookAlerts = stringListValue(ctx, webhookAlerts, diags)
+	}
+	if len(oncallAlerts) != 0 || data.OncallAlerts.IsNull() || data.OncallAlerts.IsUnknown() || len(data.OncallAlerts.Elements()) != 0 {
+		data.OncallAlerts = stringListValue(ctx, oncallAlerts, diags)
+	}
+	if len(incidentIOAlerts) != 0 || data.IncidentIoAlerts.IsNull() || data.IncidentIoAlerts.IsUnknown() || len(data.IncidentIoAlerts.Elements()) != 0 {
+		data.IncidentIoAlerts = stringListValue(ctx, incidentIOAlerts, diags)
+	}
+	if len(microsoftTeamsAlerts) != 0 || data.MicrosoftTeamsAlerts.IsNull() || data.MicrosoftTeamsAlerts.IsUnknown() || len(data.MicrosoftTeamsAlerts.Elements()) != 0 {
+		data.MicrosoftTeamsAlerts = stringListValue(ctx, microsoftTeamsAlerts, diags)
+	}
+	if len(assertions) != 0 || data.Assertions.IsNull() || data.Assertions.IsUnknown() || len(data.Assertions.Elements()) != 0 {
+		data.Assertions = assertionListValue(ctx, assertions, diags)
+	}
 }
 
 func optionalStringValue(value string) types.String {

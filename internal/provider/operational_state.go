@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -62,10 +63,10 @@ func applyOperationalState(change operationalStateChange, paused, muted **bool) 
 
 func pausedAttribute(subject string) schema.BoolAttribute {
 	description := fmt.Sprintf("Whether the %s is paused. Cannot be true when muted is true.", subject)
-	return schema.BoolAttribute{Optional: true, Computed: true, Description: description, MarkdownDescription: description}
+	return schema.BoolAttribute{Optional: true, Computed: true, Description: description, MarkdownDescription: description, PlanModifiers: []planmodifier.Bool{omittedOperationalState{other: "muted"}}}
 }
 
 func mutedAttribute(subject string) schema.BoolAttribute {
 	description := fmt.Sprintf("Whether alerts for the %s are muted. Cannot be true when paused is true.", subject)
-	return schema.BoolAttribute{Optional: true, Computed: true, Description: description, MarkdownDescription: description}
+	return schema.BoolAttribute{Optional: true, Computed: true, Description: description, MarkdownDescription: description, PlanModifiers: []planmodifier.Bool{omittedOperationalState{other: "paused"}}}
 }
