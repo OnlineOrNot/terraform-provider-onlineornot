@@ -8,6 +8,7 @@ build:
 # Run unit tests
 .PHONY: test
 test:
+	python3 -m unittest discover -s scripts -p 'test_*.py'
 	go test -v ./...
 
 # Validate examples against the local provider without contacting the API
@@ -34,11 +35,12 @@ check-contract: fetch-schema
 # Generate schemas from OpenAPI spec (Step 1 + 2)
 .PHONY: generate-schemas
 generate-schemas: fetch-schema
+	python3 scripts/prepare-openapi.py openapi.json openapi.codegen.json
 	@echo "Generating provider code specification from OpenAPI..."
 	go run github.com/hashicorp/terraform-plugin-codegen-openapi/cmd/tfplugingen-openapi generate \
 		--config generator_config.yml \
 		--output provider_code_spec.json \
-		openapi.json
+		openapi.codegen.json
 	@echo "Generating framework code from specification..."
 	go run github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework generate resources \
 		--input provider_code_spec.json \
@@ -46,9 +48,9 @@ generate-schemas: fetch-schema
 
 # Generate documentation (Step 3 + 4)
 .PHONY: docs
-docs:
+docs: fetch-schema
 	terraform fmt -recursive ./examples/
-	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate
+	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-name onlineornot --rendered-provider-name terraform-provider-onlineornot
 	go run ./tools/enrich-docs
 
 # Generate everything (schemas + docs)

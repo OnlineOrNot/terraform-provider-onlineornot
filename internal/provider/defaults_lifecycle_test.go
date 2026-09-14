@@ -59,7 +59,12 @@ func TestStatusPageDefaultsLifecycle(t *testing.T) {
 		default:
 			t.Errorf("unexpected method: %s", r.Method)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"success": true, "result": stored})
+		result := stored
+		if r.Method == "POST" {
+			// Create is identity-only and update can omit configuration fields.
+			result = map[string]any{"id": stored["id"], "name": stored["name"], "subdomain": stored["subdomain"]}
+		}
+		json.NewEncoder(w).Encode(map[string]any{"success": true, "result": result})
 	}))
 	defer server.Close()
 	config := func(settings string) string {

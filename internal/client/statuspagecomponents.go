@@ -9,8 +9,8 @@ import (
 type StatusPageComponent struct {
 	ID                  string  `json:"id,omitempty"`
 	StatusPageID        string  `json:"status_page_id,omitempty"`
-	Name                string  `json:"name"`
-	Status              string  `json:"status,omitempty"`
+	Name                *string `json:"name"`
+	Status              *string `json:"status,omitempty"`
 	DisplayUptime       *bool   `json:"display_uptime,omitempty"`
 	DisplayMetrics      *bool   `json:"display_metrics,omitempty"`
 	GroupID             *string `json:"group_id,omitempty"`

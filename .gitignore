@@ -29,3 +29,7 @@ test-local/
 # Generated files (regenerate with `make generate`)
 openapi.json
 provider_code_spec.json
+
+# Generator-only success-envelope projection
+openapi.codegen.json
+__pycache__/

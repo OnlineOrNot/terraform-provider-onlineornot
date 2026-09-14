@@ -21,33 +21,37 @@ func TestStatusPageResourceCreateHideFromSearchEngines(t *testing.T) {
 		name     string
 		planned  types.Bool
 		response string
-		want     bool
+		want     types.Bool
 	}{
-		{"omitted_defaults_false", types.BoolUnknown(), ``, false},
-		{"omitted_api_false", types.BoolUnknown(), `,"hide_from_search_engines":false`, false},
-		{"omitted_api_true", types.BoolUnknown(), `,"hide_from_search_engines":true`, true},
-		{"configured_false", types.BoolValue(false), ``, false},
-		{"configured_true", types.BoolValue(true), ``, true},
+		{"omitted_api_null", types.BoolUnknown(), `,"hide_from_search_engines":null`, types.BoolNull()},
+		{"omitted_api_false", types.BoolUnknown(), `,"hide_from_search_engines":false`, types.BoolValue(false)},
+		{"omitted_api_true", types.BoolUnknown(), `,"hide_from_search_engines":true`, types.BoolValue(true)},
+		{"configured_false", types.BoolValue(false), ``, types.BoolValue(false)},
+		{"configured_true", types.BoolValue(true), ``, types.BoolValue(true)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				if req.Method == http.MethodGet {
+					w.Write([]byte(`{"success":true,"result":{"id":"page1234"` + tc.response + `}}`))
+					return
+				}
 				if req.Method != http.MethodPost || (req.URL.Path != "/v1/status_pages" && req.URL.Path != "/v1/status_pages/page1234") {
 					t.Errorf("unexpected request: %s %s", req.Method, req.URL.Path)
 					w.WriteHeader(http.StatusNotFound)
 					return
 				}
-				var sent client.StatusPage
+				var sent client.StatusPageInput
 				if err := json.NewDecoder(req.Body).Decode(&sent); err != nil {
 					t.Error(err)
 					w.WriteHeader(http.StatusBadRequest)
 					return
 				}
-				if sent.Name != "echo-test" || sent.Subdomain != "echo-test" || sent.HideFromSearchEngines != tc.planned.ValueBool() {
+				if sent.Name != "echo-test" || sent.Subdomain != "echo-test" || (sent.HideFromSearchEngines != nil && *sent.HideFromSearchEngines != tc.planned.ValueBool()) {
 					t.Errorf("unexpected create payload: %+v", sent)
 				}
 				w.Header().Set("Content-Type", "application/json")
-				w.Write([]byte(`{"success":true,"result":{"id":"page1234","name":"echo-test","subdomain":"echo-test"` + tc.response + `}}`))
+				w.Write([]byte(`{"success":true,"result":{"id":"page1234","name":"echo-test","subdomain":"echo-test"}}`))
 			}))
 			defer server.Close()
 
@@ -78,8 +82,8 @@ func TestStatusPageResourceCreateHideFromSearchEngines(t *testing.T) {
 			if diags := resp.State.Get(ctx, &got); diags.HasError() {
 				t.Fatal(diags)
 			}
-			if !got.HideFromSearchEngines.Equal(types.BoolValue(tc.want)) {
-				t.Errorf("hide_from_search_engines = %s, want %t", got.HideFromSearchEngines, tc.want)
+			if !got.HideFromSearchEngines.Equal(tc.want) {
+				t.Errorf("hide_from_search_engines = %s, want %s", got.HideFromSearchEngines, tc.want)
 			}
 			if got.Id.ValueString() != "page1234" || !got.Name.Equal(data.Name) || !got.Subdomain.Equal(data.Subdomain) {
 				t.Errorf("unexpected status page identity: %+v", got)

@@ -62,8 +62,8 @@ func MaintenanceWindowResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"start_date": schema.StringAttribute{
 				Required:            true,
-				Description:         "Start time of the maintenance window (HH:MM format)",
-				MarkdownDescription: "Start time of the maintenance window (HH:MM format)",
+				Description:         "Start date and time of the maintenance window, as a timestamp",
+				MarkdownDescription: "Start date and time of the maintenance window, as a timestamp",
 			},
 			"timezone": schema.StringAttribute{
 				Required:            true,

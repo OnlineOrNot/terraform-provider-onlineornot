@@ -196,7 +196,14 @@ terraform plan
 The provider shares a pinned OpenAPI revision with the generated
 [`@onlineornot/api`](https://github.com/OnlineOrNot/onlineornot/tree/main/packages/api)
 SDK. `schema.lock.json` records the source revision and SHA-256 digest; schema
-generation fails if the downloaded bytes do not match that lock.
+generation fails if the downloaded bytes do not match that lock. Documentation
+also reads this verified spec, not upstream main.
+
+`make generate-schemas` writes a separate `openapi.codegen.json` projection
+because the generator cannot map HTTP 200 success/failure unions. Only explicit
+success envelopes are selected; nested result unions and nullable fields remain
+unchanged. Ambiguous response unions fail generation. Runtime clients still
+reject failure envelopes, including HTTP 200 failures.
 
 `operation-parity.json` gives every OpenAPI `operationId` one reviewed status:
 

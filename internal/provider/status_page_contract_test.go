@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -143,5 +145,33 @@ func TestScheduledMaintenanceCreateOnlyFieldsRequireReplacement(t *testing.T) {
 	notifications := response.Schema.Attributes["notifications"].(schema.SingleNestedAttribute)
 	if len(description.PlanModifiers) == 0 || len(components.PlanModifiers) == 0 || len(notifications.PlanModifiers) == 0 {
 		t.Error("expected unsupported scheduled-maintenance updates to require replacement")
+	}
+}
+
+func TestNullableStatusPageResponseState(t *testing.T) {
+	var component client.StatusPageComponent
+	if err := json.Unmarshal([]byte(`{"id":"component","name":null,"status":null,"display_uptime":null,"display_metrics":null,"group_id":null,"sort_order":null}`), &component); err != nil {
+		t.Fatal(err)
+	}
+	data := statusPageComponentModel{
+		Name: types.StringValue("old"), Status: types.StringValue("OPERATIONAL"),
+		DisplayUptime: types.BoolValue(true), DisplayMetrics: types.BoolValue(true),
+		GroupId: types.StringValue("old"),
+	}
+	populateStatusPageComponentModel(&data, &component, true)
+	if !data.Name.IsNull() || !data.Status.IsNull() || !data.DisplayUptime.IsNull() || !data.DisplayMetrics.IsNull() || !data.GroupId.IsNull() {
+		t.Fatalf("nullable component fields retained stale state: %+v", data)
+	}
+	var incident client.StatusPageIncident
+	if err := json.Unmarshal([]byte(`{"id":"incident","title":null,"impact":null}`), &incident); err != nil {
+		t.Fatal(err)
+	}
+	incidentData := statusPageIncidentModel{Title: types.StringValue("old"), Impact: types.StringValue("MAJOR")}
+	populateStatusPageIncidentIdentity(&incidentData, &incident)
+	if !incidentData.Title.IsNull() || !incidentData.Impact.IsNull() {
+		t.Fatalf("nullable incident fields retained stale state: %+v", incidentData)
+	}
+	if !statusPageString("", types.StringNull()).IsNull() {
+		t.Fatal("absent group description must remain null")
 	}
 }

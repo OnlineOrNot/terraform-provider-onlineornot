@@ -101,7 +101,7 @@ func TestUpdateStatusPageComponentMatchesOpenAPIPayload(t *testing.T) {
 			t.Errorf("unexpected component patch\nwant: %#v\n got: %#v", expected, body)
 		}
 		writeJSON(t, w, APIResponse[StatusPageComponent]{
-			Result:  StatusPageComponent{ID: "comp1234", Name: "API", Status: "OPERATIONAL"},
+			Result:  StatusPageComponent{ID: "comp1234", Name: contractString("API"), Status: contractString("OPERATIONAL")},
 			Success: true,
 		})
 	})
@@ -133,7 +133,7 @@ func TestUpdateStatusPageComponentOmitsUnmanagedRelationships(t *testing.T) {
 			t.Errorf("unexpected component patch\nwant: %#v\n got: %#v", expected, body)
 		}
 		writeJSON(t, w, APIResponse[StatusPageComponent]{
-			Result:  StatusPageComponent{ID: "comp1234", Name: "API", Status: "OPERATIONAL"},
+			Result:  StatusPageComponent{ID: "comp1234", Name: contractString("API"), Status: contractString("OPERATIONAL")},
 			Success: true,
 		})
 	})
@@ -159,7 +159,7 @@ func TestUpdateStatusPageIncidentMatchesOpenAPIPayload(t *testing.T) {
 			t.Errorf("unexpected incident patch\nwant: %#v\n got: %#v", expected, body)
 		}
 		writeJSON(t, w, APIResponse[StatusPageIncident]{
-			Result:  StatusPageIncident{ID: "inc12345", Title: "API outage", Impact: &impact},
+			Result:  StatusPageIncident{ID: "inc12345", Title: contractString("API outage"), Impact: &impact},
 			Success: true,
 		})
 	})
@@ -202,5 +202,30 @@ func TestUpdateStatusPageScheduledMaintenanceMatchesOpenAPIPayload(t *testing.T)
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func contractString(value string) *string { return &value }
+
+func TestCheckHTTP200FailureEnvelopes(t *testing.T) {
+	for _, kind := range []string{"", "dns", "tcp"} {
+		t.Run(kind, func(t *testing.T) {
+			server, c := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+				writeJSON(t, w, map[string]any{"success": false, "result": nil, "errors": []map[string]any{{"code": 1000, "message": "not found"}}})
+			})
+			defer server.Close()
+			var err error
+			switch kind {
+			case "dns":
+				_, err = c.GetDNSCheck("missing")
+			case "tcp":
+				_, err = c.GetTCPCheck("missing")
+			default:
+				_, err = c.GetCheck("missing")
+			}
+			if err == nil {
+				t.Fatal("HTTP 200 failure envelope must not become empty check state")
+			}
+		})
 	}
 }

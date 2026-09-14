@@ -95,8 +95,8 @@ func (r *StatusPageComponentResource) Create(ctx context.Context, req resource.C
 	}
 
 	comp := &client.StatusPageComponent{
-		Name:   data.Name.ValueString(),
-		Status: data.Status.ValueString(),
+		Name:   data.Name.ValueStringPointer(),
+		Status: data.Status.ValueStringPointer(),
 	}
 
 	if !data.DisplayUptime.IsNull() {
@@ -243,8 +243,8 @@ func componentPatchFromModel(ctx context.Context, data, prior *statusPageCompone
 
 func populateStatusPageComponentModel(data *statusPageComponentModel, comp *client.StatusPageComponent, manageGroup bool) {
 	data.Id = types.StringValue(comp.ID)
-	data.Name = types.StringValue(comp.Name)
-	data.Status = types.StringValue(comp.Status)
+	data.Name = types.StringPointerValue(comp.Name)
+	data.Status = types.StringPointerValue(comp.Status)
 	if manageGroup {
 		if comp.GroupID == nil {
 			data.GroupId = types.StringNull()
@@ -252,12 +252,8 @@ func populateStatusPageComponentModel(data *statusPageComponentModel, comp *clie
 			data.GroupId = types.StringValue(*comp.GroupID)
 		}
 	}
-	if comp.DisplayUptime != nil {
-		data.DisplayUptime = types.BoolValue(*comp.DisplayUptime)
-	}
-	if comp.DisplayMetrics != nil {
-		data.DisplayMetrics = types.BoolValue(*comp.DisplayMetrics)
-	}
+	data.DisplayUptime = types.BoolPointerValue(comp.DisplayUptime)
+	data.DisplayMetrics = types.BoolPointerValue(comp.DisplayMetrics)
 }
 
 func (r *StatusPageComponentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

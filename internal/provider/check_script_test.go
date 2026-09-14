@@ -90,7 +90,7 @@ func mockCheckAPI(t *testing.T, kind string) (*httptest.Server, func(string)) {
 			if script != "" {
 				stored["timeout"] = nil
 			}
-			result := make(map[string]any)
+			result := map[string]any{"script": nil}
 			for k, v := range stored {
 				if k != "script" {
 					result[k] = v

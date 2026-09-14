@@ -86,8 +86,9 @@ func (r *StatusPageResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	data.Id = types.StringValue(created.ID)
-	if data.HideFromSearchEngines.IsUnknown() {
-		data.HideFromSearchEngines = types.BoolValue(created.HideFromSearchEngines)
+	readVisibility := data.HideFromSearchEngines.IsUnknown()
+	if readVisibility {
+		data.HideFromSearchEngines = types.BoolNull()
 	}
 
 	// Set computed fields to null to avoid "unknown after apply" errors
@@ -110,9 +111,20 @@ func (r *StatusPageResource) Create(ctx context.Context, req resource.CreateRequ
 	if sp.Description != nil || sp.AllowedIPs != nil || sp.HideFromSearchEngines != nil {
 		if _, err := r.client.UpdateStatusPage(created.ID, sp); err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Status page created, but unable to configure settings: %s", err))
+			return
 		}
 	}
 
+	// Create returns identity only. Read defaults from the full GET response.
+	if readVisibility {
+		page, err := r.client.GetStatusPage(created.ID)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Status page created, but unable to read settings: %s", err))
+			return
+		}
+		data.HideFromSearchEngines = types.BoolPointerValue(page.HideFromSearchEngines)
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	}
 }
 
 func (r *StatusPageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -136,7 +148,7 @@ func (r *StatusPageResource) Read(ctx context.Context, req resource.ReadRequest,
 	if normalizedStatusPageDomain(sp.CustomDomain) != normalizedStatusPageDomain(data.CustomDomain.ValueString()) {
 		data.CustomDomain = statusPageString(sp.CustomDomain, data.CustomDomain)
 	}
-	data.HideFromSearchEngines = types.BoolValue(sp.HideFromSearchEngines)
+	data.HideFromSearchEngines = types.BoolPointerValue(sp.HideFromSearchEngines)
 	if len(sp.AllowedIPs) == 0 && data.AllowedIps.IsNull() {
 		data.AllowedIps = types.ListNull(types.StringType)
 	} else {
@@ -174,14 +186,20 @@ func (r *StatusPageResource) Update(ctx context.Context, req resource.UpdateRequ
 		empty := []string{}
 		sp.AllowedIPs = &empty
 	}
-	updated, err := r.client.UpdateStatusPage(data.Id.ValueString(), sp)
+	_, err := r.client.UpdateStatusPage(data.Id.ValueString(), sp)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update status page, got error: %s", err))
 		return
 	}
 
 	if data.HideFromSearchEngines.IsUnknown() {
-		data.HideFromSearchEngines = types.BoolValue(updated.HideFromSearchEngines)
+		// Update is partial too; omitted fields do not imply false.
+		page, err := r.client.GetStatusPage(data.Id.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Status page updated, but unable to read settings: %s", err))
+			return
+		}
+		data.HideFromSearchEngines = types.BoolPointerValue(page.HideFromSearchEngines)
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
