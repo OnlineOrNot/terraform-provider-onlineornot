@@ -13,6 +13,9 @@ description: |-
 ## Example Usage
 
 ```terraform
+# Users available for alert notifications
+data "onlineornot_users" "all" {}
+
 # Basic uptime check
 resource "onlineornot_check" "example" {
   name = "My Website"
@@ -46,7 +49,7 @@ resource "onlineornot_check" "browser" {
   name    = "Homepage Load Test"
   url     = "https://example.com"
   type    = "BROWSER_CHECK"
-  version = "NODE20_PLAYWRIGHT"
+  version = "NODE24_PLAYWRIGHT"
 }
 ```
 

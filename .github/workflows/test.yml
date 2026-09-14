@@ -73,6 +73,8 @@ jobs:
       - run: go test -v -cover ./...
         env:
           TF_ACC: ""
+      - name: Validate examples against the local provider
+        run: make check-examples
 
   # Acceptance tests run against real API - only on main branch pushes
   # Requires ONLINEORNOT_API_KEY secret to be set
