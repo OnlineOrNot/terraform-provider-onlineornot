@@ -269,3 +269,34 @@ resource "onlineornot_%s" "test" {
 		})
 	}
 }
+
+func TestCheckAlertPriorityLifecycle(t *testing.T) {
+	for _, kind := range []string{"check", "uptime_check", "browser_check"} {
+		t.Run(kind, func(t *testing.T) {
+			endpoint := strings.TrimSuffix(kind, "_check")
+			if kind == "check" {
+				endpoint = ""
+			}
+			server, _ := mockCheckAPI(t, endpoint)
+			defer server.Close()
+			config := func(priority string) string {
+				return fmt.Sprintf(`provider "onlineornot" {
+ api_key = "fixture"
+ base_url = %q
+}
+resource "onlineornot_%s" "test" {
+ name = "priority"
+ url = "https://example.com"
+ %s
+}`, server.URL, kind, priority)
+			}
+			address := "onlineornot_" + kind + ".test"
+			resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+				{Config: config(""), Check: resource.TestCheckResourceAttr(address, "alert_priority", "HIGH")},
+				{Config: config(`alert_priority = "LOW"`), Check: resource.TestCheckResourceAttr(address, "alert_priority", "LOW")},
+				{Config: config(`alert_priority = "LOW"`), PlanOnly: true},
+				{Config: config(`alert_priority = "HIGH"`), Check: resource.TestCheckResourceAttr(address, "alert_priority", "HIGH")},
+			}})
+		})
+	}
+}

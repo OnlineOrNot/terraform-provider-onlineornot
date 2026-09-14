@@ -210,6 +210,10 @@ func (r *HeartbeatResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	hb, err := r.client.GetHeartbeat(data.Id.ValueString())
+	if client.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read heartbeat, got error: %s", err))
 		return

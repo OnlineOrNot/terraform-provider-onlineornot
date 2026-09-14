@@ -62,7 +62,7 @@ resource "onlineornot_check" "browser" {
 
 ### Optional
 
-- `alert_priority` (String) Alert Priority. Must be one of: `HIGH`, `LOW`.
+- `alert_priority` (String) Alert priority. Omitted creation defaults to HIGH; omission on PATCH preserves the current priority. Must be one of: `HIGH`, `LOW`.
 - `assertions` (Attributes List) Assertions to run on the response (see [below for nested schema](#nestedatt--assertions))
 - `auth_password` (String, Sensitive) Password to use for URLs behind HTTP Basic Auth. Empty strings are preserved.
 - `auth_username` (String) Username to use for URLs behind HTTP Basic Auth. Set this to an empty string for an empty user-id.
