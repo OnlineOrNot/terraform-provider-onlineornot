@@ -9,8 +9,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -19,8 +17,7 @@ import (
 )
 
 const (
-	openAPIURL = "https://raw.githubusercontent.com/OnlineOrNot/api-schemas/main/openapi.json"
-	docsDir    = "docs"
+	docsDir = "docs"
 )
 
 // OpenAPI spec structures (minimal for our needs)
@@ -185,19 +182,10 @@ func main() {
 }
 
 func fetchOpenAPISpec() (*OpenAPISpec, error) {
-	resp, err := http.Get(openAPIURL)
+	// make docs fetches and verifies the SDK's exact schema lock first.
+	body, err := os.ReadFile("openapi.json")
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read body: %w", err)
+		return nil, fmt.Errorf("read pinned spec (run make fetch-schema): %w", err)
 	}
 
 	var spec OpenAPISpec

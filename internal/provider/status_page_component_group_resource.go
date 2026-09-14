@@ -94,7 +94,7 @@ func (r *StatusPageComponentGroupResource) Read(ctx context.Context, req resourc
 
 	data.Id = types.StringValue(group.ID)
 	data.Name = types.StringValue(group.Name)
-	data.Description = types.StringValue(group.Description)
+	data.Description = statusPageString(group.Description, data.Description)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

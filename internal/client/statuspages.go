@@ -13,7 +13,7 @@ type StatusPage struct {
 	Description           string   `json:"description,omitempty"`
 	CustomDomain          string   `json:"custom_domain,omitempty"`
 	Password              string   `json:"password,omitempty"`
-	HideFromSearchEngines bool     `json:"hide_from_search_engines,omitempty"`
+	HideFromSearchEngines *bool    `json:"hide_from_search_engines,omitempty"`
 	AllowedIPs            []string `json:"allowed_ips,omitempty"`
 }
 

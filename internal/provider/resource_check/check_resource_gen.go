@@ -99,14 +99,14 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 			"auth_password": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Password to use for URLs behind HTTP Basic Auth",
-				MarkdownDescription: "Password to use for URLs behind HTTP Basic Auth",
+				Description:         "Password to use for URLs behind HTTP Basic Auth. Empty strings are preserved.",
+				MarkdownDescription: "Password to use for URLs behind HTTP Basic Auth. Empty strings are preserved.",
 			},
 			"auth_username": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Username to use for URLs behind HTTP Basic Auth",
-				MarkdownDescription: "Username to use for URLs behind HTTP Basic Auth",
+				Description:         "Username to use for URLs behind HTTP Basic Auth. An empty string represents an empty user-id.",
+				MarkdownDescription: "Username to use for URLs behind HTTP Basic Auth. An empty string represents an empty user-id.",
 			},
 			"body": schema.StringAttribute{
 				Optional: true,

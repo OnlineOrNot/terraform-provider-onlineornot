@@ -193,7 +193,8 @@
     {
       "operationId": "getCheck",
       "status": "implemented",
-      "terraform": "onlineornot_check resource"
+      "terraform": "onlineornot_check resource",
+      "reason": "Generate from the success envelope; runtime rejects HTTP 200 failure envelopes. Existing resource and state names are preserved."
     },
     {
       "operationId": "deleteCheck",

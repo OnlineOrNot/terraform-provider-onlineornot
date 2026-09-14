@@ -15,7 +15,7 @@ type StatusPageIncidentComponent struct {
 type StatusPageIncident struct {
 	ID                string                        `json:"id,omitempty"`
 	StatusPageID      string                        `json:"status_page_id,omitempty"`
-	Title             string                        `json:"title"`
+	Title             *string                       `json:"title"`
 	Impact            *string                       `json:"impact,omitempty"`
 	Description       string                        `json:"description,omitempty"`
 	Status            string                        `json:"status,omitempty"`

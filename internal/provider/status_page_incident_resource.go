@@ -103,7 +103,7 @@ func (r *StatusPageIncidentResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	incident := &client.StatusPageIncident{
-		Title:       data.Title.ValueString(),
+		Title:       data.Title.ValueStringPointer(),
 		Description: data.Description.ValueString(),
 		Status:      data.Status.ValueString(),
 	}
@@ -213,7 +213,7 @@ func incidentPatchFromModel(data *statusPageIncidentModel) *client.StatusPageInc
 
 func populateStatusPageIncidentIdentity(data *statusPageIncidentModel, incident *client.StatusPageIncident) {
 	data.Id = types.StringValue(incident.ID)
-	data.Title = types.StringValue(incident.Title)
+	data.Title = types.StringPointerValue(incident.Title)
 	if incident.Impact == nil {
 		data.Impact = types.StringNull()
 	} else {
