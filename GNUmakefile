@@ -10,6 +10,11 @@ build:
 test:
 	go test -v ./...
 
+# Validate examples against the local provider without contacting the API
+.PHONY: check-examples
+check-examples:
+	python3 scripts/check-examples.py
+
 # Run acceptance tests
 .PHONY: testacc
 testacc:
