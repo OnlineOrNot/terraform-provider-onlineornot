@@ -114,7 +114,7 @@ hide_from_search_engines = false`), Check: func(_ *terraform.State) error {
 // before apply rather than merely assigned in Create.
 func TestExplicitAPIDefaultPlans(t *testing.T) {
 	common := map[string]knownvalue.Check{
-		"alert_priority":                  knownvalue.StringExact("LOW"),
+		"alert_priority":                  knownvalue.StringExact("HIGH"),
 		"confirmation_period_seconds":     knownvalue.Int64Exact(60),
 		"recovery_period_seconds":         knownvalue.Int64Exact(180),
 		"reminder_alert_interval_minutes": knownvalue.Int64Exact(1440),
@@ -138,6 +138,9 @@ func TestExplicitAPIDefaultPlans(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.kind, func(t *testing.T) {
 			var checks []plancheck.PlanCheck
+			if tc.kind == "check" || tc.kind == "uptime_check" || tc.kind == "browser_check" || tc.kind == "dns_check" || tc.kind == "tcp_check" {
+				tc.expected["alert_priority"] = knownvalue.StringExact("HIGH")
+			}
 			for field, expected := range tc.expected {
 				checks = append(checks, plancheck.ExpectKnownValue("onlineornot_"+tc.kind+".test", tfjsonpath.New(field), expected))
 			}

@@ -53,7 +53,7 @@ resource "onlineornot_tcp_check" "smtp_banner" {
 
 ### Optional
 
-- `alert_priority` (String) Alert Priority
+- `alert_priority` (String) Alert priority. Omitted creation defaults to HIGH; omission on PATCH preserves the current priority.
 - `assertions` (Attributes List) Assertions to run on the response (see [below for nested schema](#nestedatt--assertions))
 - `confirmation_period_seconds` (Number)
 - `discord_alerts` (List of String)

@@ -141,10 +141,10 @@ func typedCheckSchema(ctx context.Context, idDescription string) schema.Schema {
 		"alert_priority": schema.StringAttribute{
 			Optional:            true,
 			Computed:            true,
-			Description:         "Alert Priority",
-			MarkdownDescription: "Alert Priority",
+			Description:         "Alert priority. Omitted creation defaults to HIGH; omission on PATCH preserves the current priority.",
+			MarkdownDescription: "Alert priority. Omitted creation defaults to HIGH; omission on PATCH preserves the current priority.",
 			Validators:          []validator.String{stringvalidator.OneOf("LOW", "HIGH")},
-			Default:             stringdefault.StaticString("LOW"),
+			Default:             stringdefault.StaticString("HIGH"),
 		},
 		"assertions": schema.ListNestedAttribute{
 			NestedObject: schema.NestedAttributeObject{
