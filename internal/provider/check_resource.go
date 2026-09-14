@@ -132,6 +132,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			resp.Schema.Attributes["type"] = typeAttr
 		}
 	}
+	preserveCheckConfiguration(&resp.Schema, "timeout", "version")
 }
 
 func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
@@ -155,12 +156,37 @@ func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 		resp.Diagnostics.AddAttributeError(path.Root("timeout"), "Timeout is incompatible with scripted browser checks", "Omit timeout and configure timing in the Playwright script instead.")
 		return
 	}
+	// Runtime version can be recomputed when execution mode changes, but an
+	// assertion or timing edit does not select a new runtime.
+	if config.Version.IsNull() && !req.State.Raw.IsNull() {
+		var plan, state checkModel
+		resp.Diagnostics.Append(resp.Plan.Get(ctx, &plan)...)
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		if !plan.Type.IsUnknown() && plan.Type.Equal(state.Type) && !plan.Script.IsUnknown() && (plan.Script.ValueString() == "") == (state.Script.ValueString() == "") {
+			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("version"), state.Version)...)
+		}
+	}
+	// A newly configured script replaces URL-based execution.
+	if config.Url.IsNull() && !config.Script.IsNull() && !config.Script.IsUnknown() && config.Script.ValueString() != "" {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("url"), types.StringNull())...)
+	}
 	if config.Timeout.IsNull() {
+		var plan, state checkModel
+		resp.Diagnostics.Append(resp.Plan.Get(ctx, &plan)...)
+		if !req.State.Raw.IsNull() {
+			resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		}
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
 		timeout := types.Int64Value(10000)
-		if config.Script.IsUnknown() {
+		if plan.Script.IsUnknown() && !(req.State.Raw.IsNull() && config.Script.IsNull()) {
 			timeout = types.Int64Unknown()
-		} else if config.Script.ValueString() != "" {
+		} else if plan.Script.ValueString() != "" {
 			timeout = types.Int64Null()
+		} else if !req.State.Raw.IsNull() && state.Script.ValueString() == "" {
+			timeout = state.Timeout
 		}
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("timeout"), timeout)...)
 	}
@@ -278,11 +304,11 @@ func checkModelToClient(ctx context.Context, data *checkModel, forcedInputType s
 		value := data.AuthPassword.ValueString()
 		check.AuthPassword = &value
 	}
-	if !data.FollowRedirects.IsNull() {
+	if !data.FollowRedirects.IsNull() && !data.FollowRedirects.IsUnknown() {
 		value := data.FollowRedirects.ValueBool()
 		check.FollowRedirects = &value
 	}
-	if !data.VerifySsl.IsNull() {
+	if !data.VerifySsl.IsNull() && !data.VerifySsl.IsUnknown() {
 		value := data.VerifySsl.ValueBool()
 		check.VerifySSL = &value
 	}
@@ -379,12 +405,12 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 	}
 	if check.TextToSearchFor != "" {
 		data.TextToSearchFor = types.StringValue(check.TextToSearchFor)
-	} else {
+	} else if !data.TextToSearchFor.Equal(types.StringValue("")) {
 		data.TextToSearchFor = types.StringNull()
 	}
 	if check.Body != "" {
 		data.Body = types.StringValue(check.Body)
-	} else {
+	} else if !data.Body.Equal(types.StringValue("")) {
 		data.Body = types.StringNull()
 	}
 	if check.Version != "" {
@@ -394,7 +420,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 	}
 	if check.Script != "" {
 		data.Script = types.StringValue(check.Script)
-	} else {
+	} else if !data.Script.Equal(types.StringValue("")) {
 		data.Script = types.StringNull()
 	}
 	if check.AuthUsername != nil {
@@ -440,7 +466,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		testRegions, d := types.ListValueFrom(ctx, types.StringType, check.TestRegions)
 		diags.Append(d...)
 		data.TestRegions = testRegions
-	} else {
+	} else if data.TestRegions.IsNull() || data.TestRegions.IsUnknown() || len(data.TestRegions.Elements()) != 0 {
 		data.TestRegions = types.ListNull(types.StringType)
 	}
 
@@ -448,7 +474,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		userAlerts, d := types.ListValueFrom(ctx, types.StringType, check.UserAlerts)
 		diags.Append(d...)
 		data.UserAlerts = userAlerts
-	} else {
+	} else if data.UserAlerts.IsNull() || data.UserAlerts.IsUnknown() || len(data.UserAlerts.Elements()) != 0 {
 		data.UserAlerts = types.ListNull(types.StringType)
 	}
 
@@ -456,7 +482,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		slackAlerts, d := types.ListValueFrom(ctx, types.StringType, check.SlackAlerts)
 		diags.Append(d...)
 		data.SlackAlerts = slackAlerts
-	} else {
+	} else if data.SlackAlerts.IsNull() || data.SlackAlerts.IsUnknown() || len(data.SlackAlerts.Elements()) != 0 {
 		data.SlackAlerts = types.ListNull(types.StringType)
 	}
 
@@ -464,7 +490,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		discordAlerts, d := types.ListValueFrom(ctx, types.StringType, check.DiscordAlerts)
 		diags.Append(d...)
 		data.DiscordAlerts = discordAlerts
-	} else {
+	} else if data.DiscordAlerts.IsNull() || data.DiscordAlerts.IsUnknown() || len(data.DiscordAlerts.Elements()) != 0 {
 		data.DiscordAlerts = types.ListNull(types.StringType)
 	}
 
@@ -472,7 +498,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		telegramAlerts, d := types.ListValueFrom(ctx, types.StringType, check.TelegramAlerts)
 		diags.Append(d...)
 		data.TelegramAlerts = telegramAlerts
-	} else {
+	} else if data.TelegramAlerts.IsNull() || data.TelegramAlerts.IsUnknown() || len(data.TelegramAlerts.Elements()) != 0 {
 		data.TelegramAlerts = types.ListNull(types.StringType)
 	}
 
@@ -480,7 +506,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		pushoverAlerts, d := types.ListValueFrom(ctx, types.StringType, check.PushoverAlerts)
 		diags.Append(d...)
 		data.PushoverAlerts = pushoverAlerts
-	} else {
+	} else if data.PushoverAlerts.IsNull() || data.PushoverAlerts.IsUnknown() || len(data.PushoverAlerts.Elements()) != 0 {
 		data.PushoverAlerts = types.ListNull(types.StringType)
 	}
 
@@ -488,7 +514,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		webhookAlerts, d := types.ListValueFrom(ctx, types.StringType, check.WebhookAlerts)
 		diags.Append(d...)
 		data.WebhookAlerts = webhookAlerts
-	} else {
+	} else if data.WebhookAlerts.IsNull() || data.WebhookAlerts.IsUnknown() || len(data.WebhookAlerts.Elements()) != 0 {
 		data.WebhookAlerts = types.ListNull(types.StringType)
 	}
 
@@ -496,7 +522,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		oncallAlerts, d := types.ListValueFrom(ctx, types.StringType, check.OncallAlerts)
 		diags.Append(d...)
 		data.OncallAlerts = oncallAlerts
-	} else {
+	} else if data.OncallAlerts.IsNull() || data.OncallAlerts.IsUnknown() || len(data.OncallAlerts.Elements()) != 0 {
 		data.OncallAlerts = types.ListNull(types.StringType)
 	}
 
@@ -504,7 +530,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		incidentIoAlerts, d := types.ListValueFrom(ctx, types.StringType, check.IncidentIOAlerts)
 		diags.Append(d...)
 		data.IncidentIoAlerts = incidentIoAlerts
-	} else {
+	} else if data.IncidentIoAlerts.IsNull() || data.IncidentIoAlerts.IsUnknown() || len(data.IncidentIoAlerts.Elements()) != 0 {
 		data.IncidentIoAlerts = types.ListNull(types.StringType)
 	}
 
@@ -512,7 +538,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		msTeamsAlerts, d := types.ListValueFrom(ctx, types.StringType, check.MicrosoftTeamsAlerts)
 		diags.Append(d...)
 		data.MicrosoftTeamsAlerts = msTeamsAlerts
-	} else {
+	} else if data.MicrosoftTeamsAlerts.IsNull() || data.MicrosoftTeamsAlerts.IsUnknown() || len(data.MicrosoftTeamsAlerts.Elements()) != 0 {
 		data.MicrosoftTeamsAlerts = types.ListNull(types.StringType)
 	}
 
@@ -521,7 +547,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		headers, d := types.MapValueFrom(ctx, types.StringType, check.Headers)
 		diags.Append(d...)
 		data.Headers = headers
-	} else {
+	} else if data.Headers.IsNull() || data.Headers.IsUnknown() || len(data.Headers.Elements()) != 0 {
 		data.Headers = types.MapNull(types.StringType)
 	}
 
@@ -547,7 +573,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		assertionsList, d := types.ListValueFrom(ctx, assertionsElemType, assertionValues)
 		diags.Append(d...)
 		data.Assertions = assertionsList
-	} else {
+	} else if data.Assertions.IsNull() || data.Assertions.IsUnknown() || len(data.Assertions.Elements()) != 0 {
 		assertionsElemType := resource_check.AssertionsType{
 			ObjectType: types.ObjectType{
 				AttrTypes: resource_check.AssertionsValue{}.AttributeTypes(ctx),
@@ -608,7 +634,25 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	patch := &client.CheckPatch{Check: check}
+	fields := configuredCheckPatch(req.Config, check, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// URL absence is meaningful when switching to script-controlled execution.
+	var config checkModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if config.Url.IsNull() && config.Script.ValueString() != "" {
+		fields["url"] = nil
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// Clearing a script restores URL-based timing; unrelated omitted timeout
+	// values remain unmanaged.
+	if state.Script.ValueString() != "" && data.Script.ValueString() == "" && !data.Script.IsUnknown() && config.Timeout.IsNull() {
+		fields["timeout"] = data.Timeout.ValueInt64()
+	}
+	patch := &client.CheckPatch{Fields: fields}
 	if len(changes) > 0 {
 		applyOperationalState(changes[0], &patch.Paused, &patch.Muted)
 	}

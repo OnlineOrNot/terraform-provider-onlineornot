@@ -293,7 +293,7 @@ func TestCheckResourceUpdateWithoutOperationalStateChanges(t *testing.T) {
 	}
 	response := frameworkresource.UpdateResponse{State: tfsdk.State{Schema: schemaResponse.Schema}}
 
-	checkResource.Update(ctx, frameworkresource.UpdateRequest{Plan: plan, State: state}, &response)
+	checkResource.Update(ctx, frameworkresource.UpdateRequest{Config: tfsdk.Config{Raw: plan.Raw, Schema: plan.Schema}, Plan: plan, State: state}, &response)
 
 	if response.Diagnostics.HasError() {
 		t.Fatalf("unexpected update diagnostics: %v", response.Diagnostics.Errors())

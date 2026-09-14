@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
@@ -17,6 +18,7 @@ import (
 
 var _ resource.Resource = &StatusPageComponentResource{}
 var _ resource.ResourceWithImportState = &StatusPageComponentResource{}
+var _ resource.ResourceWithModifyPlan = &StatusPageComponentResource{}
 
 func NewStatusPageComponentResource() resource.Resource {
 	return &StatusPageComponentResource{}
@@ -66,6 +68,13 @@ func (r *StatusPageComponentResource) Schema(ctx context.Context, req resource.S
 		Description:         "Override status derived from an external status page.",
 		MarkdownDescription: "Override status derived from an external status page.",
 	}
+	parent := s.Attributes["status_page_id"].(schema.StringAttribute)
+	parent.PlanModifiers = append(parent.PlanModifiers, stringplanmodifier.RequiresReplace())
+	s.Attributes["status_page_id"] = parent
+	preserveCheckConfiguration(&s, "status")
+	status := s.Attributes["status"].(schema.StringAttribute)
+	status.Default = nil
+	s.Attributes["status"] = status
 	resp.Schema = s
 }
 
@@ -177,11 +186,12 @@ func (r *StatusPageComponentResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	updated, err := r.client.UpdateStatusPageComponent(data.StatusPageId.ValueString(), data.Id.ValueString(), patch)
+	updated, err := r.client.UpdateStatusPageComponent(prior.StatusPageId.ValueString(), prior.Id.ValueString(), patch)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update status page component, got error: %s", err))
 		return
 	}
+	data.StatusPageId = prior.StatusPageId
 	populateStatusPageComponentModel(&data, updated, patch.GroupID != nil)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -284,4 +294,17 @@ func (r *StatusPageComponentResource) ImportState(ctx context.Context, req resou
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("status_page_id"), parts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), parts[1])...)
+}
+
+// Status is live API state. An unrelated check edit must not reset it, while a
+// component edit may genuinely recompute it (for example changing check_ids).
+func (r *StatusPageComponentResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() || !req.State.Raw.IsNull() {
+		return
+	}
+	var status types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("status"), &status)...)
+	if status.IsNull() {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status"), types.StringValue("OPERATIONAL"))...)
+	}
 }

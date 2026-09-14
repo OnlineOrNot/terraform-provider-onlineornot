@@ -46,8 +46,9 @@ type Check struct {
 // CheckPatch contains check fields accepted by PATCH plus operational state.
 type CheckPatch struct {
 	*Check
-	Paused *bool `json:"paused,omitempty"`
-	Muted  *bool `json:"muted,omitempty"`
+	Fields map[string]any `json:"-"`
+	Paused *bool          `json:"paused,omitempty"`
+	Muted  *bool          `json:"muted,omitempty"`
 }
 
 // checkRequest represents URL absence as JSON null, including on PATCH so a
@@ -165,6 +166,13 @@ func (c *Client) UpdateTypedCheck(kind string, id string, check *CheckPatch) (*C
 			URL *string `json:"url"`
 		}{CheckPatch: payload, URL: url}
 	}
+	if check.Fields != nil {
+		fields := configuredMonitorRequest(check.Fields, check.Paused, check.Muted)
+		if kind != "" {
+			delete(fields, "type")
+		}
+		request = fields
+	}
 	respBody, err := c.Patch(path, request)
 	if err != nil {
 		return nil, err
@@ -204,4 +212,19 @@ func (c *Client) DeleteTypedCheck(kind string, id string) error {
 // ListChecks retrieves all checks
 func (c *Client) ListChecks() ([]Check, error) {
 	return listAll[Check](c, "/v1/checks")
+}
+
+// Copy selected configuration before adding PATCH-only operational fields.
+func configuredMonitorRequest(configured map[string]any, paused, muted *bool) map[string]any {
+	fields := make(map[string]any, len(configured)+2)
+	for key, value := range configured {
+		fields[key] = value
+	}
+	if paused != nil {
+		fields["paused"] = *paused
+	}
+	if muted != nil {
+		fields["muted"] = *muted
+	}
+	return fields
 }
