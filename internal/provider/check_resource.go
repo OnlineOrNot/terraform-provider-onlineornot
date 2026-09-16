@@ -76,6 +76,8 @@ type checkModel struct {
 	VerifySsl                    types.Bool   `tfsdk:"verify_ssl"`
 	Version                      types.String `tfsdk:"version"`
 	WebhookAlerts                types.List   `tfsdk:"webhook_alerts"`
+	WriteOnlyHeaders             types.Map    `tfsdk:"write_only_headers"`
+	WriteOnlyHeadersVersion      types.Int64  `tfsdk:"write_only_headers_version"`
 }
 
 // CheckResource defines the resource implementation.
@@ -96,6 +98,17 @@ func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataReque
 
 func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_check.CheckResourceSchema(ctx)
+	resp.Schema.Attributes["write_only_headers"] = schema.MapAttribute{
+		ElementType: types.StringType,
+		Optional:    true,
+		Sensitive:   true,
+		WriteOnly:   true,
+		Description: "Secret request headers, never stored in Terraform plan or state. Requires Terraform 1.11+ and write_only_headers_version. Mutually exclusive with headers. An empty map clears headers when the version changes.",
+	}
+	resp.Schema.Attributes["write_only_headers_version"] = schema.Int64Attribute{
+		Optional:    true,
+		Description: "Non-secret positive rotation counter for write_only_headers. Change this value to send new headers. Removing both write-only arguments clears remote headers unless ordinary headers are configured.",
+	}
 	// Keep generated documentation aligned with the package name used in scripts.
 	if scriptAttr, ok := resp.Schema.Attributes["script"].(schema.StringAttribute); ok {
 		scriptAttr.Description = "@playwright/test script for browser checks. Scripted checks require this field. URL-based checks do not require this field."
@@ -138,6 +151,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var data checkModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	validateWriteOnlyHeaders(&data, &resp.Diagnostics)
 	if !data.Script.IsUnknown() && data.Script.ValueString() != "" && !data.Timeout.IsNull() && !data.Timeout.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(path.Root("timeout"), "Timeout is incompatible with scripted browser checks", "Omit timeout and configure timing in the Playwright script instead. The API stores no timeout for scripted browser checks.")
 	}
@@ -155,6 +169,10 @@ func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	if config.Script.ValueString() != "" && !config.Timeout.IsNull() && !config.Timeout.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(path.Root("timeout"), "Timeout is incompatible with scripted browser checks", "Omit timeout and configure timing in the Playwright script instead.")
 		return
+	}
+	// Do not retain ordinary headers when switching into write-only mode.
+	if !config.WriteOnlyHeadersVersion.IsNull() {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("headers"), types.MapNull(types.StringType))...)
 	}
 	// Runtime version can be recomputed when execution mode changes, but an
 	// assertion or timing edit does not select a new runtime.
@@ -221,7 +239,15 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	var config checkModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	validateWriteOnlyHeaders(&config, &resp.Diagnostics)
 	check := checkModelToClient(ctx, &data, r.forcedInputType, &resp.Diagnostics)
+	if !config.WriteOnlyHeadersVersion.IsNull() {
+		check.Headers = writeOnlyHeaders(ctx, config.WriteOnlyHeaders, &resp.Diagnostics)
+		data.Headers = types.MapNull(types.StringType)
+	}
+	data.WriteOnlyHeaders = types.MapNull(types.StringType)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -235,7 +261,7 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 	// Create the check without PATCH-only operational fields.
 	created, err := r.client.CreateTypedCheck(r.endpointKind, check)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create check, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", "Unable to create check. API error details are withheld because they may contain secret headers.")
 		return
 	}
 
@@ -244,7 +270,7 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 	created, err = r.client.GetTypedCheck(r.endpointKind, created.ID)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Check created but unable to read complete check: %s", err))
+		resp.Diagnostics.AddError("Client Error", "Check created but unable to read complete check. API error details are withheld because they may contain secret headers.")
 		return
 	}
 	// Mutation responses omit R2-backed scripts; GET is authoritative.
@@ -259,12 +285,12 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		applyOperationalState(change, &patch.Paused, &patch.Muted)
 		created, err = r.client.UpdateTypedCheck(r.endpointKind, created.ID, patch)
 		if err != nil {
-			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to set check operational state, got error: %s", err))
+			resp.Diagnostics.AddError("Client Error", "Unable to set check operational state. API error details are withheld because they may contain secret headers.")
 			return
 		}
 		created, err = r.client.GetTypedCheck(r.endpointKind, created.ID)
 		if err != nil {
-			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read check after operational update: %s", err))
+			resp.Diagnostics.AddError("Client Error", "Unable to read check after operational update. API error details are withheld because they may contain secret headers.")
 			return
 		}
 		r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
@@ -542,8 +568,13 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 		data.MicrosoftTeamsAlerts = types.ListNull(types.StringType)
 	}
 
-	// Map fields
-	if len(check.Headers) > 0 {
+	// The API cannot identify secret headers. Only refresh ordinary headers
+	// already managed in state/config. In particular, import starts with null
+	// headers and must never copy unclassified remote values into state.
+	data.WriteOnlyHeaders = types.MapNull(types.StringType)
+	if !data.WriteOnlyHeadersVersion.IsNull() || data.Headers.IsNull() || data.Headers.IsUnknown() {
+		data.Headers = types.MapNull(types.StringType)
+	} else if len(check.Headers) > 0 {
 		headers, d := types.MapValueFrom(ctx, types.StringType, check.Headers)
 		diags.Append(d...)
 		data.Headers = headers
@@ -596,7 +627,7 @@ func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	// Get check from API
 	check, err := r.client.GetTypedCheck(r.endpointKind, data.Id.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read check, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", "Unable to read check. API error details are withheld because they may contain secret headers.")
 		return
 	}
 
@@ -652,13 +683,32 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	if state.Script.ValueString() != "" && data.Script.ValueString() == "" && !data.Script.IsUnknown() && config.Timeout.IsNull() {
 		fields["timeout"] = data.Timeout.ValueInt64()
 	}
+	validateWriteOnlyHeaders(&config, &resp.Diagnostics)
+	if !config.WriteOnlyHeadersVersion.IsNull() {
+		delete(fields, "headers")
+		if !data.WriteOnlyHeadersVersion.Equal(state.WriteOnlyHeadersVersion) {
+			fields["headers"] = writeOnlyHeaders(ctx, config.WriteOnlyHeaders, &resp.Diagnostics)
+		}
+		data.Headers = types.MapNull(types.StringType)
+		// A failed/ambiguous mutation must not let a later refresh copy newly
+		// secret remote headers into the previous ordinary headers attribute.
+		state.Headers = types.MapNull(types.StringType)
+		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	} else if !state.WriteOnlyHeadersVersion.IsNull() && config.Headers.IsNull() {
+		fields["headers"] = map[string]string{}
+		data.Headers = types.MapNull(types.StringType)
+	}
+	data.WriteOnlyHeaders = types.MapNull(types.StringType)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	patch := &client.CheckPatch{Fields: fields}
 	if len(changes) > 0 {
 		applyOperationalState(changes[0], &patch.Paused, &patch.Muted)
 	}
 	updated, err := r.client.UpdateTypedCheck(r.endpointKind, checkID, patch)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update check, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", "Unable to update check. API error details are withheld because they may contain secret headers.")
 		return
 	}
 	for i := 1; i < len(changes); i++ {
@@ -666,7 +716,7 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		applyOperationalState(changes[i], &patch.Paused, &patch.Muted)
 		updated, err = r.client.UpdateTypedCheck(r.endpointKind, checkID, patch)
 		if err != nil {
-			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update check operational state, got error: %s", err))
+			resp.Diagnostics.AddError("Client Error", "Unable to update check operational state. API error details are withheld because they may contain secret headers.")
 			return
 		}
 	}
@@ -674,7 +724,7 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Mutation responses omit R2-backed scripts; GET is authoritative.
 	updated, err = r.client.GetTypedCheck(r.endpointKind, checkID)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Check updated but unable to read complete check: %s", err))
+		resp.Diagnostics.AddError("Client Error", "Check updated but unable to read complete check. API error details are withheld because they may contain secret headers.")
 		return
 	}
 	r.populateModelFromAPI(ctx, &data, updated, &resp.Diagnostics)
@@ -696,7 +746,7 @@ func (r *CheckResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	// Delete the check
 	err := r.client.DeleteTypedCheck(r.endpointKind, data.Id.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete check, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", "Unable to delete check. API error details are withheld because they may contain secret headers.")
 		return
 	}
 }

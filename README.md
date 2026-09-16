@@ -16,6 +16,8 @@ Manage your [OnlineOrNot](https://onlineornot.com) uptime monitoring infrastruct
 
 - [Deploy a Playwright check with Terraform](docs/guides/deploy-playwright-check.md)
 
+- [Secret request headers](docs/guides/write-only-headers.md)
+
 ## Quick Start
 
 ```hcl

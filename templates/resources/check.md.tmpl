@@ -1,0 +1,21 @@
+---
+page_title: "onlineornot_check Resource - terraform-provider-onlineornot"
+subcategory: ""
+description: |-
+  Manages an OnlineOrNot check using the legacy generic API.
+---
+
+# onlineornot_check (Resource)
+
+For new HTTP monitors, prefer `onlineornot_uptime_check`.
+
+## Example Usage
+
+{{ tffile "examples/resources/onlineornot_check/resource.tf" }}
+
+## Secret request headers
+
+Use `write_only_headers` with `write_only_headers_version` for ephemeral secrets (Terraform 1.11+).
+See [Secret request headers](../guides/write-only-headers.md) for rotation, clearing, safe import, and migration caveats.
+
+{{ .SchemaMarkdown | trimspace }}

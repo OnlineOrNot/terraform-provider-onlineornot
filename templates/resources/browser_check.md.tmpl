@@ -58,4 +58,9 @@ For remote Terraform runs, include the files in the remote execution environment
 
 See [Deploy a Playwright check with Terraform](../guides/deploy-playwright-check.md) for setup, folder deployment, and verification steps.
 
+## Secret request headers
+
+Use `write_only_headers` with `write_only_headers_version` for ephemeral secrets (Terraform 1.11+).
+See [Secret request headers](../guides/write-only-headers.md) for rotation, clearing, safe import, and migration caveats.
+
 {{ .SchemaMarkdown | trimspace }}

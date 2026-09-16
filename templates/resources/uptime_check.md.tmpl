@@ -21,4 +21,9 @@ This resource uses the typed `/v1/checks/uptime` API. Use it for new HTTP uptime
 - `type` is managed by the provider and is always `UPTIME_CHECK` for this resource.
 - Importing a non-uptime monitor ID fails because reads go through the typed uptime endpoint.
 
+## Secret request headers
+
+Use `write_only_headers` with `write_only_headers_version` for ephemeral secrets (Terraform 1.11+).
+See [Secret request headers](../guides/write-only-headers.md) for rotation, clearing, safe import, and migration caveats.
+
 {{ .SchemaMarkdown | trimspace }}
