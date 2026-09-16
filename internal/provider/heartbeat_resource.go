@@ -224,8 +224,30 @@ func (r *HeartbeatResource) Read(ctx context.Context, req resource.ReadRequest, 
 	data.GracePeriod = types.Int64Value(int64(hb.GracePeriod))
 	data.ReminderAlertIntervalMinutes = types.Int64Value(int64(hb.ReminderAlertIntervalMinutes))
 	data.AlertPriority = types.StringValue(hb.AlertPriority)
-	populateHeartbeatPushoverAlerts(ctx, &data, hb.PushoverAlerts, &resp.Diagnostics)
-	data.TelegramAlerts = stringListValue(ctx, hb.TelegramAlerts, &resp.Diagnostics)
+	data.ReportPeriod = optionalInt64Value(hb.ReportPeriod)
+	data.ReportPeriodCron = optionalStringValue(hb.ReportPeriodCron)
+	data.Timezone = optionalStringValue(hb.Timezone)
+
+	// Preserve API empty arrays as empty lists, and absent/null arrays as null.
+	// Refresh every channel, including removals, rather than retaining old state.
+	for _, channel := range []struct {
+		target *types.List
+		alerts []string
+	}{
+		{&data.UserAlerts, hb.UserAlerts},
+		{&data.SlackAlerts, hb.SlackAlerts},
+		{&data.WebhookAlerts, hb.WebhookAlerts},
+		{&data.DiscordAlerts, hb.DiscordAlerts},
+		{&data.OncallAlerts, hb.OncallAlerts},
+		{&data.IncidentIoAlerts, hb.IncidentIOAlerts},
+		{&data.MicrosoftTeamsAlerts, hb.MicrosoftTeamsAlerts},
+		{&data.TelegramAlerts, hb.TelegramAlerts},
+		{&data.PushoverAlerts, hb.PushoverAlerts},
+	} {
+		value, diagnostics := types.ListValueFrom(ctx, types.StringType, channel.alerts)
+		resp.Diagnostics.Append(diagnostics...)
+		*channel.target = value
+	}
 	data.Paused = types.BoolValue(hb.Status == "PAUSED")
 	data.Muted = types.BoolValue(hb.Status == "MUTED")
 
