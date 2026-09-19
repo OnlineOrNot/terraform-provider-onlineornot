@@ -27,8 +27,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 			"alert_priority": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Alert priority. Omitted creation defaults to HIGH; omission on PATCH preserves the current priority.",
-				MarkdownDescription: "Alert priority. Omitted creation defaults to HIGH; omission on PATCH preserves the current priority.",
+				Description:         "[Alert priority](https://onlineornot.com/docs/how-to/alerts/configure-priority).",
+				MarkdownDescription: "[Alert priority](https://onlineornot.com/docs/how-to/alerts/configure-priority).",
 				Validators: []validator.String{
 					stringvalidator.OneOf(
 						"LOW",
@@ -115,8 +115,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 			"confirmation_period_seconds": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Confirmation period in seconds",
-				MarkdownDescription: "Confirmation period in seconds",
+				Description:         "Seconds before confirming [downtime](https://onlineornot.com/docs/explanation/confirmation-recovery-periods#confirmation-period).",
+				MarkdownDescription: "Seconds before confirming [downtime](https://onlineornot.com/docs/explanation/confirmation-recovery-periods#confirmation-period).",
 				Validators: []validator.Int64{
 					int64validator.AtLeast(0),
 				},
@@ -128,11 +128,9 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				Computed:    true,
 			},
 			"follow_redirects": schema.BoolAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Whether to follow redirects",
-				MarkdownDescription: "Whether to follow redirects",
-				Default:             booldefault.StaticBool(true),
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(true),
 			},
 			"headers": schema.MapAttribute{
 				ElementType:         types.StringType,
@@ -178,9 +176,7 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				Computed:    true,
 			},
 			"name": schema.StringAttribute{
-				Required:            true,
-				Description:         "Name of the monitor",
-				MarkdownDescription: "Name of the monitor",
+				Required: true,
 			},
 			"oncall_alerts": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -197,8 +193,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 			"recovery_period_seconds": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Recovery period in seconds",
-				MarkdownDescription: "Recovery period in seconds",
+				Description:         "Seconds before confirming [recovery](https://onlineornot.com/docs/explanation/confirmation-recovery-periods#recovery-period).",
+				MarkdownDescription: "Seconds before confirming [recovery](https://onlineornot.com/docs/explanation/confirmation-recovery-periods#recovery-period).",
 				Validators: []validator.Int64{
 					int64validator.AtLeast(0),
 				},
@@ -266,10 +262,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				Default: int64default.StaticInt64(10000),
 			},
 			"type": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Type of check",
-				MarkdownDescription: "Type of check",
+				Optional: true,
+				Computed: true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(
 						"UPTIME_CHECK",

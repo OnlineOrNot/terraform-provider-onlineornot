@@ -18,24 +18,24 @@ description: |-
 ### Required
 
 - `grace_period` (Number) Grace period in seconds to wait after missed heartbeat before alerting
-- `name` (String) Name of the heartbeat monitor
+- `name` (String)
 
 ### Optional
 
-- `alert_priority` (String) Alert priority level. Must be one of: `HIGH`, `LOW`.
-- `discord_alerts` (List of String) Array of Discord integration IDs to alert
+- `alert_priority` (String) [Alert priority](https://onlineornot.com/docs/how-to/alerts/configure-priority). Must be one of: `HIGH`, `LOW`.
+- `discord_alerts` (List of String) Discord integration IDs to notify
 - `id` (String) Heartbeat ID
-- `incident_io_alerts` (List of String) Array of incident.io integration IDs to alert
-- `microsoft_teams_alerts` (List of String) Array of Microsoft Teams integration IDs to alert
+- `incident_io_alerts` (List of String) incident.io integration IDs to notify
+- `microsoft_teams_alerts` (List of String) Microsoft Teams integration IDs to notify
 - `muted` (Boolean) Whether alerts for the heartbeat are muted. Cannot be true when paused is true.
 - `oncall_alerts` (List of String) IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)
 - `paused` (Boolean) Whether the heartbeat is paused. Cannot be true when muted is true.
-- `pushover_alerts` (List of String) Array of Pushover integration IDs to alert
+- `pushover_alerts` (List of String) Pushover integration IDs to notify
 - `reminder_alert_interval_minutes` (Number) Interval in minutes between reminder alerts (-1 for never)
 - `report_period` (Number) Expected interval in seconds between heartbeat pings (for simple schedule)
 - `report_period_cron` (String) Cron expression for expected heartbeat schedule
-- `slack_alerts` (List of String) Array of Slack integration IDs to alert
-- `telegram_alerts` (List of String) Array of Telegram integration IDs to alert
+- `slack_alerts` (List of String) Slack integration IDs to notify
+- `telegram_alerts` (List of String) Telegram integration IDs to notify
 - `timezone` (String) Timezone for cron schedule
-- `user_alerts` (List of String) Array of user IDs to alert
+- `user_alerts` (List of String) User IDs to notify
 - `webhook_alerts` (List of String) IDs of webhooks to associate with this heartbeat

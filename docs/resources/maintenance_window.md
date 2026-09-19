@@ -19,12 +19,12 @@ description: |-
 
 - `days_of_week` (List of String) Days of the week when the maintenance window is active
 - `duration_minutes` (Number) Duration of the maintenance window in minutes
-- `name` (String) Name of the maintenance window
+- `name` (String)
 - `start_date` (String) Start date and time of the maintenance window, as a timestamp
 - `timezone` (String) Timezone for the maintenance window
 
 ### Optional
 
-- `checks` (List of String) Array of uptime check IDs to associate with this maintenance window
-- `heartbeats` (List of String) Array of heartbeat IDs to associate with this maintenance window
+- `checks` (List of String) Uptime check IDs to associate with this maintenance window
+- `heartbeats` (List of String) Heartbeat IDs to associate with this maintenance window
 - `id` (String) Maintenance Window ID

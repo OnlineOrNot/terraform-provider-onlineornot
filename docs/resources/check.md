@@ -58,18 +58,18 @@ resource "onlineornot_check" "browser" {
 
 ### Required
 
-- `name` (String) Name of the monitor
+- `name` (String)
 
 ### Optional
 
-- `alert_priority` (String) Alert priority. Omitted creation defaults to HIGH; omission on PATCH preserves the current priority. Must be one of: `HIGH`, `LOW`.
+- `alert_priority` (String) [Alert priority](https://onlineornot.com/docs/how-to/alerts/configure-priority). Must be one of: `HIGH`, `LOW`.
 - `assertions` (Attributes List) Assertions to run on the response (see [below for nested schema](#nestedatt--assertions))
 - `auth_password` (String, Sensitive) Password to use for URLs behind HTTP Basic Auth. Empty strings are preserved.
 - `auth_username` (String) Username to use for URLs behind HTTP Basic Auth. Set this to an empty string for an empty user-id.
 - `body` (String)
-- `confirmation_period_seconds` (Number) Confirmation period in seconds
+- `confirmation_period_seconds` (Number) Seconds before confirming [downtime](https://onlineornot.com/docs/explanation/confirmation-recovery-periods#confirmation-period).
 - `discord_alerts` (List of String)
-- `follow_redirects` (Boolean) Whether to follow redirects
+- `follow_redirects` (Boolean)
 - `headers` (Map of String) Headers to send with the request
 - `id` (String) Uptime Check ID
 - `incident_io_alerts` (List of String)
@@ -79,7 +79,7 @@ resource "onlineornot_check" "browser" {
 - `oncall_alerts` (List of String) IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)
 - `paused` (Boolean) Whether the check is paused. Cannot be true when muted is true.
 - `pushover_alerts` (List of String)
-- `recovery_period_seconds` (Number) Recovery period in seconds
+- `recovery_period_seconds` (Number) Seconds before confirming [recovery](https://onlineornot.com/docs/explanation/confirmation-recovery-periods#recovery-period).
 - `reminder_alert_interval_minutes` (Number) Interval in minutes between reminders (-1 for never)
 - `script` (String) `@playwright/test` script for browser checks. Scripted checks require this field. URL-based checks do not require this field.
 - `slack_alerts` (List of String)
@@ -88,7 +88,7 @@ resource "onlineornot_check" "browser" {
 - `test_regions` (List of String) Regions to run checks from. Valid regions: aws:us-east-1, aws:us-east-2, aws:us-west-1, aws:eu-central-1, aws:eu-west-2, aws:ap-south-1, aws:ap-southeast-2, aws:ap-northeast-1
 - `text_to_search_for` (String) Text to search for in the response
 - `timeout` (Number) Timeout in milliseconds. Defaults to 10000 for URL-based checks. Must be omitted for scripted browser checks; configure timing in the script instead.
-- `type` (String) Type of check. Must be one of: `BROWSER_CHECK`, `UPTIME_CHECK`.
+- `type` (String) Must be one of: `BROWSER_CHECK`, `UPTIME_CHECK`.
 - `url` (String) URL to check. Required for URL-based checks, optional for script-based checks.
 - `user_alerts` (List of String)
 - `verify_ssl` (Boolean) Whether to fail a check if SSL verification fails

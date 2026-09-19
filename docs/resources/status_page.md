@@ -17,16 +17,16 @@ description: |-
 
 ### Required
 
-- `name` (String) Name of the Status Page
+- `name` (String)
 - `subdomain` (String) The subdomain your status page will be hosted at. For example "status" would become "status.onlineornot.com"
 
 ### Optional
 
 - `allowed_ips` (List of String) List of IP addresses or CIDR ranges allowed to access this status page
 - `custom_domain` (String) The custom domain your status page is hosted at.
-- `description` (String) A description of your status page
+- `description` (String)
 - `hide_from_search_engines` (Boolean) Whether to hide the status page from search engines
-- `password` (String, Sensitive) The password required to view your status page. If omitted, keeps existing password. If null or empty string, removes password protection. If non-empty string, sets new password.
+- `password` (String, Sensitive) Password protection. Send null or an empty string to remove it; omit to leave it unchanged.
 
 ### Read-Only
 

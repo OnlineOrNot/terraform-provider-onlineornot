@@ -19,8 +19,8 @@ func MaintenanceWindowResourceSchema(ctx context.Context) schema.Schema {
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "Array of uptime check IDs to associate with this maintenance window",
-				MarkdownDescription: "Array of uptime check IDs to associate with this maintenance window",
+				Description:         "Uptime check IDs to associate with this maintenance window",
+				MarkdownDescription: "Uptime check IDs to associate with this maintenance window",
 			},
 			"days_of_week": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -40,8 +40,8 @@ func MaintenanceWindowResourceSchema(ctx context.Context) schema.Schema {
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "Array of heartbeat IDs to associate with this maintenance window",
-				MarkdownDescription: "Array of heartbeat IDs to associate with this maintenance window",
+				Description:         "Heartbeat IDs to associate with this maintenance window",
+				MarkdownDescription: "Heartbeat IDs to associate with this maintenance window",
 			},
 			"id": schema.StringAttribute{
 				Optional:            true,
@@ -53,9 +53,7 @@ func MaintenanceWindowResourceSchema(ctx context.Context) schema.Schema {
 				},
 			},
 			"name": schema.StringAttribute{
-				Required:            true,
-				Description:         "Name of the maintenance window",
-				MarkdownDescription: "Name of the maintenance window",
+				Required: true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
