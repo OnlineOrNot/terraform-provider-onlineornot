@@ -29,10 +29,8 @@ func StatusPageResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "The custom domain your status page is hosted at.",
 			},
 			"description": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "A description of your status page",
-				MarkdownDescription: "A description of your status page",
+				Optional: true,
+				Computed: true,
 			},
 			"hide_from_search_engines": schema.BoolAttribute{
 				Optional:            true,
@@ -50,9 +48,7 @@ func StatusPageResourceSchema(ctx context.Context) schema.Schema {
 				},
 			},
 			"name": schema.StringAttribute{
-				Required:            true,
-				Description:         "Name of the Status Page",
-				MarkdownDescription: "Name of the Status Page",
+				Required: true,
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 100),
 				},
@@ -60,8 +56,8 @@ func StatusPageResourceSchema(ctx context.Context) schema.Schema {
 			"password": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The password required to view your status page. If omitted, keeps existing password. If null or empty string, removes password protection. If non-empty string, sets new password.",
-				MarkdownDescription: "The password required to view your status page. If omitted, keeps existing password. If null or empty string, removes password protection. If non-empty string, sets new password.",
+				Description:         "Password protection. Send null or an empty string to remove it; omit to leave it unchanged.",
+				MarkdownDescription: "Password protection. Send null or an empty string to remove it; omit to leave it unchanged.",
 			},
 			"subdomain": schema.StringAttribute{
 				Required:            true,
