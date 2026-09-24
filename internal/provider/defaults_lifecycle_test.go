@@ -124,7 +124,7 @@ func TestExplicitAPIDefaultPlans(t *testing.T) {
 		kind, config string
 		expected     map[string]knownvalue.Check
 	}{
-		{"check", "name = \"test\"\nurl = \"https://example.com\"", map[string]knownvalue.Check{"method": knownvalue.StringExact("GET"), "follow_redirects": knownvalue.Bool(true), "verify_ssl": knownvalue.Bool(false), "type": knownvalue.StringExact("UPTIME_CHECK")}},
+		{"check", "name = \"test\"\nurl = \"https://example.com\"", map[string]knownvalue.Check{"method": knownvalue.StringExact("GET"), "follow_redirects": knownvalue.Bool(true), "verify_ssl": knownvalue.Bool(true), "type": knownvalue.StringExact("UPTIME_CHECK")}},
 		{"uptime_check", "name = \"test\"\nurl = \"https://example.com\"", common},
 		{"browser_check", "name = \"test\"\nurl = \"https://example.com\"", map[string]knownvalue.Check{"type": knownvalue.StringExact("BROWSER_CHECK"), "timeout": knownvalue.Int64Exact(10000)}},
 		{"dns_check", "name = \"test\"\ndns_domain = \"example.com\"\ndns_record_type = \"A\"", map[string]knownvalue.Check{"dns_protocol": knownvalue.StringExact("UDP")}},
