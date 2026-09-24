@@ -136,8 +136,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "Headers to send with the request",
-				MarkdownDescription: "Headers to send with the request",
+				Description:         "Headers to send. Uptime checks support environment variable references such as {{API_TOKEN}}. Terraform example: Authorization = \"Bearer {{API_TOKEN}}\". Terraform stores the template; create the referenced variable separately.",
+				MarkdownDescription: "Headers to send. Uptime checks support environment variable references such as {{API_TOKEN}}. Terraform example: Authorization = \"Bearer {{API_TOKEN}}\". Terraform stores the template; create the referenced variable separately.",
 			},
 			"id": schema.StringAttribute{
 				Optional:            true,
@@ -288,7 +288,7 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "Whether to fail a check if SSL verification fails",
 				MarkdownDescription: "Whether to fail a check if SSL verification fails",
-				Default:             booldefault.StaticBool(false),
+				Default:             booldefault.StaticBool(true),
 			},
 			"version": schema.StringAttribute{
 				Optional:            true,

@@ -207,6 +207,36 @@
       "terraform": "onlineornot_check resource"
     },
     {
+      "operationId": "listEnvironmentVariables",
+      "status": "planned",
+      "terraform": "onlineornot_environment_variables data source",
+      "reason": "Deferred for the MVP; lists metadata only and must never expose secret values."
+    },
+    {
+      "operationId": "createEnvironmentVariable",
+      "status": "planned",
+      "terraform": "onlineornot_environment_variable resource",
+      "reason": "Deferred for the MVP; secret creation needs write-only input and a non-secret change trigger."
+    },
+    {
+      "operationId": "getEnvironmentVariable",
+      "status": "planned",
+      "terraform": "onlineornot_environment_variable resource read",
+      "reason": "Deferred for the MVP; secret reads return metadata only, never the value."
+    },
+    {
+      "operationId": "updateEnvironmentVariable",
+      "status": "planned",
+      "terraform": "onlineornot_environment_variable resource",
+      "reason": "Deferred for the MVP; secret updates need write-only input and a non-secret change trigger."
+    },
+    {
+      "operationId": "deleteEnvironmentVariable",
+      "status": "planned",
+      "terraform": "onlineornot_environment_variable resource",
+      "reason": "Deferred for the MVP; deletion must respect saved check references."
+    },
+    {
       "operationId": "listHeartbeats",
       "status": "implemented",
       "terraform": "onlineornot_heartbeats data source"

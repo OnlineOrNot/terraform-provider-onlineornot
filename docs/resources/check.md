@@ -70,7 +70,7 @@ resource "onlineornot_check" "browser" {
 - `confirmation_period_seconds` (Number) Seconds before confirming [downtime](https://onlineornot.com/docs/explanation/confirmation-recovery-periods#confirmation-period).
 - `discord_alerts` (List of String)
 - `follow_redirects` (Boolean)
-- `headers` (Map of String) Headers to send with the request
+- `headers` (Map of String) Headers to send. Uptime checks support environment variable references such as {{API_TOKEN}}. Terraform example: Authorization = "Bearer {{API_TOKEN}}". Terraform stores the template; create the referenced variable separately.
 - `id` (String) Uptime Check ID
 - `incident_io_alerts` (List of String)
 - `method` (String) HTTP Method. Must be one of: `DELETE`, `GET`, `HEAD`, `PATCH`, `POST`, `PUT`.
