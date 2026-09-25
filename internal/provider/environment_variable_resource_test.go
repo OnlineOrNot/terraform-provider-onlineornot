@@ -84,7 +84,10 @@ func TestEnvironmentVariableResourceLifecycle(t *testing.T) {
 	defer server.Close()
 	config := func(name, value, version string) string {
 		return fmt.Sprintf(`terraform { required_version = ">= 1.11" }
-provider "onlineornot" { api_key = "mock-key" base_url = %q }
+provider "onlineornot" {
+ api_key = "mock-key"
+ base_url = %q
+}
 resource "onlineornot_environment_variable" "test" {
  name = %q
  type = "secret"
