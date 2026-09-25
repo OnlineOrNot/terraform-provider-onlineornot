@@ -17,6 +17,7 @@ This resource uses the typed `/v1/checks/uptime` API. Use it for new HTTP uptime
 
 ## Notes
 
+- To use a secret environment variable in `headers`, set the value to `onlineornot_environment_variable.<name>.reference`, not `.name`. The former produces `{{"{{API_TOKEN}}"}}` and the latter produces the plain string `API_TOKEN`. For a bearer token, use `"Bearer ${onlineornot_environment_variable.api_token.reference}"`. See the [environment variable resource](environment_variable.md) for a complete example.
 - `url` is required for URL-based uptime checks.
 - `type` is managed by the provider and is always `UPTIME_CHECK` for this resource.
 - Importing a non-uptime monitor ID fails because reads go through the typed uptime endpoint.
