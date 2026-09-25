@@ -34,9 +34,9 @@ func (r *EnvironmentVariableResource) Metadata(_ context.Context, req resource.M
 }
 func (r *EnvironmentVariableResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{Description: "Manages a secret environment variable. The API never returns its value; external value changes cannot be detected on refresh.", Attributes: map[string]schema.Attribute{
-		"id":            schema.StringAttribute{Computed: true, Description: "Environment variable ID."},
+		"id":            schema.StringAttribute{Computed: true, Description: "Environment variable ID.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 		"name":          schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.RegexMatches(regexp.MustCompile(`^[A-Z_][A-Z0-9_]{0,63}$`), "must be an uppercase environment variable name")}, Description: "Uppercase name used in {{NAME}} references; renames update referencing checks."},
-		"reference":     schema.StringAttribute{Computed: true, Description: "Non-sensitive {{NAME}} reference for use in check headers and other templated fields."},
+		"reference":     schema.StringAttribute{Computed: true, Description: "Non-sensitive {{NAME}} reference for use in check headers and other templated fields.", PlanModifiers: []planmodifier.String{environmentVariableReferencePlanModifier{}}},
 		"type":          schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.OneOf("secret")}, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "Only secret variables are supported. Type is immutable."},
 		"value":         schema.StringAttribute{Optional: true, WriteOnly: true, Sensitive: true, Description: "Secret value, supplied on create and when changing value_version. Never saved in state or plan. Supply from an ephemeral value; ordinary Terraform variables/configuration may be retained outside provider state."},
 		"value_version": schema.StringAttribute{Required: true, Description: "Non-secret change trigger. Change this string AND supply value to replace the remote value. Terraform cannot detect out-of-band changes to secret values."},
@@ -171,4 +171,23 @@ func (r *EnvironmentVariableResource) ImportState(ctx context.Context, req resou
 
 func environmentVariableReference(name types.String) types.String {
 	return types.StringValue("{{" + name.ValueString() + "}}")
+}
+
+// Compute the reference from the planned name, not the prior reference: a rename
+// must propagate the new template to checks in the same Terraform plan.
+type environmentVariableReferencePlanModifier struct{}
+
+func (environmentVariableReferencePlanModifier) Description(context.Context) string {
+	return "Derive the reference from the planned environment variable name."
+}
+func (m environmentVariableReferencePlanModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+func (environmentVariableReferencePlanModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	var name types.String
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("name"), &name)...)
+	if resp.Diagnostics.HasError() || name.IsNull() || name.IsUnknown() {
+		return
+	}
+	resp.PlanValue = environmentVariableReference(name)
 }
