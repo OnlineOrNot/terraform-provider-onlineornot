@@ -22,6 +22,7 @@ type EnvironmentVariableResource struct{ client *client.Client }
 type environmentVariableModel struct {
 	ID           types.String `tfsdk:"id"`
 	Name         types.String `tfsdk:"name"`
+	Reference    types.String `tfsdk:"reference"`
 	Type         types.String `tfsdk:"type"`
 	Value        types.String `tfsdk:"value"`
 	ValueVersion types.String `tfsdk:"value_version"`
@@ -35,6 +36,7 @@ func (r *EnvironmentVariableResource) Schema(_ context.Context, _ resource.Schem
 	resp.Schema = schema.Schema{Description: "Manages a secret environment variable. The API never returns its value; external value changes cannot be detected on refresh.", Attributes: map[string]schema.Attribute{
 		"id":            schema.StringAttribute{Computed: true, Description: "Environment variable ID."},
 		"name":          schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.RegexMatches(regexp.MustCompile(`^[A-Z_][A-Z0-9_]{0,63}$`), "must be an uppercase environment variable name")}, Description: "Uppercase name used in {{NAME}} references; renames update referencing checks."},
+		"reference":     schema.StringAttribute{Computed: true, Description: "Non-sensitive {{NAME}} reference for use in check headers and other templated fields."},
 		"type":          schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.OneOf("secret")}, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "Only secret variables are supported. Type is immutable."},
 		"value":         schema.StringAttribute{Optional: true, WriteOnly: true, Sensitive: true, Description: "Secret value, supplied on create and when changing value_version. Never saved in state or plan. Supply from an ephemeral value; ordinary Terraform variables/configuration may be retained outside provider state."},
 		"value_version": schema.StringAttribute{Required: true, Description: "Non-secret change trigger. Change this string AND supply value to replace the remote value. Terraform cannot detect out-of-band changes to secret values."},
@@ -80,6 +82,7 @@ func (r *EnvironmentVariableResource) Create(ctx context.Context, req resource.C
 		return
 	}
 	data.ID = types.StringValue(result.ID)
+	data.Reference = environmentVariableReference(data.Name)
 	data.Value = types.StringNull()
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -103,6 +106,7 @@ func (r *EnvironmentVariableResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 	data.Name = types.StringValue(result.Name)
+	data.Reference = environmentVariableReference(data.Name)
 	data.Type = types.StringValue(result.Type)
 	// value_version represents user intent, not a remote revision; the API does not expose secret value changes.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -129,6 +133,7 @@ func (r *EnvironmentVariableResource) Update(ctx context.Context, req resource.U
 		input.Value = &value
 	}
 	if input.Name == "" && input.Value == nil {
+		plan.Reference = environmentVariableReference(plan.Name)
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 		return
 	}
@@ -142,6 +147,7 @@ func (r *EnvironmentVariableResource) Update(ctx context.Context, req resource.U
 		return
 	}
 	plan.ID = state.ID
+	plan.Reference = environmentVariableReference(plan.Name)
 	plan.Value = types.StringNull()
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -161,4 +167,8 @@ func (r *EnvironmentVariableResource) ImportState(ctx context.Context, req resou
 		return
 	}
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func environmentVariableReference(name types.String) types.String {
+	return types.StringValue("{{" + name.ValueString() + "}}")
 }

@@ -93,13 +93,37 @@ resource "onlineornot_environment_variable" "test" {
  type = "secret"
  value = %q
  value_version = %q
+}
+output "env_test_header" {
+ value = onlineornot_environment_variable.test.reference
+}
+output "authorization_header" {
+ value = "Bearer ${onlineornot_environment_variable.test.reference}"
 }`, server.URL, name, value, version)
 	}
 	resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
-		{Config: config("API_TOKEN", "first-secret", "1"), Check: resource.ComposeAggregateTestCheckFunc(resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "id", "env123"), resource.TestCheckNoResourceAttr("onlineornot_environment_variable.test", "value"))},
-		{RefreshState: true},
-		{Config: config("RENAMED_TOKEN", "first-secret", "1"), Check: resource.TestCheckNoResourceAttr("onlineornot_environment_variable.test", "value")},
-		{Config: config("RENAMED_TOKEN", "second-secret", "2"), Check: resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "value_version", "2")},
+		{Config: config("API_TOKEN", "first-secret", "1"), Check: resource.ComposeAggregateTestCheckFunc(
+			resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "id", "env123"),
+			resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "name", "API_TOKEN"),
+			resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "reference", "{{API_TOKEN}}"),
+			resource.TestCheckOutput("env_test_header", "{{API_TOKEN}}"),
+			resource.TestCheckOutput("authorization_header", "Bearer {{API_TOKEN}}"),
+			resource.TestCheckNoResourceAttr("onlineornot_environment_variable.test", "value"),
+		)},
+		{RefreshState: true, Check: resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "reference", "{{API_TOKEN}}")},
+		{Config: config("RENAMED_TOKEN", "first-secret", "1"), Check: resource.ComposeAggregateTestCheckFunc(
+			resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "name", "RENAMED_TOKEN"),
+			resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "reference", "{{RENAMED_TOKEN}}"),
+			resource.TestCheckOutput("env_test_header", "{{RENAMED_TOKEN}}"),
+			resource.TestCheckOutput("authorization_header", "Bearer {{RENAMED_TOKEN}}"),
+			resource.TestCheckNoResourceAttr("onlineornot_environment_variable.test", "value"),
+		)},
+		{RefreshState: true, Check: resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "reference", "{{RENAMED_TOKEN}}")},
+		{ResourceName: "onlineornot_environment_variable.test", ImportState: true, ImportStateVerify: true, ImportStateVerifyIgnore: []string{"value_version"}},
+		{Config: config("RENAMED_TOKEN", "second-secret", "2"), Check: resource.ComposeAggregateTestCheckFunc(
+			resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "value_version", "2"),
+			resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "reference", "{{RENAMED_TOKEN}}"),
+		)},
 	}})
 	mu.Lock()
 	defer mu.Unlock()

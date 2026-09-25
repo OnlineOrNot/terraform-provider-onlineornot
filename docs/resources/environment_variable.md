@@ -8,7 +8,7 @@ description: |-
 
 Manages a secret environment variable for checks that reference `{{NAME}}`. The API must have environment variables enabled and the credential must have `ENVIRONMENT_VARIABLES` EDIT permission. Names must match `[A-Z_][A-Z0-9_]{0,63}`. Deletion fails while a saved check (including a paused one) references the variable.
 
-Terraform 1.11 or newer is required for write-only attributes. **Use an ephemeral input**: `sensitive = true` alone does not prevent Terraform from saving an ordinary input variable in state or a plan file. The provider never stores `value` in Terraform state or plan output. The API never returns secret values, so Terraform cannot detect out-of-band changes to a value. Change `value_version` *and* provide the new `value` to rotate it; changing `value` without changing `value_version` does not send an update. `value_version` is a non-secret marker, not a hash of the secret. Renaming requires no new secret value. Import is supported by ID, but cannot recover the secret or its version; set `value_version` in configuration after import to manage subsequent replacements.
+Terraform 1.11 or newer is required for write-only attributes. **Use an ephemeral input**: `sensitive = true` alone does not prevent Terraform from saving an ordinary input variable in state or a plan file. The provider never stores `value` in Terraform state or plan output. The API never returns secret values, so Terraform cannot detect out-of-band changes to a value. Change `value_version` *and* provide the new `value` to rotate it; changing `value` without changing `value_version` does not send an update. `value_version` is a non-secret marker, not a hash of the secret. The computed, non-sensitive `reference` is the current name wrapped in template syntax (for example, `{{API_TOKEN}}`). Use it in check headers or other templated fields; `name` remains the plain uppercase name. `reference` follows renames and is available after refresh or import. Renaming requires no new secret value. Import is supported by ID, but cannot recover the secret or its version; set `value_version` in configuration after import to manage subsequent replacements.
 
 ## Example Usage
 
@@ -28,6 +28,18 @@ resource "onlineornot_environment_variable" "api_token" {
   type          = "secret"
   value         = var.api_token
   value_version = "rotation-1"
+}
+
+# Use the computed reference in a check with environment variables. The secret
+# itself remains write-only; headers contain only its non-sensitive template.
+resource "onlineornot_check" "api" {
+  name = "API Health Check"
+  url  = "https://api.example.com/health"
+
+  headers = {
+    env-test      = onlineornot_environment_variable.api_token.reference
+    Authorization = "Bearer ${onlineornot_environment_variable.api_token.reference}"
+  }
 }
 ```
 
@@ -49,6 +61,7 @@ resource "onlineornot_environment_variable" "api_token" {
 ### Read-Only
 
 - `id` (String) Environment variable ID.
+- `reference` (String) Non-sensitive {{NAME}} reference for use in check headers and other templated fields.
 
 ## Import
 
