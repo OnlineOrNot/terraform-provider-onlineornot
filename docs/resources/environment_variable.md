@@ -6,15 +6,31 @@ description: |-
 
 # onlineornot_environment_variable (Resource)
 
-Manages a secret environment variable for checks that reference `{{NAME}}`. The API must have environment variables enabled and the credential must have `ENVIRONMENT_VARIABLES` EDIT permission. Names must match `[A-Z_][A-Z0-9_]{0,63}`. Deletion fails while a saved check (including a paused one) references the variable.
+Manages a secret environment variable for checks. Checks use `{{NAME}}` to refer to a variable.
 
-Terraform 1.11 or newer is required for write-only attributes. **Use an ephemeral input**: `sensitive = true` alone does not prevent Terraform from saving an ordinary input variable in state or a plan file. The provider never stores `value` in Terraform state or plan output. The API never returns secret values, so Terraform cannot detect out-of-band changes to a value. Change `value_version` *and* provide the new `value` to rotate it; changing `value` without changing `value_version` does not send an update. `value_version` is a non-secret marker, not a hash of the secret. Renaming requires no new secret value. Import is supported by ID, but cannot recover the secret or its version; set `value_version` in configuration after import to manage subsequent replacements.
+The API must support environment variables. The credential needs `ENVIRONMENT_VARIABLES` EDIT permission. Names must match `[A-Z_][A-Z0-9_]{0,63}`.
 
-## Referencing a variable from a check
+You cannot delete a variable while a saved check uses it. This rule also applies to paused checks.
 
-Use `.reference` in check headers or other templated fields. It is a computed, non-sensitive string containing the current name in OnlineOrNot template syntax: for `name = "API_TOKEN"`, `.reference` is `{{API_TOKEN}}`. By contrast, `.name` is only `API_TOKEN`. Terraform does not automatically wrap `.name` when you put it in a header, so a header set to `.name` sends the literal name rather than referencing the variable. Ordinary literal header values are unchanged.
+## Secret values
 
-Use `.reference` directly for a header value, or interpolate it inside a larger value such as `"Bearer ${onlineornot_environment_variable.api_token.reference}"`. The reference follows renames and is populated on refresh and import. The secret itself remains write-only; the reference is safe to store in Terraform state.
+Terraform 1.11 or newer is required for write-only attributes. Use an ephemeral input for `value`. Marking an ordinary input `sensitive = true` does not prevent Terraform from saving it in state or a plan file.
+
+The provider does not store `value` in state or plan output. The API does not return secret values. Thus, Terraform cannot detect changes to a secret value made outside Terraform.
+
+To change the secret value, change `value_version` and provide a new `value`. Changing `value` alone does not update the secret. `value_version` is a non-secret marker, not a hash of the secret.
+
+A rename does not require a new secret value. You can import a variable by ID. Import cannot recover its secret value or `value_version`. Set `value_version` in configuration before later updates.
+
+## References in check headers
+
+`name` is the plain name. For `name = "API_TOKEN"`, `.name` is `API_TOKEN`.
+
+`reference` is a computed, non-sensitive string. For the same variable, `.reference` is `{{API_TOKEN}}`.
+
+Set a header to `.reference` to use the secret. A header set to `.name` contains only the literal name. Terraform does not add the `{{...}}` syntax to `.name`. Other header values stay unchanged.
+
+Use `.reference` by itself or in a string such as `"Bearer ${onlineornot_environment_variable.api_token.reference}"`. You can also use it in other fields that support templates. It changes when you rename the variable. It is also available after refresh or import. The reference contains no secret value and is stored in Terraform state.
 
 ## Example Usage
 
@@ -36,8 +52,8 @@ resource "onlineornot_environment_variable" "api_token" {
   value_version = "rotation-1"
 }
 
-# Use .reference ("{{API_TOKEN}}"), not .name ("API_TOKEN"), in headers.
-# The secret itself remains write-only; headers contain only its template.
+# .reference produces "{{API_TOKEN}}". .name produces only "API_TOKEN".
+# The secret stays write-only. Headers contain the reference, not the secret.
 resource "onlineornot_uptime_check" "api" {
   name = "API Health Check"
   url  = "https://api.example.com/health"
@@ -75,4 +91,4 @@ resource "onlineornot_uptime_check" "api" {
 terraform import onlineornot_environment_variable.api_token <environment-variable-id>
 ```
 
-The imported value cannot be read or recovered. Configuration must supply a non-secret `value_version` before later updates.
+Import cannot recover the secret value or `value_version`. Set a non-secret `value_version` in configuration before later updates.
