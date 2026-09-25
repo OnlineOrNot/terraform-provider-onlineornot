@@ -8,7 +8,7 @@ description: |-
 
 Manages a secret environment variable for checks. Checks use `{{"{{NAME}}"}}` to refer to a variable.
 
-The API must support environment variables. The credential needs `ENVIRONMENT_VARIABLES` EDIT permission. Names must match `[A-Z_][A-Z0-9_]{0,63}`.
+Your API key needs `ENVIRONMENT_VARIABLES` EDIT permission. Names must match `[A-Z_][A-Z0-9_]{0,63}`.
 
 You cannot delete a variable while a saved check uses it. This rule also applies to paused checks.
 
