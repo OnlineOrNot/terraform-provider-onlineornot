@@ -37,6 +37,12 @@ resource "onlineornot_uptime_check" "api" {
 }
 ```
 
+## Headers with environment variables
+
+Set a header to `onlineornot_environment_variable.api_token.reference` to use a secret. It produces `{{API_TOKEN}}`. The `.name` attribute produces only `API_TOKEN`.
+
+For a bearer token, use `"Bearer ${onlineornot_environment_variable.api_token.reference}"`. See the [environment variable resource](environment_variable.md) for a complete example.
+
 ## Notes
 
 - `url` is required for URL-based uptime checks.
