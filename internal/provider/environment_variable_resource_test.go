@@ -12,6 +12,9 @@ import (
 
 	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
 )
 
@@ -111,7 +114,10 @@ output "authorization_header" {
 			resource.TestCheckNoResourceAttr("onlineornot_environment_variable.test", "value"),
 		)},
 		{RefreshState: true, Check: resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "reference", "{{API_TOKEN}}")},
-		{Config: config("RENAMED_TOKEN", "first-secret", "1"), Check: resource.ComposeAggregateTestCheckFunc(
+		{Config: config("RENAMED_TOKEN", "first-secret", "1"), ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+			plancheck.ExpectKnownValue("onlineornot_environment_variable.test", tfjsonpath.New("id"), knownvalue.StringExact("env123")),
+			plancheck.ExpectKnownValue("onlineornot_environment_variable.test", tfjsonpath.New("reference"), knownvalue.StringExact("{{RENAMED_TOKEN}}")),
+		}}, Check: resource.ComposeAggregateTestCheckFunc(
 			resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "name", "RENAMED_TOKEN"),
 			resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "reference", "{{RENAMED_TOKEN}}"),
 			resource.TestCheckOutput("env_test_header", "{{RENAMED_TOKEN}}"),
@@ -120,7 +126,10 @@ output "authorization_header" {
 		)},
 		{RefreshState: true, Check: resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "reference", "{{RENAMED_TOKEN}}")},
 		{ResourceName: "onlineornot_environment_variable.test", ImportState: true, ImportStateVerify: true, ImportStateVerifyIgnore: []string{"value_version"}},
-		{Config: config("RENAMED_TOKEN", "second-secret", "2"), Check: resource.ComposeAggregateTestCheckFunc(
+		{Config: config("RENAMED_TOKEN", "second-secret", "2"), ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+			plancheck.ExpectKnownValue("onlineornot_environment_variable.test", tfjsonpath.New("id"), knownvalue.StringExact("env123")),
+			plancheck.ExpectKnownValue("onlineornot_environment_variable.test", tfjsonpath.New("reference"), knownvalue.StringExact("{{RENAMED_TOKEN}}")),
+		}}, Check: resource.ComposeAggregateTestCheckFunc(
 			resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "value_version", "2"),
 			resource.TestCheckResourceAttr("onlineornot_environment_variable.test", "reference", "{{RENAMED_TOKEN}}"),
 		)},
