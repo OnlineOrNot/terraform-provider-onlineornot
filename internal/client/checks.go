@@ -7,6 +7,7 @@ import (
 
 // Check represents an uptime check
 type Check struct {
+	ProjectID                    string            `json:"project_id,omitempty"`
 	ID                           string            `json:"id,omitempty"`
 	Name                         string            `json:"name"`
 	URL                          string            `json:"url"`
@@ -209,9 +210,13 @@ func (c *Client) DeleteTypedCheck(kind string, id string) error {
 	return err
 }
 
-// ListChecks retrieves all checks
-func (c *Client) ListChecks() ([]Check, error) {
-	return listAll[Check](c, "/v1/checks")
+// ListChecksInProject retrieves checks, optionally filtered by project.
+func (c *Client) ListChecksInProject(project string) ([]Check, error) {
+	path, err := projectFilter("/v1/checks", project)
+	if err != nil {
+		return nil, err
+	}
+	return listAll[Check](c, path)
 }
 
 // Copy selected configuration before adding PATCH-only operational fields.
@@ -228,3 +233,5 @@ func configuredMonitorRequest(configured map[string]any, paused, muted *bool) ma
 	}
 	return fields
 }
+
+func (c *Client) ListChecks() ([]Check, error) { return c.ListChecksInProject("") }

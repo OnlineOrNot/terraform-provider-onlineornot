@@ -13,6 +13,7 @@ type MonitorAssertion struct {
 }
 
 type DNSCheck struct {
+	ProjectID                    string             `json:"project_id,omitempty"`
 	ID                           string             `json:"id,omitempty"`
 	Name                         string             `json:"name"`
 	CheckType                    string             `json:"check_type,omitempty"`
@@ -42,6 +43,7 @@ type DNSCheck struct {
 }
 
 type TCPCheck struct {
+	ProjectID                    string             `json:"project_id,omitempty"`
 	ID                           string             `json:"id,omitempty"`
 	Name                         string             `json:"name"`
 	CheckType                    string             `json:"check_type,omitempty"`

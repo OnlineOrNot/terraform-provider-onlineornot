@@ -57,7 +57,7 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"expires_after": schema.StringAttribute{Computed: true, Description: "Actual expiration returned by the API, including the default expiration. Null for a non-expiring token."},
 			"token":         schema.StringAttribute{Computed: true, Sensitive: true, Description: "Secret returned only on creation, preserved on refresh. Unavailable (null) after import. Stored in state; protect state and plan files."},
 			"grants": schema.SetNestedAttribute{Required: true, Description: "Unordered scope/permission pairs. EDIT implies READ. Changes replace the token.", PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()}, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-				"scope":      schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.OneOf("UPTIME_CHECKS", "STATUS_PAGES", "HEARTBEAT_CHECKS", "MAINTENANCE_WINDOWS", "PEOPLE", "INTEGRATIONS", "API_TOKENS", "WEBHOOKS")}},
+				"scope":      schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.OneOf("PROJECTS", "UPTIME_CHECKS", "STATUS_PAGES", "HEARTBEAT_CHECKS", "MAINTENANCE_WINDOWS", "PEOPLE", "INTEGRATIONS", "API_TOKENS", "WEBHOOKS")}},
 				"permission": schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.OneOf("READ", "EDIT")}},
 			}}},
 		},

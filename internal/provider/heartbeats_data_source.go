@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
@@ -22,10 +23,12 @@ type HeartbeatsDataSource struct {
 }
 
 type HeartbeatsDataSourceModel struct {
+	ProjectID  types.String         `tfsdk:"project_id"`
 	Heartbeats []HeartbeatDataModel `tfsdk:"heartbeats"`
 }
 
 type HeartbeatDataModel struct {
+	ProjectID   types.String `tfsdk:"project_id"`
 	ID          types.String `tfsdk:"id"`
 	Name        types.String `tfsdk:"name"`
 	GracePeriod types.Int64  `tfsdk:"grace_period"`
@@ -39,11 +42,13 @@ func (d *HeartbeatsDataSource) Schema(ctx context.Context, req datasource.Schema
 	resp.Schema = schema.Schema{
 		Description: "Fetches the list of heartbeats.",
 		Attributes: map[string]schema.Attribute{
+			"project_id": schema.StringAttribute{Optional: true, Validators: []validator.String{projectIDValidator{}}, Description: "Optional encoded project ID filter. Omit to list across all authorized projects."},
 			"heartbeats": schema.ListNestedAttribute{
 				Description: "List of heartbeats",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"project_id": schema.StringAttribute{Computed: true, Description: "Encoded owning project ID."},
 						"id": schema.StringAttribute{
 							Description: "The unique identifier of the heartbeat",
 							Computed:    true,
@@ -88,7 +93,7 @@ func (d *HeartbeatsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	heartbeats, err := d.client.ListHeartbeats()
+	heartbeats, err := d.client.ListHeartbeatsInProject(data.ProjectID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read heartbeats, got error: %s", err))
 		return
@@ -97,6 +102,7 @@ func (d *HeartbeatsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	data.Heartbeats = make([]HeartbeatDataModel, len(heartbeats))
 	for i, hb := range heartbeats {
 		data.Heartbeats[i] = HeartbeatDataModel{
+			ProjectID:   optionalStringValue(hb.ProjectID),
 			ID:          types.StringValue(hb.ID),
 			Name:        types.StringValue(hb.Name),
 			GracePeriod: types.Int64Value(int64(hb.GracePeriod)),

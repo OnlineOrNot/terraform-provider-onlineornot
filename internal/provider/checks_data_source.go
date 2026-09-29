@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
@@ -22,10 +23,12 @@ type ChecksDataSource struct {
 }
 
 type ChecksDataSourceModel struct {
-	Checks []CheckDataModel `tfsdk:"checks"`
+	ProjectID types.String     `tfsdk:"project_id"`
+	Checks    []CheckDataModel `tfsdk:"checks"`
 }
 
 type CheckDataModel struct {
+	ProjectID types.String `tfsdk:"project_id"`
 	ID        types.String `tfsdk:"id"`
 	Name      types.String `tfsdk:"name"`
 	URL       types.String `tfsdk:"url"`
@@ -42,11 +45,13 @@ func (d *ChecksDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 	resp.Schema = schema.Schema{
 		Description: "Fetches the list of uptime checks.",
 		Attributes: map[string]schema.Attribute{
+			"project_id": schema.StringAttribute{Optional: true, Validators: []validator.String{projectIDValidator{}}, Description: "Optional encoded project ID filter. Omit to list across all authorized projects."},
 			"checks": schema.ListNestedAttribute{
 				Description: "List of uptime checks",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"project_id": schema.StringAttribute{Computed: true, Description: "Encoded owning project ID."},
 						"id": schema.StringAttribute{
 							Description: "The unique identifier of the check",
 							Computed:    true,
@@ -103,7 +108,7 @@ func (d *ChecksDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	checks, err := d.client.ListChecks()
+	checks, err := d.client.ListChecksInProject(data.ProjectID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read checks, got error: %s", err))
 		return
@@ -112,6 +117,7 @@ func (d *ChecksDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	data.Checks = make([]CheckDataModel, len(checks))
 	for i, check := range checks {
 		data.Checks[i] = CheckDataModel{
+			ProjectID: optionalStringValue(check.ProjectID),
 			ID:        types.StringValue(check.ID),
 			Name:      types.StringValue(check.Name),
 			URL:       types.StringValue(check.URL),

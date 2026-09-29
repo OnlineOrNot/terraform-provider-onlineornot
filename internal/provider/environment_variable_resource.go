@@ -20,6 +20,7 @@ var _ resource.ResourceWithImportState = &EnvironmentVariableResource{}
 
 type EnvironmentVariableResource struct{ client *client.Client }
 type environmentVariableModel struct {
+	ProjectID    types.String `tfsdk:"project_id"`
 	ID           types.String `tfsdk:"id"`
 	Name         types.String `tfsdk:"name"`
 	Reference    types.String `tfsdk:"reference"`
@@ -34,6 +35,7 @@ func (r *EnvironmentVariableResource) Metadata(_ context.Context, req resource.M
 }
 func (r *EnvironmentVariableResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{Description: "Manages a secret environment variable. The API never returns its value; external value changes cannot be detected on refresh.", Attributes: map[string]schema.Attribute{
+		"project_id":    projectSelectionAttribute(true),
 		"id":            schema.StringAttribute{Computed: true, Description: "Environment variable ID.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 		"name":          schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.RegexMatches(regexp.MustCompile(`^[A-Z_][A-Z0-9_]{0,63}$`), "must be an uppercase environment variable name")}, Description: "Uppercase name used in {{NAME}} references; renames update referencing checks."},
 		"reference":     schema.StringAttribute{Computed: true, Description: "Non-sensitive {{NAME}} reference for use in check headers and other templated fields.", PlanModifiers: []planmodifier.String{environmentVariableReferencePlanModifier{}}},
@@ -72,7 +74,7 @@ func (r *EnvironmentVariableResource) Create(ctx context.Context, req resource.C
 		return
 	}
 	value := config.Value.ValueString()
-	result, err := r.client.CreateEnvironmentVariable(client.EnvironmentVariableWrite{Name: data.Name.ValueString(), Type: "secret", Value: &value})
+	result, err := r.client.CreateEnvironmentVariable(client.EnvironmentVariableWrite{ProjectID: data.ProjectID.ValueString(), Name: data.Name.ValueString(), Type: "secret", Value: &value})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating environment variable", environmentVariableError)
 		return
@@ -82,6 +84,7 @@ func (r *EnvironmentVariableResource) Create(ctx context.Context, req resource.C
 		return
 	}
 	data.ID = types.StringValue(result.ID)
+	data.ProjectID = optionalStringValue(result.ProjectID)
 	data.Reference = environmentVariableReference(data.Name)
 	data.Value = types.StringNull()
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -105,6 +108,7 @@ func (r *EnvironmentVariableResource) Read(ctx context.Context, req resource.Rea
 		resp.Diagnostics.AddError("Unexpected environment variable type", "The remote variable is not a secret.")
 		return
 	}
+	data.ProjectID = optionalStringValue(result.ProjectID)
 	data.Name = types.StringValue(result.Name)
 	data.Reference = environmentVariableReference(data.Name)
 	data.Type = types.StringValue(result.Type)

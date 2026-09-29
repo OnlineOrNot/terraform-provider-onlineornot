@@ -27,6 +27,7 @@ var _ resource.Resource = &TCPCheckResource{}
 var _ resource.ResourceWithImportState = &TCPCheckResource{}
 
 type typedCheckModel struct {
+	ProjectID                    types.String `tfsdk:"project_id"`
 	AlertPriority                types.String `tfsdk:"alert_priority"`
 	Assertions                   types.List   `tfsdk:"assertions"`
 	ConfirmationPeriodSeconds    types.Int64  `tfsdk:"confirmation_period_seconds"`
@@ -140,6 +141,7 @@ func (r *TCPCheckResource) Schema(ctx context.Context, req resource.SchemaReques
 
 func typedCheckSchema(ctx context.Context, idDescription string) schema.Schema {
 	return schema.Schema{Attributes: map[string]schema.Attribute{
+		"project_id": projectSelectionAttribute(false),
 		"alert_priority": schema.StringAttribute{
 			Optional:            true,
 			Computed:            true,
@@ -283,6 +285,9 @@ func (r *DNSCheckResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	if !moveProject(ctx, r.client, false, state.Id.ValueString(), state.ProjectID, data.ProjectID, req.State, &resp.State, &resp.Diagnostics) {
+		return
+	}
 	patch := &client.DNSCheckPatch{Fields: fields}
 	if len(changes) > 0 {
 		applyOperationalState(changes[0], &patch.Paused, &patch.Muted)
@@ -388,6 +393,9 @@ func (r *TCPCheckResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	if !moveProject(ctx, r.client, false, state.Id.ValueString(), state.ProjectID, data.ProjectID, req.State, &resp.State, &resp.Diagnostics) {
+		return
+	}
 	patch := &client.TCPCheckPatch{Fields: fields}
 	if len(changes) > 0 {
 		applyOperationalState(changes[0], &patch.Paused, &patch.Muted)
@@ -427,6 +435,7 @@ func (r *TCPCheckResource) ImportState(ctx context.Context, req resource.ImportS
 
 func dnsModelToClient(ctx context.Context, data *DNSCheckModel, diags *diag.Diagnostics) *client.DNSCheck {
 	check := &client.DNSCheck{
+		ProjectID:                    data.ProjectID.ValueString(),
 		Name:                         data.Name.ValueString(),
 		TestInterval:                 int(data.TestInterval.ValueInt64()),
 		ReminderAlertIntervalMinutes: int(data.ReminderAlertIntervalMinutes.ValueInt64()),
@@ -448,6 +457,7 @@ func dnsModelToClient(ctx context.Context, data *DNSCheckModel, diags *diag.Diag
 
 func tcpModelToClient(ctx context.Context, data *TCPCheckModel, diags *diag.Diagnostics) *client.TCPCheck {
 	check := &client.TCPCheck{
+		ProjectID:                    data.ProjectID.ValueString(),
 		Name:                         data.Name.ValueString(),
 		TestInterval:                 int(data.TestInterval.ValueInt64()),
 		ReminderAlertIntervalMinutes: int(data.ReminderAlertIntervalMinutes.ValueInt64()),
@@ -504,6 +514,7 @@ func listElementsAs(ctx context.Context, value types.List, target *[]string, dia
 }
 
 func populateDNSModel(ctx context.Context, data *DNSCheckModel, check *client.DNSCheck, diags *diag.Diagnostics) {
+	data.ProjectID = optionalStringValue(check.ProjectID)
 	populateCommonModel(ctx, &data.typedCheckModel, check.ID, check.Name, check.Status, check.TestInterval, check.ReminderAlertIntervalMinutes, check.ConfirmationPeriodSeconds, check.RecoveryPeriodSeconds, check.Timeout, check.AlertPriority, check.TestRegions, check.UserAlerts, check.SlackAlerts, check.DiscordAlerts, check.TelegramAlerts, check.PushoverAlerts, check.WebhookAlerts, check.OncallAlerts, check.IncidentIOAlerts, check.MicrosoftTeamsAlerts, check.Assertions, diags)
 	data.DNSDomain = types.StringValue(check.DNSDomain)
 	data.DNSRecordType = types.StringValue(check.DNSRecordType)
@@ -516,6 +527,7 @@ func populateDNSModel(ctx context.Context, data *DNSCheckModel, check *client.DN
 }
 
 func populateTCPModel(ctx context.Context, data *TCPCheckModel, check *client.TCPCheck, diags *diag.Diagnostics) {
+	data.ProjectID = optionalStringValue(check.ProjectID)
 	populateCommonModel(ctx, &data.typedCheckModel, check.ID, check.Name, check.Status, check.TestInterval, check.ReminderAlertIntervalMinutes, check.ConfirmationPeriodSeconds, check.RecoveryPeriodSeconds, check.Timeout, check.AlertPriority, check.TestRegions, check.UserAlerts, check.SlackAlerts, check.DiscordAlerts, check.TelegramAlerts, check.PushoverAlerts, check.WebhookAlerts, check.OncallAlerts, check.IncidentIOAlerts, check.MicrosoftTeamsAlerts, check.Assertions, diags)
 	data.TCPHostname = types.StringValue(check.TCPHostname)
 	data.TCPPort = types.Int64Value(int64(check.TCPPort))

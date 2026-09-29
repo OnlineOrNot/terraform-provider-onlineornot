@@ -22,6 +22,9 @@ func configuredCheckPatch(config tfsdk.Config, model any, diags *diag.Diagnostic
 	value := reflect.ValueOf(model).Elem()
 	for i := 0; i < value.NumField(); i++ {
 		key := strings.Split(value.Type().Field(i).Tag.Get("json"), ",")[0]
+		if key == "project_id" {
+			continue
+		} // Ownership changes use the move endpoint.
 		setting, ok := configured[key]
 		if !ok || setting.IsNull() || !setting.IsFullyKnown() {
 			continue

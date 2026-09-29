@@ -36,6 +36,7 @@ provider "onlineornot" {}
 
 ## Guides
 
+- [Projects: selection and ownership updates](guides/projects.md)
 - [Deploy a Playwright check with Terraform](guides/deploy-playwright-check.md)
 
 ## Authentication

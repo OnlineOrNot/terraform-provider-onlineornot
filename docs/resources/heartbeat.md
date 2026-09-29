@@ -30,6 +30,7 @@ description: |-
 - `muted` (Boolean) Whether alerts for the heartbeat are muted. Cannot be true when paused is true.
 - `oncall_alerts` (List of String) IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)
 - `paused` (Boolean) Whether the heartbeat is paused. Cannot be true when muted is true.
+- `project_id` (String) Encoded project ID. Omit on creation to use Default; omission on update retains ownership. Changes use an atomic move preserving identity and operational state. Destination variables must already exist.
 - `pushover_alerts` (List of String) Pushover integration IDs to notify
 - `reminder_alert_interval_minutes` (Number) Interval in minutes between reminder alerts (-1 for never)
 - `report_period` (Number) Expected interval in seconds between heartbeat pings (for simple schedule)

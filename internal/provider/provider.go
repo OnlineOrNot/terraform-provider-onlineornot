@@ -90,6 +90,7 @@ func (p *OnlineornotProvider) Configure(ctx context.Context, req provider.Config
 
 func (p *OnlineornotProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		NewProjectResource,
 		NewTokenResource,
 		NewEnvironmentVariableResource,
 		NewCheckResource,
@@ -113,6 +114,7 @@ func (p *OnlineornotProvider) Resources(ctx context.Context) []func() resource.R
 
 func (p *OnlineornotProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		NewProjectsDataSource,
 		NewUserDataSource,
 		NewUsersDataSource,
 		NewChecksDataSource,

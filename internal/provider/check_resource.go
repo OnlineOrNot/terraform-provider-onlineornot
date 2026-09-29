@@ -43,6 +43,7 @@ func NewBrowserCheckResource() resource.Resource {
 }
 
 type checkModel struct {
+	ProjectID                    types.String `tfsdk:"project_id"`
 	AlertPriority                types.String `tfsdk:"alert_priority"`
 	Assertions                   types.List   `tfsdk:"assertions"`
 	AuthPassword                 types.String `tfsdk:"auth_password"`
@@ -109,6 +110,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 	timeout.Description = "Timeout in milliseconds. Defaults to 10000 for URL-based checks. Must be omitted for scripted browser checks; configure timing in the script instead."
 	timeout.MarkdownDescription = timeout.Description
 	resp.Schema.Attributes["timeout"] = timeout
+	resp.Schema.Attributes["project_id"] = projectSelectionAttribute(false)
 	resp.Schema.Attributes["paused"] = pausedAttribute("check")
 	resp.Schema.Attributes["muted"] = mutedAttribute("check")
 
@@ -277,6 +279,7 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 // checkModelToClient converts a Terraform check model into the API request model.
 func checkModelToClient(ctx context.Context, data *checkModel, forcedInputType string, diags *diag.Diagnostics) *client.Check {
 	check := &client.Check{
+		ProjectID:                    data.ProjectID.ValueString(),
 		Name:                         data.Name.ValueString(),
 		URL:                          data.Url.ValueString(),
 		TestInterval:                 int(data.TestInterval.ValueInt64()),
@@ -365,6 +368,7 @@ func checkModelToClient(ctx context.Context, data *checkModel, forcedInputType s
 
 // populateModelFromAPI updates a CheckModel with values from the API response
 func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkModel, check *client.Check, diags *diag.Diagnostics) {
+	data.ProjectID = optionalStringValue(check.ProjectID)
 	data.Id = types.StringValue(check.ID)
 	data.Name = types.StringValue(check.Name)
 	data.Url = types.StringNull()
@@ -651,6 +655,9 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// values remain unmanaged.
 	if state.Script.ValueString() != "" && data.Script.ValueString() == "" && !data.Script.IsUnknown() && config.Timeout.IsNull() {
 		fields["timeout"] = data.Timeout.ValueInt64()
+	}
+	if !moveProject(ctx, r.client, false, state.Id.ValueString(), state.ProjectID, data.ProjectID, req.State, &resp.State, &resp.Diagnostics) {
+		return
 	}
 	patch := &client.CheckPatch{Fields: fields}
 	if len(changes) > 0 {

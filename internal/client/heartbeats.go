@@ -7,6 +7,7 @@ import (
 
 // Heartbeat represents a heartbeat monitor
 type Heartbeat struct {
+	ProjectID                    string   `json:"project_id,omitempty"`
 	ID                           string   `json:"id,omitempty"`
 	Status                       string   `json:"status,omitempty"`
 	Name                         string   `json:"name"`
@@ -106,7 +107,13 @@ func (c *Client) DeleteHeartbeat(id string) error {
 	return err
 }
 
-// ListHeartbeats retrieves all heartbeats
-func (c *Client) ListHeartbeats() ([]Heartbeat, error) {
-	return listAll[Heartbeat](c, "/v1/heartbeats")
+// ListHeartbeatsInProject retrieves heartbeats, optionally filtered by project.
+func (c *Client) ListHeartbeatsInProject(project string) ([]Heartbeat, error) {
+	path, err := projectFilter("/v1/heartbeats", project)
+	if err != nil {
+		return nil, err
+	}
+	return listAll[Heartbeat](c, path)
 }
+
+func (c *Client) ListHeartbeats() ([]Heartbeat, error) { return c.ListHeartbeatsInProject("") }

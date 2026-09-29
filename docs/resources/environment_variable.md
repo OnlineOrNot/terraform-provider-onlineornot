@@ -78,6 +78,7 @@ resource "onlineornot_uptime_check" "api" {
 
 > **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
 
+- `project_id` (String) Encoded project ID. Omit on creation to use Default. Variable moves are unsupported; changing project replaces the variable.
 - `value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Secret value, supplied on create and when changing value_version. Never saved in state or plan. Supply from an ephemeral value; ordinary Terraform variables/configuration may be retained outside provider state.
 
 ### Read-Only

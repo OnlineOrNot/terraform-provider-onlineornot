@@ -25,6 +25,7 @@ type HeartbeatResource struct {
 }
 
 type heartbeatModel struct {
+	ProjectID                    types.String `tfsdk:"project_id"`
 	AlertPriority                types.String `tfsdk:"alert_priority"`
 	DiscordAlerts                types.List   `tfsdk:"discord_alerts"`
 	GracePeriod                  types.Int64  `tfsdk:"grace_period"`
@@ -58,8 +59,10 @@ func (r *HeartbeatResource) Metadata(ctx context.Context, req resource.MetadataR
 
 func (r *HeartbeatResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_heartbeat.HeartbeatResourceSchema(ctx)
+	resp.Schema.Attributes["project_id"] = projectSelectionAttribute(false)
 	resp.Schema.Attributes["paused"] = pausedAttribute("heartbeat")
 	resp.Schema.Attributes["muted"] = mutedAttribute("heartbeat")
+	preserveCheckConfiguration(&resp.Schema)
 }
 
 func (r *HeartbeatResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -88,6 +91,7 @@ func (r *HeartbeatResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	hb := &client.Heartbeat{
+		ProjectID:                    data.ProjectID.ValueString(),
 		Name:                         data.Name.ValueString(),
 		GracePeriod:                  int(data.GracePeriod.ValueInt64()),
 		ReportPeriod:                 int(data.ReportPeriod.ValueInt64()),
@@ -138,6 +142,7 @@ func (r *HeartbeatResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	data.Id = types.StringValue(created.ID)
+	data.ProjectID = optionalStringValue(created.ProjectID)
 
 	// Set computed fields to null to avoid "unknown after apply" errors
 	if data.AlertPriority.IsUnknown() {
@@ -220,6 +225,7 @@ func (r *HeartbeatResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	data.Id = types.StringValue(hb.ID)
+	data.ProjectID = optionalStringValue(hb.ProjectID)
 	data.Name = types.StringValue(hb.Name)
 	data.GracePeriod = types.Int64Value(int64(hb.GracePeriod))
 	data.ReminderAlertIntervalMinutes = types.Int64Value(int64(hb.ReminderAlertIntervalMinutes))
@@ -307,11 +313,14 @@ func (r *HeartbeatResource) Update(ctx context.Context, req resource.UpdateReque
 		resp.Diagnostics.AddError("Invalid Operational State", err.Error())
 		return
 	}
+	if !moveProject(ctx, r.client, true, state.Id.ValueString(), state.ProjectID, data.ProjectID, req.State, &resp.State, &resp.Diagnostics) {
+		return
+	}
 	patch := &client.HeartbeatPatch{Heartbeat: hb}
 	if len(changes) > 0 {
 		applyOperationalState(changes[0], &patch.Paused, &patch.Muted)
 	}
-	updated, err := r.client.UpdateHeartbeat(data.Id.ValueString(), patch)
+	updated, err := r.client.UpdateHeartbeat(state.Id.ValueString(), patch)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update heartbeat, got error: %s", err))
 		return
@@ -319,12 +328,14 @@ func (r *HeartbeatResource) Update(ctx context.Context, req resource.UpdateReque
 	for i := 1; i < len(changes); i++ {
 		patch = &client.HeartbeatPatch{}
 		applyOperationalState(changes[i], &patch.Paused, &patch.Muted)
-		updated, err = r.client.UpdateHeartbeat(data.Id.ValueString(), patch)
+		updated, err = r.client.UpdateHeartbeat(state.Id.ValueString(), patch)
 		if err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update heartbeat operational state, got error: %s", err))
 			return
 		}
 	}
+	data.Id = state.Id
+	data.ProjectID = optionalStringValue(updated.ProjectID)
 	data.Paused = types.BoolValue(updated.Status == "PAUSED")
 	data.Muted = types.BoolValue(updated.Status == "MUTED")
 
