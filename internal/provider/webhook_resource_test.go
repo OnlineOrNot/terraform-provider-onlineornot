@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	testresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/client"
 	"github.com/onlineornot/terraform-provider-onlineornot/internal/provider/resource_webhook"
 )
@@ -211,5 +213,77 @@ func TestWebhookComputedAssociations(t *testing.T) {
 		if !before.Raw.Equal(after.Raw) {
 			t.Fatal("computed refresh changed state")
 		}
+	}
+}
+
+// Terraform must accept templates without resolving them or changing stored URLs.
+func TestWebhookURLTemplatesLifecycle(t *testing.T) {
+	var mu sync.Mutex
+	url := ""
+	var writes []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		switch r.Method {
+		case http.MethodPost, http.MethodPatch:
+			var input client.WebhookRequest
+			if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+				t.Error(err)
+			}
+			url = input.URL
+			writes = append(writes, url)
+		case http.MethodGet, http.MethodDelete:
+		default:
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+		webhook := map[string]any{
+			"id": "webhook1", "url": url, "description": nil,
+			"events":     []string{"uptime.down"},
+			"checks":     []map[string]string{{"id": "check001", "name": "API"}},
+			"heartbeats": []any{}, "status_pages": []any{},
+		}
+		response := map[string]any{"success": true, "result": webhook}
+		if r.Method == http.MethodGet && r.URL.Path == "/v1/webhooks" {
+			response["result"] = []any{webhook}
+			response["result_info"] = map[string]int{"page": 1, "per_page": 100, "count": 1, "total_count": 1}
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+	urls := []string{"{{WEBHOOK_URL}}", "https://example.com/hooks/{{WEBHOOK_TOKEN}}", "https://example.com/hook", "{{WEBHOOK_URL}}"}
+	steps := make([]testresource.TestStep, 0, len(urls))
+	for _, value := range urls {
+		steps = append(steps, testresource.TestStep{
+			Config: fmt.Sprintf(`
+provider "onlineornot" {
+  api_key = "loopback-only"
+  base_url = %q
+}
+resource "onlineornot_webhook" "test" {
+  url = %q
+  events = ["uptime.down"]
+  check_ids = ["check001"]
+}
+data "onlineornot_webhooks" "test" {
+  depends_on = [onlineornot_webhook.test]
+}
+`, server.URL, value),
+			Check: testresource.ComposeTestCheckFunc(
+				testresource.TestCheckResourceAttr("onlineornot_webhook.test", "url", value),
+				testresource.TestCheckResourceAttr("data.onlineornot_webhooks.test", "webhooks.0.url", value),
+			),
+		})
+	}
+	testresource.UnitTest(t, testresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps:                    steps,
+	})
+	mu.Lock()
+	defer mu.Unlock()
+	if !reflect.DeepEqual(writes, urls) {
+		t.Fatalf("webhook create/update URLs = %v, want %v", writes, urls)
 	}
 }

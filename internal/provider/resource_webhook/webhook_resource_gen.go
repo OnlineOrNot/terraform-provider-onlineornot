@@ -62,8 +62,8 @@ func WebhookResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"url": schema.StringAttribute{
 				Required:            true,
-				Description:         "Webhook endpoint URL",
-				MarkdownDescription: "Webhook endpoint URL",
+				Description:         "Webhook URL. Use {{NAME}} to reference an environment variable.",
+				MarkdownDescription: "Webhook URL. Use {{NAME}} to reference an environment variable.",
 			},
 		},
 	}
