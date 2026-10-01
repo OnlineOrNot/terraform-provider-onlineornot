@@ -58,6 +58,9 @@ func StatusPageResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "Password protection. Send null or an empty string to remove it; omit to leave it unchanged.",
 				MarkdownDescription: "Password protection. Send null or an empty string to remove it; omit to leave it unchanged.",
+				Validators: []validator.String{
+					stringvalidator.LengthAtMost(4096),
+				},
 			},
 			"subdomain": schema.StringAttribute{
 				Required:            true,

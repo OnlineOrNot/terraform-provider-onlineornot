@@ -49,7 +49,7 @@ func (d *WebhooksDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 							Computed:    true,
 						},
 						"url": schema.StringAttribute{
-							Description: "The webhook endpoint URL",
+							Description: "Webhook URL. May contain {{NAME}} references to environment variables.",
 							Computed:    true,
 						},
 						"description": schema.StringAttribute{

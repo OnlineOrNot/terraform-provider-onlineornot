@@ -26,4 +26,4 @@ Read-Only:
 
 - `description` (String) The description of the webhook
 - `id` (String) The unique identifier of the webhook
-- `url` (String) The webhook endpoint URL
+- `url` (String) Webhook URL. May contain {{NAME}} references to environment variables.
