@@ -34,11 +34,15 @@ func (r *StatusPageResource) Metadata(ctx context.Context, req resource.Metadata
 
 func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_status_page.StatusPageResourceSchema(ctx)
-	for _, name := range []string{"description", "custom_domain", "password"} {
+	for _, name := range []string{"description", "custom_domain", "password", "logo", "dark_logo", "favicon"} {
 		a := resp.Schema.Attributes[name].(schema.StringAttribute)
 		a.Computed = false
 		if name == "password" {
 			a.Sensitive = true
+		}
+		if name == "logo" || name == "dark_logo" || name == "favicon" {
+			a.Description = "Image file contents as a base64 data URL, not a hosted URL. Supports PNG, JPEG, GIF, WebP, SVG and ICO; maximum decoded file size 10 MB. Removing a previously configured value removes the image. Imported images are preserved until configured. The API returns hosted URLs, not the original file contents, so refresh preserves this input in state."
+			a.MarkdownDescription = a.Description
 		}
 		resp.Schema.Attributes[name] = a
 	}
@@ -89,6 +93,12 @@ func (r *StatusPageResource) Create(ctx context.Context, req resource.CreateRequ
 	readVisibility := data.HideFromSearchEngines.IsUnknown()
 	if readVisibility {
 		data.HideFromSearchEngines = types.BoolNull()
+	}
+
+	for _, image := range []*types.String{&data.Logo, &data.DarkLogo, &data.Favicon} {
+		if image.IsUnknown() {
+			*image = types.StringNull()
+		}
 	}
 
 	// Set computed fields to null to avoid "unknown after apply" errors
@@ -172,6 +182,7 @@ func (r *StatusPageResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	sp := statusPageInput(ctx, &data)
+	applyStatusPageImages(sp, &data, &prior)
 	if data.Password.IsNull() && !prior.Password.IsNull() {
 		empty := ""
 		sp.Password = &empty
@@ -246,6 +257,7 @@ func statusPageInput(ctx context.Context, data *resource_status_page.StatusPageM
 		data.AllowedIps.ElementsAs(ctx, &ips, false)
 		input.AllowedIPs = &ips
 	}
+	applyStatusPageImages(input, data, nil)
 	return input
 }
 
@@ -262,4 +274,36 @@ func normalizedStatusPageDomain(domain string) string {
 	domain = strings.ToLower(domain)
 	domain = strings.TrimPrefix(strings.TrimPrefix(domain, "https://"), "http://")
 	return strings.TrimSuffix(domain, "/")
+}
+
+// Image inputs are not returned by the API. Retain them in state on refresh,
+// omit unmanaged images, and send explicit null when a managed image is removed.
+func applyStatusPageImages(input *client.StatusPageInput, data, prior *resource_status_page.StatusPageModel) {
+	images := []struct {
+		value    types.String
+		previous types.String
+		target   ***string
+	}{
+		{value: data.Logo, target: &input.Logo},
+		{value: data.DarkLogo, target: &input.DarkLogo},
+		{value: data.Favicon, target: &input.Favicon},
+	}
+	if prior != nil {
+		images[0].previous = prior.Logo
+		images[1].previous = prior.DarkLogo
+		images[2].previous = prior.Favicon
+	}
+	for _, image := range images {
+		if image.value.IsUnknown() {
+			continue
+		}
+		if !image.value.IsNull() {
+			value := image.value.ValueString()
+			pointer := &value
+			*image.target = &pointer
+		} else if prior != nil && !image.previous.IsNull() && !image.previous.IsUnknown() {
+			var pointer *string
+			*image.target = &pointer
+		}
+	}
 }

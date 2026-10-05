@@ -7,6 +7,9 @@ import (
 
 // StatusPage represents a status page
 type StatusPage struct {
+	LogoURL               *string  `json:"logo_url"`
+	DarkLogoURL           *string  `json:"dark_logo_url"`
+	FaviconURL            *string  `json:"favicon_url"`
 	ID                    string   `json:"id,omitempty"`
 	Name                  string   `json:"name"`
 	Subdomain             string   `json:"subdomain"`
@@ -19,6 +22,9 @@ type StatusPage struct {
 
 // StatusPageInput preserves explicit zero values while allowing omission.
 type StatusPageInput struct {
+	Logo                  **string  `json:"logo,omitempty"`
+	DarkLogo              **string  `json:"dark_logo,omitempty"`
+	Favicon               **string  `json:"favicon,omitempty"`
 	Name                  string    `json:"name"`
 	Subdomain             string    `json:"subdomain"`
 	Description           *string   `json:"description,omitempty"`

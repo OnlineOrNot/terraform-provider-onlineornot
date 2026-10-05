@@ -24,8 +24,11 @@ description: |-
 
 - `allowed_ips` (List of String) List of IP addresses or CIDR ranges allowed to access this status page
 - `custom_domain` (String) The custom domain your status page is hosted at.
+- `dark_logo` (String) Image file contents as a base64 data URL, not a hosted URL. Supports PNG, JPEG, GIF, WebP, SVG and ICO; maximum decoded file size 10 MB. Removing a previously configured value removes the image. Imported images are preserved until configured. The API returns hosted URLs, not the original file contents, so refresh preserves this input in state.
 - `description` (String)
+- `favicon` (String) Image file contents as a base64 data URL, not a hosted URL. Supports PNG, JPEG, GIF, WebP, SVG and ICO; maximum decoded file size 10 MB. Removing a previously configured value removes the image. Imported images are preserved until configured. The API returns hosted URLs, not the original file contents, so refresh preserves this input in state.
 - `hide_from_search_engines` (Boolean) Whether to hide the status page from search engines
+- `logo` (String) Image file contents as a base64 data URL, not a hosted URL. Supports PNG, JPEG, GIF, WebP, SVG and ICO; maximum decoded file size 10 MB. Removing a previously configured value removes the image. Imported images are preserved until configured. The API returns hosted URLs, not the original file contents, so refresh preserves this input in state.
 - `password` (String, Sensitive) Password protection. Send null or an empty string to remove it; omit to leave it unchanged.
 
 ### Read-Only

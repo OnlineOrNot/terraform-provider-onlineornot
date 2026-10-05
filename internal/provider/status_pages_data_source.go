@@ -26,6 +26,9 @@ type StatusPagesDataSourceModel struct {
 }
 
 type StatusPageDataModel struct {
+	LogoURL      types.String `tfsdk:"logo_url"`
+	DarkLogoURL  types.String `tfsdk:"dark_logo_url"`
+	FaviconURL   types.String `tfsdk:"favicon_url"`
 	ID           types.String `tfsdk:"id"`
 	Name         types.String `tfsdk:"name"`
 	Subdomain    types.String `tfsdk:"subdomain"`
@@ -57,6 +60,9 @@ func (d *StatusPagesDataSource) Schema(ctx context.Context, req datasource.Schem
 							Description: "The subdomain of the status page",
 							Computed:    true,
 						},
+						"logo_url":      schema.StringAttribute{Description: "Hosted URL of the status page logo", Computed: true},
+						"dark_logo_url": schema.StringAttribute{Description: "Hosted URL of the dark mode logo", Computed: true},
+						"favicon_url":   schema.StringAttribute{Description: "Hosted URL of the status page favicon", Computed: true},
 						"custom_domain": schema.StringAttribute{
 							Description: "The custom domain of the status page",
 							Computed:    true,
@@ -102,9 +108,12 @@ func (d *StatusPagesDataSource) Read(ctx context.Context, req datasource.ReadReq
 	data.StatusPages = make([]StatusPageDataModel, len(statusPages))
 	for i, sp := range statusPages {
 		data.StatusPages[i] = StatusPageDataModel{
-			ID:        types.StringValue(sp.ID),
-			Name:      types.StringValue(sp.Name),
-			Subdomain: types.StringValue(sp.Subdomain),
+			LogoURL:     types.StringPointerValue(sp.LogoURL),
+			DarkLogoURL: types.StringPointerValue(sp.DarkLogoURL),
+			FaviconURL:  types.StringPointerValue(sp.FaviconURL),
+			ID:          types.StringValue(sp.ID),
+			Name:        types.StringValue(sp.Name),
+			Subdomain:   types.StringValue(sp.Subdomain),
 		}
 		if sp.CustomDomain != "" {
 			data.StatusPages[i].CustomDomain = types.StringValue(sp.CustomDomain)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -150,5 +151,120 @@ func TestStatusPageCreateSettingsFailureRetainsID(t *testing.T) {
 	}
 	if got.Id.ValueString() != "page1234" || !resp.State.Raw.IsFullyKnown() {
 		t.Fatalf("lost created state: %+v", got)
+	}
+}
+
+func TestStatusPageImageInputs(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		value   types.String
+		prior   *resource_status_page.StatusPageModel
+		present bool
+		want    any
+	}{
+		{name: "unmanaged", value: types.StringNull()},
+		{name: "unknown", value: types.StringUnknown()},
+		{name: "upload", value: types.StringValue("data:image/png;base64,aGVsbG8="), present: true, want: "data:image/png;base64,aGVsbG8="},
+		{name: "remove", value: types.StringNull(), prior: &resource_status_page.StatusPageModel{Logo: types.StringValue("old"), DarkLogo: types.StringValue("old"), Favicon: types.StringValue("old")}, present: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			data := resource_status_page.StatusPageModel{Logo: tc.value, DarkLogo: tc.value, Favicon: tc.value}
+			input := statusPageInput(context.Background(), &data)
+			applyStatusPageImages(input, &data, tc.prior)
+			body, err := json.Marshal(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var payload map[string]any
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatal(err)
+			}
+			for _, name := range []string{"logo", "dark_logo", "favicon"} {
+				got, present := payload[name]
+				if present != tc.present || got != tc.want {
+					t.Errorf("%s = %v (present %v), want %v (present %v)", name, got, present, tc.want, tc.present)
+				}
+			}
+		})
+	}
+}
+
+func TestStatusPageImagesAreOptionalInputs(t *testing.T) {
+	var resp resource.SchemaResponse
+	(&StatusPageResource{}).Schema(context.Background(), resource.SchemaRequest{}, &resp)
+	for _, name := range []string{"logo", "dark_logo", "favicon"} {
+		a := resp.Schema.Attributes[name].(schema.StringAttribute)
+		if !a.Optional || a.Computed {
+			t.Errorf("%s must be optional, not computed", name)
+		}
+	}
+}
+
+func TestStatusPageImageLifecycle(t *testing.T) {
+	ctx := context.Background()
+	image := "data:image/png;base64,aGVsbG8="
+	writes := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.Method == http.MethodPost {
+			writes++
+			var payload map[string]any
+			if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+				t.Fatal(err)
+			}
+			for _, name := range []string{"logo", "dark_logo", "favicon"} {
+				value, present := payload[name]
+				if !present || (writes == 1 && value != image) || (writes == 2 && value != nil) {
+					t.Errorf("unexpected image request: %v", payload)
+				}
+			}
+		}
+		w.Write([]byte(`{"success":true,"result":{"id":"page1234","name":"test","subdomain":"test","hide_from_search_engines":false,"logo_url":"https://example.com/logo.png"}}`))
+	}))
+	defer server.Close()
+	r := &StatusPageResource{client: client.NewClient(&client.Config{BaseURL: server.URL, APIKey: "test"})}
+	var schemaResp resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	data := resource_status_page.StatusPageModel{
+		Id: types.StringUnknown(), Name: types.StringValue("test"), Subdomain: types.StringValue("test"),
+		Logo: types.StringValue(image), DarkLogo: types.StringValue(image), Favicon: types.StringValue(image),
+		HideFromSearchEngines: types.BoolUnknown(), AllowedIps: types.ListNull(types.StringType),
+	}
+	plan := tfsdk.Plan{Schema: schemaResp.Schema}
+	if diags := plan.Set(ctx, &data); diags.HasError() {
+		t.Fatal(diags)
+	}
+	created := resource.CreateResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+	r.Create(ctx, resource.CreateRequest{Plan: plan}, &created)
+	if created.Diagnostics.HasError() {
+		t.Fatal(created.Diagnostics)
+	}
+	refreshed := resource.ReadResponse{State: created.State}
+	r.Read(ctx, resource.ReadRequest{State: created.State}, &refreshed)
+	if refreshed.Diagnostics.HasError() {
+		t.Fatal(refreshed.Diagnostics)
+	}
+	if diags := refreshed.State.Get(ctx, &data); diags.HasError() {
+		t.Fatal(diags)
+	}
+	if data.Logo.ValueString() != image || data.DarkLogo.ValueString() != image || data.Favicon.ValueString() != image {
+		t.Fatal("refresh must preserve image inputs, not replace them with hosted URLs")
+	}
+	data.Logo, data.DarkLogo, data.Favicon = types.StringNull(), types.StringNull(), types.StringNull()
+	if diags := plan.Set(ctx, &data); diags.HasError() {
+		t.Fatal(diags)
+	}
+	updated := resource.UpdateResponse{State: refreshed.State}
+	r.Update(ctx, resource.UpdateRequest{State: refreshed.State, Plan: plan}, &updated)
+	if updated.Diagnostics.HasError() {
+		t.Fatal(updated.Diagnostics)
+	}
+	if diags := updated.State.Get(ctx, &data); diags.HasError() {
+		t.Fatal(diags)
+	}
+	if !data.Logo.IsNull() || !data.DarkLogo.IsNull() || !data.Favicon.IsNull() {
+		t.Fatal("removed inputs must remain null")
+	}
+	if writes != 2 {
+		t.Errorf("expected create and update, got %d writes", writes)
 	}
 }
