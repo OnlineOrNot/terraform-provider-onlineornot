@@ -1,0 +1,32 @@
+---
+page_title: "onlineornot_status_page Resource - terraform-provider-onlineornot"
+subcategory: "Status Pages"
+description: |-
+  Manages an OnlineOrNot status page.
+---
+
+# onlineornot_status_page (Resource)
+
+Manages an OnlineOrNot status page, including its logo, dark-mode logo, and favicon.
+
+## Example Usage
+
+{{ tffile "examples/resources/onlineornot_status_page/resource.tf" }}
+
+## Uploading local images
+
+Place your image files alongside your Terraform configuration. `filebase64()` reads a file and encodes its contents; prefix that value with the matching MIME type to form a data URL. The provider uploads the image during apply. Do not pass a filesystem path or a hosted URL directly to `logo`, `dark_logo`, or `favicon`.
+
+The example includes sample SVG files. For PNG and ICO files instead, use:
+
+```hcl
+logo    = "data:image/png;base64,${filebase64("${path.module}/logo.png")}"
+favicon = "data:image/x-icon;base64,${filebase64("${path.module}/favicon.ico")}"
+```
+
+- Supported formats: PNG, JPEG, GIF, WebP, SVG, and ICO. Each decoded file must be at most 10 MB.
+- `dark_logo` is optional. Omit any image attribute you do not want to manage.
+- Remove a previously configured image attribute, or set it to `null`, to remove that image on the next apply. Images on imported pages remain untouched until configured.
+- The API returns hosted URLs, not original file contents. Refresh preserves configured image contents in Terraform state; protect state and saved plans accordingly. The `onlineornot_status_pages` data source exposes `logo_url`, `dark_logo_url`, and `favicon_url`.
+
+{{ .SchemaMarkdown | trimspace }}
