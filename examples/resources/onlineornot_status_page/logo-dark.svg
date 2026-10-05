@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40">
+  <rect width="180" height="40" rx="8" fill="#0f172a"/>
+  <circle cx="20" cy="20" r="8" fill="#4ade80"/>
+  <text x="38" y="26" font-family="sans-serif" font-size="18" fill="#f1f5f9">Example Status</text>
+</svg>

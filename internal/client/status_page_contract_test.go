@@ -229,3 +229,45 @@ func TestCheckHTTP200FailureEnvelopes(t *testing.T) {
 		})
 	}
 }
+
+func TestStatusPageImageContract(t *testing.T) {
+	image := "data:image/png;base64,aGVsbG8="
+	pointer := &image
+	var removed *string
+	server, apiClient := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || (r.URL.Path != "/v1/status_pages" && r.URL.Path != "/v1/status_pages/page1234") {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		var payload map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		if payload["logo"] != image {
+			t.Errorf("upload not serialized: %v", payload)
+		}
+		if value, present := payload["dark_logo"]; !present || value != nil {
+			t.Errorf("removal not serialized: %v", payload)
+		}
+		if _, present := payload["favicon"]; present {
+			t.Errorf("unmanaged image not omitted: %v", payload)
+		}
+		w.Write([]byte(`{"success":true,"result":{"id":"page1234","logo_url":"https://example.com/logo.png","dark_logo_url":null,"favicon_url":null}}`))
+	})
+	defer server.Close()
+	input := &StatusPageInput{Name: "test", Subdomain: "test", Logo: &pointer, DarkLogo: &removed}
+	for _, create := range []bool{true, false} {
+		var page *StatusPage
+		var err error
+		if create {
+			page, err = apiClient.CreateStatusPage(input)
+		} else {
+			page, err = apiClient.UpdateStatusPage("page1234", input)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if page.LogoURL == nil || *page.LogoURL != "https://example.com/logo.png" || page.DarkLogoURL != nil || page.FaviconURL != nil {
+			t.Errorf("unexpected URLs: %+v", page)
+		}
+	}
+}

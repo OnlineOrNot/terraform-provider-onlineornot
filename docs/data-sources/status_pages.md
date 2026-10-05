@@ -25,6 +25,9 @@ Fetches the list of status pages.
 Read-Only:
 
 - `custom_domain` (String) The custom domain of the status page
+- `dark_logo_url` (String) Hosted URL of the dark mode logo
+- `favicon_url` (String) Hosted URL of the status page favicon
 - `id` (String) The unique identifier of the status page
+- `logo_url` (String) Hosted URL of the status page logo
 - `name` (String) The name of the status page
 - `subdomain` (String) The subdomain of the status page

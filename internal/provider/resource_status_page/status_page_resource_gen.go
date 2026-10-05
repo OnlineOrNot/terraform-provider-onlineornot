@@ -28,9 +28,27 @@ func StatusPageResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The custom domain your status page is hosted at.",
 				MarkdownDescription: "The custom domain your status page is hosted at.",
 			},
+			"dark_logo": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Image file contents as a base64 data URL, not a hosted URL. Supports PNG, JPEG, GIF, WebP, SVG and ICO; maximum decoded file size 10 MB. Omit to preserve the image; send null to remove it.",
+				MarkdownDescription: "Image file contents as a base64 data URL, not a hosted URL. Supports PNG, JPEG, GIF, WebP, SVG and ICO; maximum decoded file size 10 MB. Omit to preserve the image; send null to remove it.",
+				Validators: []validator.String{
+					stringvalidator.LengthAtMost(13333436),
+				},
+			},
 			"description": schema.StringAttribute{
 				Optional: true,
 				Computed: true,
+			},
+			"favicon": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Image file contents as a base64 data URL, not a hosted URL. Supports PNG, JPEG, GIF, WebP, SVG and ICO; maximum decoded file size 10 MB. Omit to preserve the image; send null to remove it.",
+				MarkdownDescription: "Image file contents as a base64 data URL, not a hosted URL. Supports PNG, JPEG, GIF, WebP, SVG and ICO; maximum decoded file size 10 MB. Omit to preserve the image; send null to remove it.",
+				Validators: []validator.String{
+					stringvalidator.LengthAtMost(13333436),
+				},
 			},
 			"hide_from_search_engines": schema.BoolAttribute{
 				Optional:            true,
@@ -45,6 +63,15 @@ func StatusPageResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Status Page ID",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(8),
+				},
+			},
+			"logo": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Image file contents as a base64 data URL, not a hosted URL. Supports PNG, JPEG, GIF, WebP, SVG and ICO; maximum decoded file size 10 MB. Omit to preserve the image; send null to remove it.",
+				MarkdownDescription: "Image file contents as a base64 data URL, not a hosted URL. Supports PNG, JPEG, GIF, WebP, SVG and ICO; maximum decoded file size 10 MB. Omit to preserve the image; send null to remove it.",
+				Validators: []validator.String{
+					stringvalidator.LengthAtMost(13333436),
 				},
 			},
 			"name": schema.StringAttribute{
@@ -77,9 +104,12 @@ func StatusPageResourceSchema(ctx context.Context) schema.Schema {
 type StatusPageModel struct {
 	AllowedIps            types.List   `tfsdk:"allowed_ips"`
 	CustomDomain          types.String `tfsdk:"custom_domain"`
+	DarkLogo              types.String `tfsdk:"dark_logo"`
 	Description           types.String `tfsdk:"description"`
+	Favicon               types.String `tfsdk:"favicon"`
 	HideFromSearchEngines types.Bool   `tfsdk:"hide_from_search_engines"`
 	Id                    types.String `tfsdk:"id"`
+	Logo                  types.String `tfsdk:"logo"`
 	Name                  types.String `tfsdk:"name"`
 	Password              types.String `tfsdk:"password"`
 	Subdomain             types.String `tfsdk:"subdomain"`

@@ -21,6 +21,9 @@ func WebhookResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "IDs of uptime checks to associate with this webhook",
 				MarkdownDescription: "IDs of uptime checks to associate with this webhook",
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
 			},
 			"description": schema.StringAttribute{
 				Optional:            true,
@@ -35,6 +38,7 @@ func WebhookResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Event types this webhook should subscribe to",
 				Validators: []validator.List{
 					listvalidator.SizeAtLeast(1),
+					listvalidator.UniqueValues(),
 				},
 			},
 			"heartbeat_ids": schema.ListAttribute{
@@ -43,6 +47,9 @@ func WebhookResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "IDs of heartbeats to associate with this webhook",
 				MarkdownDescription: "IDs of heartbeats to associate with this webhook",
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
 			},
 			"id": schema.StringAttribute{
 				Optional:            true,
@@ -59,6 +66,9 @@ func WebhookResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "IDs of status pages to associate with this webhook",
 				MarkdownDescription: "IDs of status pages to associate with this webhook",
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
 			},
 			"url": schema.StringAttribute{
 				Required:            true,
