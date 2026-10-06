@@ -25,8 +25,8 @@ func StatusPageResourceSchema(ctx context.Context) schema.Schema {
 			"custom_domain": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The custom domain your status page is hosted at.",
-				MarkdownDescription: "The custom domain your status page is hosted at.",
+				Description:         "The custom domain URL. On update, send null to remove the existing custom domain.",
+				MarkdownDescription: "The custom domain URL. On update, send null to remove the existing custom domain.",
 			},
 			"dark_logo": schema.StringAttribute{
 				Optional:            true,

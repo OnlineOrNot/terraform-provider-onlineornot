@@ -28,7 +28,7 @@ type StatusPageInput struct {
 	Name                  string    `json:"name"`
 	Subdomain             string    `json:"subdomain"`
 	Description           *string   `json:"description,omitempty"`
-	CustomDomain          *string   `json:"custom_domain,omitempty"`
+	CustomDomain          **string  `json:"custom_domain,omitempty"`
 	Password              *string   `json:"password,omitempty"`
 	HideFromSearchEngines *bool     `json:"hide_from_search_engines,omitempty"`
 	AllowedIPs            *[]string `json:"allowed_ips,omitempty"`

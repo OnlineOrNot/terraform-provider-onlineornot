@@ -317,7 +317,8 @@
     {
       "operationId": "updateStatusPage",
       "status": "implemented",
-      "terraform": "onlineornot_status_page resource"
+      "terraform": "onlineornot_status_page resource",
+      "reason": "Nullable custom_domain is supported: removing a configured domain sends explicit null; omitted unmanaged domains are preserved."
     },
     {
       "operationId": "deleteStatusPage",
