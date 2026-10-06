@@ -268,3 +268,66 @@ func TestStatusPageImageLifecycle(t *testing.T) {
 		t.Errorf("expected create and update, got %d writes", writes)
 	}
 }
+
+func TestStatusPageCustomDomainUpdate(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		prior   types.String
+		planned types.String
+		present bool
+		want    any
+	}{
+		{"unmanaged", types.StringNull(), types.StringNull(), false, nil},
+		{"set", types.StringNull(), types.StringValue("https://status.example.com"), true, "https://status.example.com"},
+		{"change", types.StringValue("https://old.example.com"), types.StringValue("https://status.example.com"), true, "https://status.example.com"},
+		{"remove", types.StringValue("https://status.example.com"), types.StringNull(), true, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			calls := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				calls++
+				if req.Method != http.MethodPost || req.URL.Path != "/v1/status_pages/page1234" {
+					t.Errorf("unexpected request: %s %s", req.Method, req.URL.Path)
+				}
+				var payload map[string]any
+				if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+					t.Error(err)
+				}
+				got, present := payload["custom_domain"]
+				if present != tc.present || got != tc.want {
+					t.Errorf("custom_domain = %v (present %v), want %v (present %v)", got, present, tc.want, tc.present)
+				}
+				w.Write([]byte(`{"success":true,"result":{"id":"page1234"}}`))
+			}))
+			defer server.Close()
+			r := &StatusPageResource{client: client.NewClient(&client.Config{BaseURL: server.URL, APIKey: "test"})}
+			var schemaResp resource.SchemaResponse
+			r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+			data := resource_status_page.StatusPageModel{
+				Id: types.StringValue("page1234"), Name: types.StringValue("test"), Subdomain: types.StringValue("test"),
+				CustomDomain: tc.prior, HideFromSearchEngines: types.BoolValue(false), AllowedIps: types.ListNull(types.StringType),
+			}
+			state := tfsdk.State{Schema: schemaResp.Schema}
+			if diags := state.Set(ctx, &data); diags.HasError() {
+				t.Fatal(diags)
+			}
+			data.CustomDomain = tc.planned
+			plan := tfsdk.Plan{Schema: schemaResp.Schema}
+			if diags := plan.Set(ctx, &data); diags.HasError() {
+				t.Fatal(diags)
+			}
+			updated := resource.UpdateResponse{State: state}
+			r.Update(ctx, resource.UpdateRequest{State: state, Plan: plan}, &updated)
+			if updated.Diagnostics.HasError() {
+				t.Fatal(updated.Diagnostics)
+			}
+			if diags := updated.State.Get(ctx, &data); diags.HasError() {
+				t.Fatal(diags)
+			}
+			if !data.CustomDomain.Equal(tc.planned) || calls != 1 {
+				t.Fatalf("unexpected update state or request count: domain %s, calls %d", data.CustomDomain, calls)
+			}
+		})
+	}
+}

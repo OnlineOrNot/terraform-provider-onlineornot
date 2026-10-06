@@ -50,7 +50,7 @@ favicon = "data:image/x-icon;base64,${filebase64("${path.module}/favicon.ico")}"
 ### Optional
 
 - `allowed_ips` (List of String) List of IP addresses or CIDR ranges allowed to access this status page
-- `custom_domain` (String) The custom domain your status page is hosted at.
+- `custom_domain` (String) The custom domain URL. Removing a previously managed value sends null to remove the domain.
 - `dark_logo` (String) Image file contents as a base64 data URL, not a hosted URL. Supports PNG, JPEG, GIF, WebP, SVG and ICO; maximum decoded file size 10 MB. Removing a previously configured value removes the image. Imported images are preserved until configured. The API returns hosted URLs, not the original file contents, so refresh preserves this input in state.
 - `description` (String)
 - `favicon` (String) Image file contents as a base64 data URL, not a hosted URL. Supports PNG, JPEG, GIF, WebP, SVG and ICO; maximum decoded file size 10 MB. Removing a previously configured value removes the image. Imported images are preserved until configured. The API returns hosted URLs, not the original file contents, so refresh preserves this input in state.

@@ -37,6 +37,10 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 	for _, name := range []string{"description", "custom_domain", "password", "logo", "dark_logo", "favicon"} {
 		a := resp.Schema.Attributes[name].(schema.StringAttribute)
 		a.Computed = false
+		if name == "custom_domain" {
+			a.Description = "The custom domain URL. Removing a previously managed value sends null to remove the domain."
+			a.MarkdownDescription = a.Description
+		}
 		if name == "password" {
 			a.Sensitive = true
 		}
@@ -183,6 +187,10 @@ func (r *StatusPageResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	sp := statusPageInput(ctx, &data)
 	applyStatusPageImages(sp, &data, &prior)
+	if data.CustomDomain.IsNull() && !prior.CustomDomain.IsNull() && !prior.CustomDomain.IsUnknown() {
+		var domain *string
+		sp.CustomDomain = &domain
+	}
 	if data.Password.IsNull() && !prior.Password.IsNull() {
 		empty := ""
 		sp.Password = &empty
@@ -242,7 +250,8 @@ func statusPageInput(ctx context.Context, data *resource_status_page.StatusPageM
 	}
 	if !data.CustomDomain.IsNull() && !data.CustomDomain.IsUnknown() {
 		v := data.CustomDomain.ValueString()
-		input.CustomDomain = &v
+		pointer := &v
+		input.CustomDomain = &pointer
 	}
 	if !data.Password.IsNull() && !data.Password.IsUnknown() {
 		v := data.Password.ValueString()
