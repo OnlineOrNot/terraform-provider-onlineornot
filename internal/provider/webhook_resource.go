@@ -32,6 +32,7 @@ func (r *WebhookResource) Metadata(ctx context.Context, req resource.MetadataReq
 
 func (r *WebhookResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_webhook.WebhookResourceSchema(ctx)
+	resp.Schema.Attributes["project_id"] = projectOwnershipAttribute(true)
 }
 
 func (r *WebhookResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -146,7 +147,11 @@ func (r *WebhookResource) ImportState(ctx context.Context, req resource.ImportSt
 
 func webhookRequestFromModel(ctx context.Context, data *resource_webhook.WebhookModel) (*client.WebhookRequest, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	wh := &client.WebhookRequest{URL: data.Url.ValueString()}
+	wh := &client.WebhookRequest{ProjectID: data.ProjectId.ValueString(), URL: data.Url.ValueString()}
+	if !data.Enabled.IsNull() && !data.Enabled.IsUnknown() {
+		value := data.Enabled.ValueBool()
+		wh.Enabled = &value
+	}
 	if !data.Description.IsNull() && !data.Description.IsUnknown() {
 		description := data.Description.ValueString()
 		wh.Description = &description
@@ -172,6 +177,8 @@ func webhookRequestFromModel(ctx context.Context, data *resource_webhook.Webhook
 func populateWebhookModel(ctx context.Context, data *resource_webhook.WebhookModel, wh *client.Webhook) diag.Diagnostics {
 	var diags diag.Diagnostics
 	data.Id = types.StringValue(wh.ID)
+	data.ProjectId = optionalStringValue(wh.ProjectID)
+	data.Enabled = types.BoolValue(wh.Enabled)
 	data.Url = types.StringValue(wh.URL)
 	// The API stores an omitted create description as null. Preserve Terraform's
 	// null rather than introducing an empty-string diff on every refresh.

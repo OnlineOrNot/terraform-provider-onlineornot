@@ -43,3 +43,13 @@ class PrepareOpenAPITest(unittest.TestCase):
                     schema['description'] = 'Cannot silently discard sibling constraints'
                 with self.assertRaisesRegex(ValueError, 'Unsupported response union in getCheck'):
                     prepare_openapi.prepare(spec)
+
+    def test_project_id_pattern_is_re2_compatible_without_changing_contract(self):
+        pattern = '^(?=.*[a-zA-Z-])[a-zA-Z0-9-]+$'
+        spec = {'paths': {}, 'components': {'schemas': {'ProjectId': {'type': 'string', 'pattern': pattern}}}}
+        prepared = prepare_openapi.prepare(spec)
+        self.assertEqual(prepared['components']['schemas']['ProjectId']['pattern'], '^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$')
+        self.assertEqual(spec['components']['schemas']['ProjectId']['pattern'], pattern)
+        import re
+        for value in ('1234567890123456', 'sourceProject1234567', '-1234567890123456', '123abc', '', 'bad/value', 'abc_def', 'abcé'):
+            self.assertEqual(bool(re.fullmatch(pattern, value)), bool(re.fullmatch(prepared['components']['schemas']['ProjectId']['pattern'], value)))

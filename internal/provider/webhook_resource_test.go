@@ -42,7 +42,7 @@ func webhookState(t *testing.T, model resource_webhook.WebhookModel) tfsdk.State
 func TestWebhookResourceRoundtrip(t *testing.T) {
 	ctx := context.Background()
 	list := func(ids ...string) types.List { return webhookTestList(t, ids...) }
-	model := resource_webhook.WebhookModel{Id: types.StringUnknown(), Url: types.StringValue("https://example.com/hook"), Description: types.StringNull(), Events: list("uptime.up", "uptime.down"), CheckIds: list("check002", "check001"), HeartbeatIds: list("heartbeat1"), StatusPageIds: list("status01")}
+	model := resource_webhook.WebhookModel{ProjectId: types.StringValue(projectSourceID), Enabled: types.BoolValue(true), Id: types.StringUnknown(), Url: types.StringValue("https://example.com/hook"), Description: types.StringNull(), Events: list("uptime.up", "uptime.down"), CheckIds: list("check002", "check001"), HeartbeatIds: list("heartbeat1"), StatusPageIds: list("status01")}
 	associations := map[string][]string{"checks": {"check001", "check002"}, "heartbeats": {"heartbeat1"}, "status_pages": {"status01"}}
 	events := []string{"uptime.down", "uptime.up"}
 	description := any(nil)
@@ -79,7 +79,7 @@ func TestWebhookResourceRoundtrip(t *testing.T) {
 			}
 			return result
 		}
-		json.NewEncoder(w).Encode(map[string]any{"success": true, "result": map[string]any{"id": "webhook1", "url": "https://example.com/hook", "description": description, "events": events, "checks": refs(associations["checks"]), "heartbeats": refs(associations["heartbeats"]), "status_pages": refs(associations["status_pages"])}})
+		json.NewEncoder(w).Encode(map[string]any{"success": true, "result": map[string]any{"id": "webhook1", "project_id": projectSourceID, "enabled": true, "url": "https://example.com/hook", "description": description, "events": events, "checks": refs(associations["checks"]), "heartbeats": refs(associations["heartbeats"]), "status_pages": refs(associations["status_pages"])}})
 	}))
 	defer server.Close()
 	r := &WebhookResource{client: client.NewClient(&client.Config{BaseURL: server.URL})}

@@ -22,10 +22,12 @@ type WebhooksDataSource struct {
 }
 
 type WebhooksDataSourceModel struct {
-	Webhooks []WebhookDataModel `tfsdk:"webhooks"`
+	ProjectId types.String       `tfsdk:"project_id"`
+	Webhooks  []WebhookDataModel `tfsdk:"webhooks"`
 }
 
 type WebhookDataModel struct {
+	ProjectId   types.String `tfsdk:"project_id"`
 	ID          types.String `tfsdk:"id"`
 	URL         types.String `tfsdk:"url"`
 	Description types.String `tfsdk:"description"`
@@ -39,11 +41,13 @@ func (d *WebhooksDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 	resp.Schema = schema.Schema{
 		Description: "Fetches the list of webhooks.",
 		Attributes: map[string]schema.Attribute{
+			"project_id": schema.StringAttribute{Optional: true, Description: "Filter by encoded project ID. Omit to list across all projects."},
 			"webhooks": schema.ListNestedAttribute{
 				Description: "List of webhooks",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"project_id": schema.StringAttribute{Computed: true, Description: "Encoded owning project ID."},
 						"id": schema.StringAttribute{
 							Description: "The unique identifier of the webhook",
 							Computed:    true,
@@ -88,7 +92,7 @@ func (d *WebhooksDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	webhooks, err := d.client.ListWebhooks()
+	webhooks, err := d.client.ListWebhooksInProject(data.ProjectId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read webhooks, got error: %s", err))
 		return
@@ -97,6 +101,7 @@ func (d *WebhooksDataSource) Read(ctx context.Context, req datasource.ReadReques
 	data.Webhooks = make([]WebhookDataModel, len(webhooks))
 	for i, wh := range webhooks {
 		data.Webhooks[i] = WebhookDataModel{
+			ProjectId:   optionalStringValue(wh.ProjectID),
 			ID:          types.StringValue(wh.ID),
 			URL:         types.StringValue(wh.URL),
 			Description: types.StringValue(wh.Description),

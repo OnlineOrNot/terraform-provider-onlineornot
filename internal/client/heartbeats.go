@@ -7,6 +7,7 @@ import (
 
 // Heartbeat represents a heartbeat monitor
 type Heartbeat struct {
+	ProjectID                    string   `json:"project_id,omitempty"`
 	ID                           string   `json:"id,omitempty"`
 	Status                       string   `json:"status,omitempty"`
 	Name                         string   `json:"name"`
@@ -80,7 +81,13 @@ func (c *Client) GetHeartbeat(id string) (*Heartbeat, error) {
 
 // UpdateHeartbeat updates an existing heartbeat
 func (c *Client) UpdateHeartbeat(id string, hb *HeartbeatPatch) (*Heartbeat, error) {
-	respBody, err := c.Patch(fmt.Sprintf("/v1/heartbeats/%s", id), hb)
+	payload := *hb
+	if hb.Heartbeat != nil {
+		copy := *hb.Heartbeat
+		copy.ProjectID = ""
+		payload.Heartbeat = &copy
+	}
+	respBody, err := c.Patch(fmt.Sprintf("/v1/heartbeats/%s", id), &payload)
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +114,8 @@ func (c *Client) DeleteHeartbeat(id string) error {
 }
 
 // ListHeartbeats retrieves all heartbeats
-func (c *Client) ListHeartbeats() ([]Heartbeat, error) {
-	return listAll[Heartbeat](c, "/v1/heartbeats")
+func (c *Client) ListHeartbeats() ([]Heartbeat, error) { return c.ListHeartbeatsInProject("") }
+
+func (c *Client) ListHeartbeatsInProject(projectID string) ([]Heartbeat, error) {
+	return listAll[Heartbeat](c, projectCollectionPath("/v1/heartbeats", projectID))
 }

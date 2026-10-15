@@ -2,6 +2,24 @@ provider:
   name: onlineornot
 
 resources:
+  project:
+    create:
+      path: /v1/projects
+      method: POST
+    read:
+      path: /v1/projects/{project_id}
+      method: GET
+    update:
+      path: /v1/projects/{project_id}
+      method: PATCH
+    delete:
+      path: /v1/projects/{project_id}
+      method: DELETE
+    schema:
+      ignores: [success, errors, messages, result]
+      attributes:
+        aliases:
+          project_id: id
   # onlineornot_token is hand-written in token_resource.go: asymmetric
   # create/read secret and expiry fields, and replacement-only lifecycle.
   # ===================

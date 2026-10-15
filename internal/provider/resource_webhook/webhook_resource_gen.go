@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
@@ -30,6 +31,12 @@ func WebhookResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "Optional description of the webhook",
 				MarkdownDescription: "Optional description of the webhook",
+			},
+			"enabled": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Whether webhook delivery is enabled. Defaults to true on creation; omitted PATCH values preserve the current state.",
+				MarkdownDescription: "Whether webhook delivery is enabled. Defaults to true on creation; omitted PATCH values preserve the current state.",
 			},
 			"events": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -60,6 +67,16 @@ func WebhookResourceSchema(ctx context.Context) schema.Schema {
 					stringvalidator.LengthAtLeast(8),
 				},
 			},
+			"project_id": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Omit to select the organisation's stable Default project.",
+				MarkdownDescription: "Omit to select the organisation's stable Default project.",
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(16, 128),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$"), ""),
+				},
+			},
 			"status_page_ids": schema.ListAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
@@ -82,9 +99,11 @@ func WebhookResourceSchema(ctx context.Context) schema.Schema {
 type WebhookModel struct {
 	CheckIds      types.List   `tfsdk:"check_ids"`
 	Description   types.String `tfsdk:"description"`
+	Enabled       types.Bool   `tfsdk:"enabled"`
 	Events        types.List   `tfsdk:"events"`
 	HeartbeatIds  types.List   `tfsdk:"heartbeat_ids"`
 	Id            types.String `tfsdk:"id"`
+	ProjectId     types.String `tfsdk:"project_id"`
 	StatusPageIds types.List   `tfsdk:"status_page_ids"`
 	Url           types.String `tfsdk:"url"`
 }

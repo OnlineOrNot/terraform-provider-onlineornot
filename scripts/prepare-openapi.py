@@ -11,8 +11,20 @@ import json
 import sys
 
 
+def project_id_patterns(value):
+    if isinstance(value, dict):
+        if value.get('pattern') == '^(?=.*[a-zA-Z-])[a-zA-Z0-9-]+$':
+            value['pattern'] = '^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$'
+        for child in value.values():
+            project_id_patterns(child)
+    elif isinstance(value, list):
+        for child in value:
+            project_id_patterns(child)
+
+
 def prepare(spec):
     result = copy.deepcopy(spec)
+    project_id_patterns(result)
     for path in result['paths'].values():
         for operation in path.values():
             if not isinstance(operation, dict):

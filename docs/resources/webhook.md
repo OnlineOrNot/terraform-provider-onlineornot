@@ -39,6 +39,8 @@ resource "onlineornot_uptime_check" "example" {
 
 - `check_ids` (List of String) IDs of uptime checks to associate with this webhook
 - `description` (String) Optional description of the webhook
+- `enabled` (Boolean) Whether webhook delivery is enabled. Defaults to true on creation; omitted PATCH values preserve the current state.
 - `heartbeat_ids` (List of String) IDs of heartbeats to associate with this webhook
 - `id` (String) Webhook ID
+- `project_id` (String) Encoded project ID. Omission on creation selects the stable Default project; later omission preserves current ownership. Changing this value requires replacement; this resource cannot move between projects.
 - `status_page_ids` (List of String) IDs of status pages to associate with this webhook

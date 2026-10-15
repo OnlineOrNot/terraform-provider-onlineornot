@@ -78,6 +78,7 @@ resource "onlineornot_check" "browser" {
 - `muted` (Boolean) Whether alerts for the check are muted. Cannot be true when paused is true.
 - `oncall_alerts` (List of String) IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)
 - `paused` (Boolean) Whether the check is paused. Cannot be true when muted is true.
+- `project_id` (String) Encoded project ID. Omission on creation selects the stable Default project; later omission preserves current ownership. Changes move checks and heartbeats in place, preserving their identity.
 - `pushover_alerts` (List of String)
 - `recovery_period_seconds` (Number) Seconds before confirming [recovery](https://onlineornot.com/docs/explanation/confirmation-recovery-periods#recovery-period).
 - `reminder_alert_interval_minutes` (Number) Interval in minutes between reminders (-1 for never)

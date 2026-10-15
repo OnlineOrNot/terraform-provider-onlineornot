@@ -7,6 +7,7 @@ import (
 
 // Check represents an uptime check
 type Check struct {
+	ProjectID                    string            `json:"project_id,omitempty"`
 	ID                           string            `json:"id,omitempty"`
 	Name                         string            `json:"name"`
 	URL                          string            `json:"url"`
@@ -146,10 +147,17 @@ func (c *Client) UpdateCheck(id string, check *CheckPatch) (*Check, error) {
 func (c *Client) UpdateTypedCheck(kind string, id string, check *CheckPatch) (*Check, error) {
 	path := fmt.Sprintf("/v1/checks/%s", id)
 	payload := check
+	if check.Check != nil {
+		copy := *check.Check
+		copy.ProjectID = ""
+		patch := *check
+		patch.Check = &copy
+		payload = &patch
+	}
 	if kind != "" {
 		path = fmt.Sprintf("/v1/checks/%s/%s", kind, id)
 		if check.Check != nil {
-			checkWithoutType := *check.Check
+			checkWithoutType := *payload.Check
 			checkWithoutType.Type = ""
 			payload = &CheckPatch{Check: &checkWithoutType, Paused: check.Paused, Muted: check.Muted}
 		}
@@ -210,14 +218,19 @@ func (c *Client) DeleteTypedCheck(kind string, id string) error {
 }
 
 // ListChecks retrieves all checks
-func (c *Client) ListChecks() ([]Check, error) {
-	return listAll[Check](c, "/v1/checks")
+func (c *Client) ListChecks() ([]Check, error) { return c.ListChecksInProject("") }
+
+func (c *Client) ListChecksInProject(projectID string) ([]Check, error) {
+	return listAll[Check](c, projectCollectionPath("/v1/checks", projectID))
 }
 
 // Copy selected configuration before adding PATCH-only operational fields.
 func configuredMonitorRequest(configured map[string]any, paused, muted *bool) map[string]any {
 	fields := make(map[string]any, len(configured)+2)
 	for key, value := range configured {
+		if key == "project_id" {
+			continue
+		}
 		fields[key] = value
 	}
 	if paused != nil {

@@ -13,6 +13,7 @@ type MonitorAssertion struct {
 }
 
 type DNSCheck struct {
+	ProjectID                    string             `json:"project_id,omitempty"`
 	ID                           string             `json:"id,omitempty"`
 	Name                         string             `json:"name"`
 	CheckType                    string             `json:"check_type,omitempty"`
@@ -42,6 +43,7 @@ type DNSCheck struct {
 }
 
 type TCPCheck struct {
+	ProjectID                    string             `json:"project_id,omitempty"`
 	ID                           string             `json:"id,omitempty"`
 	Name                         string             `json:"name"`
 	CheckType                    string             `json:"check_type,omitempty"`
@@ -118,6 +120,13 @@ func (c *Client) GetDNSCheck(id string) (*DNSCheck, error) {
 }
 
 func (c *Client) UpdateDNSCheck(id string, check *DNSCheckPatch) (*DNSCheck, error) {
+	if check.DNSCheck != nil {
+		patch := *check
+		copy := *check.DNSCheck
+		copy.ProjectID = ""
+		patch.DNSCheck = &copy
+		check = &patch
+	}
 	var request any = check
 	if check.Fields != nil {
 		request = configuredMonitorRequest(check.Fields, check.Paused, check.Muted)
@@ -151,6 +160,13 @@ func (c *Client) GetTCPCheck(id string) (*TCPCheck, error) {
 }
 
 func (c *Client) UpdateTCPCheck(id string, check *TCPCheckPatch) (*TCPCheck, error) {
+	if check.TCPCheck != nil {
+		patch := *check
+		copy := *check.TCPCheck
+		copy.ProjectID = ""
+		patch.TCPCheck = &copy
+		check = &patch
+	}
 	var request any = check
 	if check.Fields != nil {
 		request = configuredMonitorRequest(check.Fields, check.Paused, check.Muted)
