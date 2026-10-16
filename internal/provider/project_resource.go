@@ -30,9 +30,9 @@ func (r *ProjectResource) Metadata(_ context.Context, req resource.MetadataReque
 
 func (r *ProjectResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_project.ProjectResourceSchema(ctx)
-	resp.Schema.Description = "Manages an organization project. Deletion requires an empty, non-Default project. Project names are editable labels, not identity or access boundaries. Requires PROJECTS:READ and PROJECTS:EDIT."
+	resp.Schema.Description = "Manages an organization project. Only empty projects can be deleted. The Default project cannot be deleted. Requires PROJECTS:READ and PROJECTS:EDIT."
 	resp.Schema.Attributes["id"] = schema.StringAttribute{Computed: true, Description: "Project ID.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}
-	resp.Schema.Attributes["is_default"] = schema.BoolAttribute{Computed: true, Description: "Stable Default identity, independent of name."}
+	resp.Schema.Attributes["is_default"] = schema.BoolAttribute{Computed: true, Description: "Whether this is the Default project."}
 	resp.Schema.Attributes["created_at"] = schema.StringAttribute{Computed: true, Description: "Creation timestamp."}
 	resp.Schema.Attributes["updated_at"] = schema.StringAttribute{Computed: true, Description: "Last update timestamp."}
 }

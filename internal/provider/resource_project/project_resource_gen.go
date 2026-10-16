@@ -27,8 +27,8 @@ func ProjectResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				Description:         "Editable display label. Project names need not be unique.",
-				MarkdownDescription: "Editable display label. Project names need not be unique.",
+				Description:         "Project name.",
+				MarkdownDescription: "Project name.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 255),
 				},

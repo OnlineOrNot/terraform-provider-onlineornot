@@ -70,8 +70,8 @@ func WebhookResourceSchema(ctx context.Context) schema.Schema {
 			"project_id": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Omit to select the organisation's stable Default project.",
-				MarkdownDescription: "Omit to select the organisation's stable Default project.",
+				Description:         "Project ID. Defaults to the Default project when creating the resource. Changing this value requires replacement.",
+				MarkdownDescription: "Project ID. Defaults to the Default project when creating the resource. Changing this value requires replacement.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(16, 128),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$"), ""),

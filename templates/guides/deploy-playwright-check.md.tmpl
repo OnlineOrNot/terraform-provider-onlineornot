@@ -174,8 +174,8 @@ If you change the file name to `landing.spec.js`, the resource address becomes:
 onlineornot_browser_check.files["landing.spec.js"]
 ```
 
-Use separate resource blocks or stable map keys if monitor identity must not depend on file names.
-With a stable map key, change the file path but keep the key unchanged.
+Use separate resource blocks or map keys that do not depend on file names.
+Keep each key unchanged when changing its file path.
 
 Files must exist before Terraform starts.
 For remote Terraform runs, include the files in the remote execution environment.

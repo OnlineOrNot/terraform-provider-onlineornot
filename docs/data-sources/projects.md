@@ -3,12 +3,12 @@
 page_title: "onlineornot_projects Data Source - terraform-provider-onlineornot"
 subcategory: ""
 description: |-
-  Lists all organization projects, including stable Default identity. Requires PROJECTS:READ.
+  Lists organization projects. Requires PROJECTS:READ.
 ---
 
 # onlineornot_projects (Data Source)
 
-Lists all organization projects, including stable Default identity. Requires PROJECTS:READ.
+Lists organization projects. Requires PROJECTS:READ.
 
 ## Example Usage
 
@@ -34,6 +34,6 @@ Read-Only:
 
 - `created_at` (String) Creation timestamp.
 - `id` (String) Project ID.
-- `is_default` (Boolean) Stable Default identity, independent of name.
-- `name` (String) Editable project label.
+- `is_default` (Boolean) Whether this is the Default project.
+- `name` (String) Project name.
 - `updated_at` (String) Last update timestamp.

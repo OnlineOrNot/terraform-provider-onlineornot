@@ -20,9 +20,9 @@ func (d *ProjectsDataSource) Metadata(_ context.Context, req datasource.Metadata
 }
 
 func (d *ProjectsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	resp.Schema = schema.Schema{Description: "Lists all organization projects, including stable Default identity. Requires PROJECTS:READ.", Attributes: map[string]schema.Attribute{
+	resp.Schema = schema.Schema{Description: "Lists organization projects. Requires PROJECTS:READ.", Attributes: map[string]schema.Attribute{
 		"projects": schema.ListNestedAttribute{Computed: true, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{Computed: true, Description: "Project ID."}, "name": schema.StringAttribute{Computed: true, Description: "Editable project label."}, "is_default": schema.BoolAttribute{Computed: true, Description: "Stable Default identity, independent of name."}, "created_at": schema.StringAttribute{Computed: true, Description: "Creation timestamp."}, "updated_at": schema.StringAttribute{Computed: true, Description: "Last update timestamp."},
+			"id": schema.StringAttribute{Computed: true, Description: "Project ID."}, "name": schema.StringAttribute{Computed: true, Description: "Project name."}, "is_default": schema.BoolAttribute{Computed: true, Description: "Whether this is the Default project."}, "created_at": schema.StringAttribute{Computed: true, Description: "Creation timestamp."}, "updated_at": schema.StringAttribute{Computed: true, Description: "Last update timestamp."},
 		}}},
 	}}
 }

@@ -23,6 +23,8 @@ resources:
         overrides:
           id:
             description: "Project ID."
+          name:
+            description: "Project name."
   # onlineornot_token is hand-written in token_resource.go: asymmetric
   # create/read secret and expiry fields, and replacement-only lifecycle.
   # ===================
@@ -52,6 +54,8 @@ resources:
         aliases:
           check_id: id
         overrides:
+          project_id:
+            description: "Project ID. Defaults to the Default project when creating the resource. Changing this value moves the resource to another project."
           id:
             description: "Uptime Check ID"
           status:
@@ -86,6 +90,9 @@ resources:
       attributes:
         aliases:
           heartbeat_id: id
+        overrides:
+          project_id:
+            description: "Project ID. Defaults to the Default project when creating the resource. Changing this value moves the resource to another project."
 
   # ===================
   # MAINTENANCE WINDOWS
@@ -138,6 +145,9 @@ resources:
       attributes:
         aliases:
           webhook_id: id
+        overrides:
+          project_id:
+            description: "Project ID. Defaults to the Default project when creating the resource. Changing this value requires replacement."
 
   # ===================
   # STATUS PAGES

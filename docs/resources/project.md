@@ -3,12 +3,12 @@
 page_title: "onlineornot_project Resource - terraform-provider-onlineornot"
 subcategory: ""
 description: |-
-  Manages an organization project. Deletion requires an empty, non-Default project. Project names are editable labels, not identity or access boundaries. Requires PROJECTS:READ and PROJECTS:EDIT.
+  Manages an organization project. Only empty projects can be deleted. The Default project cannot be deleted. Requires PROJECTS:READ and PROJECTS:EDIT.
 ---
 
 # onlineornot_project (Resource)
 
-Manages an organization project. Deletion requires an empty, non-Default project. Project names are editable labels, not identity or access boundaries. Requires PROJECTS:READ and PROJECTS:EDIT.
+Manages an organization project. Only empty projects can be deleted. The Default project cannot be deleted. Requires PROJECTS:READ and PROJECTS:EDIT.
 
 ## Example Usage
 
@@ -40,13 +40,13 @@ data "onlineornot_checks" "staging" {
 
 ### Required
 
-- `name` (String) Editable display label. Project names need not be unique.
+- `name` (String) Project name.
 
 ### Read-Only
 
 - `created_at` (String) Creation timestamp.
 - `id` (String) Project ID.
-- `is_default` (Boolean) Stable Default identity, independent of name.
+- `is_default` (Boolean) Whether this is the Default project.
 - `updated_at` (String) Last update timestamp.
 
 ## Import

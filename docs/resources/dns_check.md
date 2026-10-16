@@ -67,7 +67,7 @@ resource "onlineornot_dns_check" "custom_resolver" {
 - `muted` (Boolean) Whether alerts for the check are muted. Cannot be true when paused is true.
 - `oncall_alerts` (List of String)
 - `paused` (Boolean) Whether the check is paused. Cannot be true when muted is true.
-- `project_id` (String) Project ID. Omission on creation selects the stable Default project; later omission preserves current ownership. Changes move checks and heartbeats in place, preserving their identity.
+- `project_id` (String) Project ID. Defaults to the Default project when creating the resource. Changing this value moves the resource to another project.
 - `pushover_alerts` (List of String)
 - `recovery_period_seconds` (Number)
 - `reminder_alert_interval_minutes` (Number)
