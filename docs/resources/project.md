@@ -45,7 +45,7 @@ data "onlineornot_checks" "staging" {
 ### Read-Only
 
 - `created_at` (String) Creation timestamp.
-- `id` (String) Encoded project ID.
+- `id` (String) Project ID.
 - `is_default` (Boolean) Stable Default identity, independent of name.
 - `updated_at` (String) Last update timestamp.
 

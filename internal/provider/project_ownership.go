@@ -11,11 +11,11 @@ import (
 )
 
 func projectOwnershipAttribute(replacement bool) schema.StringAttribute {
-	description := "Encoded project ID. Omission on creation selects the stable Default project; later omission preserves current ownership. Changes move checks and heartbeats in place, preserving their identity."
+	description := "Project ID. Omission on creation selects the stable Default project; later omission preserves current ownership. Changes move checks and heartbeats in place, preserving their identity."
 	modifiers := []planmodifier.String{stringplanmodifier.UseStateForUnknown()}
 	if replacement {
-		description = "Encoded project ID. Omission on creation selects the stable Default project; later omission preserves current ownership. Changing this value requires replacement; this resource cannot move between projects."
+		description = "Project ID. Omission on creation selects the stable Default project; later omission preserves current ownership. Changing this value requires replacement; this resource cannot move between projects."
 		modifiers = append(modifiers, stringplanmodifier.RequiresReplace())
 	}
-	return schema.StringAttribute{Optional: true, Computed: true, Description: description, MarkdownDescription: description, PlanModifiers: modifiers, Validators: []validator.String{stringvalidator.LengthBetween(16, 128), stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$"), "must be an encoded project ID, not a name or raw database ID")}}
+	return schema.StringAttribute{Optional: true, Computed: true, Description: description, MarkdownDescription: description, PlanModifiers: modifiers, Validators: []validator.String{stringvalidator.LengthBetween(16, 128), stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$"), "must be a project ID, not a project name")}}
 }

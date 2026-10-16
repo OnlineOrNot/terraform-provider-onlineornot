@@ -17,7 +17,7 @@ Fetches the list of heartbeats.
 
 ### Optional
 
-- `project_id` (String) Filter by encoded project ID. Omit to list across all projects.
+- `project_id` (String) Filter by project ID. Omit to list across all projects.
 
 ### Read-Only
 
@@ -31,4 +31,4 @@ Read-Only:
 - `grace_period` (Number) The grace period in seconds
 - `id` (String) The unique identifier of the heartbeat
 - `name` (String) The name of the heartbeat
-- `project_id` (String) Encoded owning project ID.
+- `project_id` (String) Owning project ID.

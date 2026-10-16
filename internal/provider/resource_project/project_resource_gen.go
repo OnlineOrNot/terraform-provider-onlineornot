@@ -18,8 +18,8 @@ func ProjectResourceSchema(ctx context.Context) schema.Schema {
 			"id": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Encoded project ID, not a project name or raw database ID.",
-				MarkdownDescription: "Encoded project ID, not a project name or raw database ID.",
+				Description:         "Project ID.",
+				MarkdownDescription: "Project ID.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(16, 128),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$"), ""),

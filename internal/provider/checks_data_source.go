@@ -44,13 +44,13 @@ func (d *ChecksDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 	resp.Schema = schema.Schema{
 		Description: "Fetches the list of uptime checks.",
 		Attributes: map[string]schema.Attribute{
-			"project_id": schema.StringAttribute{Optional: true, Description: "Filter by encoded project ID. Omit to list across all projects."},
+			"project_id": schema.StringAttribute{Optional: true, Description: "Filter by project ID. Omit to list across all projects."},
 			"checks": schema.ListNestedAttribute{
 				Description: "List of uptime checks",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_id": schema.StringAttribute{Computed: true, Description: "Encoded owning project ID."},
+						"project_id": schema.StringAttribute{Computed: true, Description: "Owning project ID."},
 						"id": schema.StringAttribute{
 							Description: "The unique identifier of the check",
 							Computed:    true,

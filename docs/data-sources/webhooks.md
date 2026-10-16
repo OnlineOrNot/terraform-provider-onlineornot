@@ -17,7 +17,7 @@ Fetches the list of webhooks.
 
 ### Optional
 
-- `project_id` (String) Filter by encoded project ID. Omit to list across all projects.
+- `project_id` (String) Filter by project ID. Omit to list across all projects.
 
 ### Read-Only
 
@@ -30,5 +30,5 @@ Read-Only:
 
 - `description` (String) The description of the webhook
 - `id` (String) The unique identifier of the webhook
-- `project_id` (String) Encoded owning project ID.
+- `project_id` (String) Owning project ID.
 - `url` (String) Webhook URL. May contain {{NAME}} references to environment variables.

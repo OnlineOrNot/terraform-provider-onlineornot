@@ -33,7 +33,7 @@ output "default_project_id" {
 Read-Only:
 
 - `created_at` (String) Creation timestamp.
-- `id` (String) Encoded project ID.
+- `id` (String) Project ID.
 - `is_default` (Boolean) Stable Default identity, independent of name.
 - `name` (String) Editable project label.
 - `updated_at` (String) Last update timestamp.
