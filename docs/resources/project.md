@@ -46,7 +46,7 @@ data "onlineornot_checks" "staging" {
 
 - `created_at` (String) Creation timestamp.
 - `id` (String) Project ID.
-- `is_default` (Boolean) Whether this is the Default project.
+- `is_default` (Boolean) Legacy Default-project flag. Null when the API omits it.
 - `updated_at` (String) Last update timestamp.
 
 ## Import

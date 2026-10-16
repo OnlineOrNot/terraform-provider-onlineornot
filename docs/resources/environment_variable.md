@@ -78,7 +78,7 @@ resource "onlineornot_uptime_check" "api" {
 
 > **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
 
-- `project_id` (String) Project ID. Defaults to the Default project when creating the resource. Changing this value requires replacement.
+- `project_id` (String) Project ID. Omit on creation to use the API's default assignment. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value requires replacement.
 - `value` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Secret value, supplied on create and when changing value_version. Never saved in state or plan. Supply from an ephemeral value; ordinary Terraform variables/configuration may be retained outside provider state.
 
 ### Read-Only

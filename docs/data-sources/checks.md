@@ -32,6 +32,6 @@ Read-Only:
 - `id` (String) The unique identifier of the check
 - `method` (String) The HTTP method used
 - `name` (String) The name of the check
-- `project_id` (String) Owning project ID.
+- `project_id` (String) Owning project ID. Null for Unassigned.
 - `status` (String) The current status of the check. Must be one of: `DOWN`, `MAINTENANCE`, `MUTED`, `PAUSED`, `PENDING`, `RECOVERING`, `UP`, `VERIFYING`.
 - `url` (String) The URL being monitored

@@ -32,7 +32,7 @@ func (r *ProjectResource) Schema(ctx context.Context, _ resource.SchemaRequest, 
 	resp.Schema = resource_project.ProjectResourceSchema(ctx)
 	resp.Schema.Description = "Manages an organization project. Only empty projects can be deleted. The Default project cannot be deleted. Requires PROJECTS:READ and PROJECTS:EDIT."
 	resp.Schema.Attributes["id"] = schema.StringAttribute{Computed: true, Description: "Project ID.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}
-	resp.Schema.Attributes["is_default"] = schema.BoolAttribute{Computed: true, Description: "Whether this is the Default project."}
+	resp.Schema.Attributes["is_default"] = schema.BoolAttribute{Computed: true, Description: "Legacy Default-project flag. Null when the API omits it."}
 	resp.Schema.Attributes["created_at"] = schema.StringAttribute{Computed: true, Description: "Creation timestamp."}
 	resp.Schema.Attributes["updated_at"] = schema.StringAttribute{Computed: true, Description: "Last update timestamp."}
 }
@@ -49,7 +49,7 @@ func (r *ProjectResource) Configure(_ context.Context, req resource.ConfigureReq
 }
 
 func projectModelFromAPI(p *client.Project) projectModel {
-	return projectModel{ID: types.StringValue(p.ID), Name: types.StringValue(p.Name), IsDefault: types.BoolValue(p.IsDefault), CreatedAt: types.StringValue(p.CreatedAt), UpdatedAt: types.StringValue(p.UpdatedAt)}
+	return projectModel{ID: types.StringValue(p.ID), Name: types.StringValue(p.Name), IsDefault: types.BoolPointerValue(p.IsDefault), CreatedAt: types.StringValue(p.CreatedAt), UpdatedAt: types.StringValue(p.UpdatedAt)}
 }
 
 func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

@@ -102,9 +102,10 @@ func (r *WebhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 }
 
 func (r *WebhookResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data resource_webhook.WebhookModel
+	var data, state resource_webhook.WebhookModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -115,7 +116,7 @@ func (r *WebhookResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	updated, err := r.client.UpdateWebhook(data.Id.ValueString(), wh)
+	updated, err := r.client.UpdateWebhook(state.Id.ValueString(), wh)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update webhook, got error: %s", err))
 		return
