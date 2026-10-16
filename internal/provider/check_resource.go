@@ -43,6 +43,7 @@ func NewBrowserCheckResource() resource.Resource {
 }
 
 type checkModel struct {
+	ProjectId                    types.String `tfsdk:"project_id"`
 	AlertPriority                types.String `tfsdk:"alert_priority"`
 	Assertions                   types.List   `tfsdk:"assertions"`
 	AuthPassword                 types.String `tfsdk:"auth_password"`
@@ -96,6 +97,7 @@ func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataReque
 
 func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_check.CheckResourceSchema(ctx)
+	resp.Schema.Attributes["project_id"] = projectOwnershipAttribute(false)
 	// Keep generated documentation aligned with the package name used in scripts.
 	if scriptAttr, ok := resp.Schema.Attributes["script"].(schema.StringAttribute); ok {
 		scriptAttr.Description = "@playwright/test script for browser checks. Scripted checks require this field. URL-based checks do not require this field."
@@ -277,6 +279,7 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 // checkModelToClient converts a Terraform check model into the API request model.
 func checkModelToClient(ctx context.Context, data *checkModel, forcedInputType string, diags *diag.Diagnostics) *client.Check {
 	check := &client.Check{
+		ProjectID:                    data.ProjectId.ValueString(),
 		Name:                         data.Name.ValueString(),
 		URL:                          data.Url.ValueString(),
 		TestInterval:                 int(data.TestInterval.ValueInt64()),
@@ -366,6 +369,7 @@ func checkModelToClient(ctx context.Context, data *checkModel, forcedInputType s
 // populateModelFromAPI updates a CheckModel with values from the API response
 func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkModel, check *client.Check, diags *diag.Diagnostics) {
 	data.Id = types.StringValue(check.ID)
+	data.ProjectId = optionalStringValue(check.ProjectID)
 	data.Name = types.StringValue(check.Name)
 	data.Url = types.StringNull()
 	if check.URL != "" {
@@ -651,6 +655,17 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// values remain unmanaged.
 	if state.Script.ValueString() != "" && data.Script.ValueString() == "" && !data.Script.IsUnknown() && config.Timeout.IsNull() {
 		fields["timeout"] = data.Timeout.ValueInt64()
+	}
+	if !data.ProjectId.Equal(state.ProjectId) {
+		if err := r.client.MoveCheck(checkID, data.ProjectId.ValueString()); err != nil {
+			resp.Diagnostics.AddError("Error moving check", err.Error())
+			return
+		}
+		state.ProjectId = data.ProjectId
+		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 	patch := &client.CheckPatch{Fields: fields}
 	if len(changes) > 0 {

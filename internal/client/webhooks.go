@@ -7,6 +7,8 @@ import (
 
 // Webhook is the API response with associations flattened to IDs.
 type Webhook struct {
+	Enabled       bool     `json:"enabled"`
+	ProjectID     string   `json:"project_id,omitempty"`
 	ID            string   `json:"id,omitempty"`
 	URL           string   `json:"url"`
 	Description   string   `json:"description,omitempty"`
@@ -19,6 +21,8 @@ type Webhook struct {
 // WebhookRequest uses write-only association names. A nil pointer omits an
 // association, while a pointer to an empty slice explicitly clears it on PATCH.
 type WebhookRequest struct {
+	Enabled       *bool     `json:"enabled,omitempty"`
+	ProjectID     string    `json:"project_id,omitempty"`
 	URL           string    `json:"url,omitempty"`
 	Description   *string   `json:"description,omitempty"`
 	Events        []string  `json:"events,omitempty"`
@@ -103,7 +107,9 @@ func (c *Client) GetWebhook(id string) (*Webhook, error) {
 
 // UpdateWebhook updates an existing webhook
 func (c *Client) UpdateWebhook(id string, wh *WebhookRequest) (*Webhook, error) {
-	respBody, err := c.Patch(fmt.Sprintf("/v1/webhooks/%s", id), wh)
+	payload := *wh
+	payload.ProjectID = ""
+	respBody, err := c.Patch(fmt.Sprintf("/v1/webhooks/%s", id), &payload)
 	if err != nil {
 		return nil, err
 	}
@@ -130,6 +136,8 @@ func (c *Client) DeleteWebhook(id string) error {
 }
 
 // ListWebhooks retrieves every numbered page, including when the server caps page size.
-func (c *Client) ListWebhooks() ([]Webhook, error) {
-	return listAll[Webhook](c, "/v1/webhooks")
+func (c *Client) ListWebhooks() ([]Webhook, error) { return c.ListWebhooksInProject("") }
+
+func (c *Client) ListWebhooksInProject(projectID string) ([]Webhook, error) {
+	return listAll[Webhook](c, projectCollectionPath("/v1/webhooks", projectID))
 }

@@ -526,6 +526,65 @@
       "operationId": "deleteWebhook",
       "status": "implemented",
       "terraform": "onlineornot_webhook resource"
+    },
+    {
+      "operationId": "moveCheck",
+      "status": "implemented",
+      "terraform": "check resources in-place project_id update"
+    },
+    {
+      "operationId": "moveHeartbeat",
+      "status": "implemented",
+      "terraform": "onlineornot_heartbeat in-place project_id update"
+    },
+    {
+      "operationId": "createProject",
+      "status": "implemented",
+      "terraform": "onlineornot_project resource"
+    },
+    {
+      "operationId": "listProjects",
+      "status": "implemented",
+      "terraform": "onlineornot_projects data source"
+    },
+    {
+      "operationId": "getProject",
+      "status": "implemented",
+      "terraform": "onlineornot_project resource"
+    },
+    {
+      "operationId": "updateProject",
+      "status": "implemented",
+      "terraform": "onlineornot_project resource"
+    },
+    {
+      "operationId": "deleteProject",
+      "status": "implemented",
+      "terraform": "onlineornot_project resource"
+    },
+    {
+      "operationId": "getWebhookDeliverySummary",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Operational webhook delivery history is not managed infrastructure; this release manages webhook configuration, not delivery telemetry."
+    },
+    {
+      "operationId": "getWebhookDeliveryActivity",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Operational webhook delivery history is not managed infrastructure; this release manages webhook configuration, not delivery telemetry."
+    },
+    {
+      "operationId": "listWebhookDeliveries",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Operational webhook delivery history is not managed infrastructure; this release manages webhook configuration, not delivery telemetry."
+    },
+    {
+      "operationId": "getWebhookDelivery",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Operational webhook delivery history is not managed infrastructure; this release manages webhook configuration, not delivery telemetry."
     }
   ]
 }

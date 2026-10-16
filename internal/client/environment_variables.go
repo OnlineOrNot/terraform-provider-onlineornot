@@ -8,15 +8,17 @@ import (
 
 // EnvironmentVariable contains metadata only. Secret values are never decoded into responses.
 type EnvironmentVariable struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Type string `json:"type"`
+	ProjectID string `json:"project_id,omitempty"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Type      string `json:"type"`
 }
 
 type EnvironmentVariableWrite struct {
-	Name  string  `json:"name,omitempty"`
-	Type  string  `json:"type,omitempty"`
-	Value *string `json:"value,omitempty"`
+	ProjectID string  `json:"project_id,omitempty"`
+	Name      string  `json:"name,omitempty"`
+	Type      string  `json:"type,omitempty"`
+	Value     *string `json:"value,omitempty"`
 }
 
 func decodeEnvironmentVariable(body []byte) (*EnvironmentVariable, error) {
@@ -42,6 +44,7 @@ func (c *Client) GetEnvironmentVariable(id string) (*EnvironmentVariable, error)
 	return decodeEnvironmentVariable(body)
 }
 func (c *Client) UpdateEnvironmentVariable(id string, input EnvironmentVariableWrite) (*EnvironmentVariable, error) {
+	input.ProjectID = ""
 	body, err := c.Patch("/v1/env/"+url.PathEscape(id), input)
 	if err != nil {
 		return nil, err

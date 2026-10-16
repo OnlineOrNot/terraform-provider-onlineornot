@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
@@ -77,6 +78,16 @@ func HeartbeatResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)",
 				MarkdownDescription: "IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)",
+			},
+			"project_id": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Project ID. Omit on creation to use the API's default assignment. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value moves the resource to another project.",
+				MarkdownDescription: "Project ID. Omit on creation to use the API's default assignment. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value moves the resource to another project.",
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(16, 128),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$"), ""),
+				},
 			},
 			"pushover_alerts": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -157,6 +168,7 @@ type HeartbeatModel struct {
 	MicrosoftTeamsAlerts         types.List   `tfsdk:"microsoft_teams_alerts"`
 	Name                         types.String `tfsdk:"name"`
 	OncallAlerts                 types.List   `tfsdk:"oncall_alerts"`
+	ProjectId                    types.String `tfsdk:"project_id"`
 	PushoverAlerts               types.List   `tfsdk:"pushover_alerts"`
 	ReminderAlertIntervalMinutes types.Int64  `tfsdk:"reminder_alert_interval_minutes"`
 	ReportPeriod                 types.Int64  `tfsdk:"report_period"`

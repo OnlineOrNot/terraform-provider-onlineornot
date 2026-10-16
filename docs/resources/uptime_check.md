@@ -74,6 +74,7 @@ For a bearer token, use `"Bearer ${onlineornot_environment_variable.api_token.re
 - `muted` (Boolean) Whether alerts for the check are muted. Cannot be true when paused is true.
 - `oncall_alerts` (List of String) IDs of on-call integrations (Grafana, PagerDuty, Opsgenie, Spike)
 - `paused` (Boolean) Whether the check is paused. Cannot be true when muted is true.
+- `project_id` (String) Project ID. Omit on creation to use the API's default assignment. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value moves the resource to another project.
 - `pushover_alerts` (List of String)
 - `recovery_period_seconds` (Number) Seconds before confirming [recovery](https://onlineornot.com/docs/explanation/confirmation-recovery-periods#recovery-period).
 - `reminder_alert_interval_minutes` (Number) Interval in minutes between reminders (-1 for never)
