@@ -70,8 +70,8 @@ func WebhookResourceSchema(ctx context.Context) schema.Schema {
 			"project_id": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Project ID. Omit on creation to use the API's default assignment. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value requires replacement.",
-				MarkdownDescription: "Project ID. Omit on creation to use the API's default assignment. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value requires replacement.",
+				Description:         "Project ID. Omit on creation to leave the resource Unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value requires replacement.",
+				MarkdownDescription: "Project ID. Omit on creation to leave the resource Unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value requires replacement.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(16, 128),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$"), ""),
