@@ -8,7 +8,6 @@ import (
 type Project struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
-	IsDefault *bool  `json:"is_default,omitempty"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 }

@@ -22,7 +22,7 @@ func (d *ProjectsDataSource) Metadata(_ context.Context, req datasource.Metadata
 func (d *ProjectsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{Description: "Lists organization projects. Requires PROJECTS:READ.", Attributes: map[string]schema.Attribute{
 		"projects": schema.ListNestedAttribute{Computed: true, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{Computed: true, Description: "Project ID."}, "name": schema.StringAttribute{Computed: true, Description: "Project name."}, "is_default": schema.BoolAttribute{Computed: true, Description: "Legacy Default-project flag. Null when the API omits it."}, "created_at": schema.StringAttribute{Computed: true, Description: "Creation timestamp."}, "updated_at": schema.StringAttribute{Computed: true, Description: "Last update timestamp."},
+			"id": schema.StringAttribute{Computed: true, Description: "Project ID."}, "name": schema.StringAttribute{Computed: true, Description: "Project name."}, "created_at": schema.StringAttribute{Computed: true, Description: "Creation timestamp."}, "updated_at": schema.StringAttribute{Computed: true, Description: "Last update timestamp."},
 		}}},
 	}}
 }

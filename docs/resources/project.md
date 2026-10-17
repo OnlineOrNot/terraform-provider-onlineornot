@@ -3,12 +3,12 @@
 page_title: "onlineornot_project Resource - terraform-provider-onlineornot"
 subcategory: ""
 description: |-
-  Manages an organization project. Only empty projects can be deleted. The Default project cannot be deleted. Requires PROJECTS:READ and PROJECTS:EDIT.
+  Manages an organization project. Only empty projects can be deleted. Requires PROJECTS:READ and PROJECTS:EDIT.
 ---
 
 # onlineornot_project (Resource)
 
-Manages an organization project. Only empty projects can be deleted. The Default project cannot be deleted. Requires PROJECTS:READ and PROJECTS:EDIT.
+Manages an organization project. Only empty projects can be deleted. Requires PROJECTS:READ and PROJECTS:EDIT.
 
 ## Example Usage
 
@@ -46,7 +46,6 @@ data "onlineornot_checks" "staging" {
 
 - `created_at` (String) Creation timestamp.
 - `id` (String) Project ID.
-- `is_default` (Boolean) Legacy Default-project flag. Null when the API omits it.
 - `updated_at` (String) Last update timestamp.
 
 ## Import

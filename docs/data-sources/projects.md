@@ -15,8 +15,8 @@ Lists organization projects. Requires PROJECTS:READ.
 ```terraform
 data "onlineornot_projects" "all" {}
 
-output "default_project_id" {
-  value = one([for project in data.onlineornot_projects.all.projects : project.id if project.is_default])
+output "project_ids" {
+  value = { for project in data.onlineornot_projects.all.projects : project.name => project.id }
 }
 ```
 
@@ -34,6 +34,5 @@ Read-Only:
 
 - `created_at` (String) Creation timestamp.
 - `id` (String) Project ID.
-- `is_default` (Boolean) Legacy Default-project flag. Null when the API omits it.
 - `name` (String) Project name.
 - `updated_at` (String) Last update timestamp.
