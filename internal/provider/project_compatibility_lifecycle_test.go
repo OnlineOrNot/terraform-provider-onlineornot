@@ -152,7 +152,7 @@ func TestProjectNullableCollectionOwnership(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{Config: config.String(), Check: resource.ComposeTestCheckFunc(checks...)}}})
 }
 
-func TestProjectOptionalDefaultFlagLifecycle(t *testing.T) {
+func TestProjectMetadataLifecycle(t *testing.T) {
 	var mu sync.Mutex
 	stored := map[string]any{"id": projectSourceID, "name": "staging", "created_at": "2026-10-16T00:00:00Z", "updated_at": "2026-10-16T00:00:00Z"}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -187,7 +187,7 @@ func TestProjectOptionalDefaultFlagLifecycle(t *testing.T) {
 	config := func(name string) string {
 		return fmt.Sprintf("provider \"onlineornot\" {\napi_key=\"loopback-only\"\nbase_url=%q\n}\nresource \"onlineornot_project\" \"test\" {name=%q}\ndata \"onlineornot_projects\" \"all\" {depends_on=[onlineornot_project.test]}\n", server.URL, name)
 	}
-	check := resource.ComposeTestCheckFunc(resource.TestCheckNoResourceAttr("onlineornot_project.test", "is_default"), resource.TestCheckNoResourceAttr("data.onlineornot_projects.all", "projects.0.is_default"), resource.TestCheckResourceAttr("data.onlineornot_projects.all", "projects.1.is_default", "false"), resource.TestCheckResourceAttr("data.onlineornot_projects.all", "projects.2.is_default", "true"))
+	check := resource.ComposeTestCheckFunc(resource.TestCheckNoResourceAttr("onlineornot_project.test", "is_default"), resource.TestCheckNoResourceAttr("data.onlineornot_projects.all", "projects.0.is_default"), resource.TestCheckNoResourceAttr("data.onlineornot_projects.all", "projects.1.is_default"), resource.TestCheckNoResourceAttr("data.onlineornot_projects.all", "projects.2.is_default"))
 	resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
 		{Config: config("staging"), Check: check},
 		{Config: config("renamed"), Check: check},

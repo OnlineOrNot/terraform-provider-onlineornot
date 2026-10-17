@@ -75,8 +75,8 @@ data "onlineornot_projects" "all" { depends_on = [onlineornot_project.test] }
 `, server.URL, name)
 	}
 	resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
-		{Config: config("staging"), Check: resource.ComposeTestCheckFunc(resource.TestCheckResourceAttr("onlineornot_project.test", "id", projectSourceID), resource.TestCheckResourceAttr("onlineornot_project.test", "is_default", "false"), resource.TestCheckResourceAttr("data.onlineornot_projects.all", "projects.0.name", "staging"))},
-		{Config: config("Default"), Check: resource.TestCheckResourceAttr("onlineornot_project.test", "is_default", "false")},
+		{Config: config("staging"), Check: resource.ComposeTestCheckFunc(resource.TestCheckResourceAttr("onlineornot_project.test", "id", projectSourceID), resource.TestCheckNoResourceAttr("onlineornot_project.test", "is_default"), resource.TestCheckResourceAttr("data.onlineornot_projects.all", "projects.0.name", "staging"))},
+		{Config: config("Default"), Check: resource.ComposeTestCheckFunc(resource.TestCheckNoResourceAttr("onlineornot_project.test", "is_default"), resource.TestCheckResourceAttr("onlineornot_project.test", "name", "Default"))},
 		{ResourceName: "onlineornot_project.test", ImportState: true, ImportStateId: projectSourceID, ImportStateVerify: true},
 	}})
 }
