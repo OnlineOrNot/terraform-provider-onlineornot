@@ -55,7 +55,7 @@ resources:
           check_id: id
         overrides:
           project_id:
-            description: "Project ID. Omit on creation to use the API's default assignment. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value moves the resource to another project."
+            description: "Project ID. Omit on creation to leave the resource Unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value moves the resource to another project."
           id:
             description: "Uptime Check ID"
           status:
@@ -92,7 +92,7 @@ resources:
           heartbeat_id: id
         overrides:
           project_id:
-            description: "Project ID. Omit on creation to use the API's default assignment. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value moves the resource to another project."
+            description: "Project ID. Omit on creation to leave the resource Unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value moves the resource to another project."
 
   # ===================
   # MAINTENANCE WINDOWS
@@ -147,7 +147,7 @@ resources:
           webhook_id: id
         overrides:
           project_id:
-            description: "Project ID. Omit on creation to use the API's default assignment. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value requires replacement."
+            description: "Project ID. Omit on creation to leave the resource Unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value requires replacement."
 
   # ===================
   # STATUS PAGES

@@ -585,6 +585,24 @@
       "status": "waived",
       "terraform": "none",
       "reason": "Operational webhook delivery history is not managed infrastructure; this release manages webhook configuration, not delivery telemetry."
+    },
+    {
+      "operationId": "moveWebhook",
+      "status": "planned",
+      "terraform": "onlineornot_webhook in-place project_id update",
+      "reason": "Webhook project changes currently require replacement; dedicated move support is not implemented."
+    },
+    {
+      "operationId": "moveEnvironmentVariable",
+      "status": "planned",
+      "terraform": "onlineornot_environment_variable in-place project_id update",
+      "reason": "Environment variable project changes currently require replacement; dedicated move support is not implemented."
+    },
+    {
+      "operationId": "moveResources",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Imperative atomic movement of an explicit resource selection has no persistent Terraform resource identity; individual resources own their project assignments."
     }
   ]
 }
