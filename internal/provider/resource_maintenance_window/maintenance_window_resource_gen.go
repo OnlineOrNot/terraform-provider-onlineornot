@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
@@ -58,6 +59,16 @@ func MaintenanceWindowResourceSchema(ctx context.Context) schema.Schema {
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
+			"project_id": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Project ID. Omit on creation to leave the resource Unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value requires replacement.",
+				MarkdownDescription: "Project ID. Omit on creation to leave the resource Unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value requires replacement.",
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(16, 128),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$"), ""),
+				},
+			},
 			"start_date": schema.StringAttribute{
 				Required:            true,
 				Description:         "Start date and time of the maintenance window, as a timestamp",
@@ -79,6 +90,7 @@ type MaintenanceWindowModel struct {
 	Heartbeats      types.List   `tfsdk:"heartbeats"`
 	Id              types.String `tfsdk:"id"`
 	Name            types.String `tfsdk:"name"`
+	ProjectId       types.String `tfsdk:"project_id"`
 	StartDate       types.String `tfsdk:"start_date"`
 	Timezone        types.String `tfsdk:"timezone"`
 }

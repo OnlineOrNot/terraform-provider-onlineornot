@@ -191,7 +191,7 @@ func TestProjectMonitorMovesLifecycle(t *testing.T) {
 }
 
 func TestProjectImmutableOwnershipPlans(t *testing.T) {
-	for _, kind := range []string{"environment_variable", "webhook"} {
+	for _, kind := range []string{"environment_variable", "webhook", "maintenance_window"} {
 		t.Run(kind, func(t *testing.T) {
 			var mu sync.Mutex
 			var stored map[string]any
@@ -220,6 +220,13 @@ func TestProjectImmutableOwnershipPlans(t *testing.T) {
 events = ["uptime.down"]`
 			if kind == "environment_variable" {
 				settings = "name = \"API_KEY\"\ntype = \"secret\"\nvalue = \"loopback-secret\"\nvalue_version = \"1\""
+			}
+			if kind == "maintenance_window" {
+				settings = `name = "maintenance"
+start_date = "2026-10-28T00:00:00Z"
+duration_minutes = 30
+days_of_week = ["MONDAY"]
+timezone = "UTC"`
 			}
 			config := func(project string) string {
 				return fmt.Sprintf("provider \"onlineornot\" {\napi_key=\"loopback-only\"\nbase_url=%q\n}\nresource \"onlineornot_%s\" \"test\" {\n%s\nproject_id=%q\n}", server.URL, kind, settings, project)

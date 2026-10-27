@@ -22,10 +22,12 @@ type MaintenanceWindowsDataSource struct {
 }
 
 type MaintenanceWindowsDataSourceModel struct {
+	ProjectId          types.String                 `tfsdk:"project_id"`
 	MaintenanceWindows []MaintenanceWindowDataModel `tfsdk:"maintenance_windows"`
 }
 
 type MaintenanceWindowDataModel struct {
+	ProjectId       types.String `tfsdk:"project_id"`
 	ID              types.String `tfsdk:"id"`
 	Name            types.String `tfsdk:"name"`
 	StartDate       types.String `tfsdk:"start_date"`
@@ -41,11 +43,13 @@ func (d *MaintenanceWindowsDataSource) Schema(ctx context.Context, req datasourc
 	resp.Schema = schema.Schema{
 		Description: "Fetches the list of maintenance windows.",
 		Attributes: map[string]schema.Attribute{
+			"project_id": schema.StringAttribute{Optional: true, Description: "Filter by project ID, or unassigned for windows without a project. Omit to list across all projects."},
 			"maintenance_windows": schema.ListNestedAttribute{
 				Description: "List of maintenance windows",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"project_id": schema.StringAttribute{Computed: true, Description: "Owning project ID. Null for Unassigned."},
 						"id": schema.StringAttribute{
 							Description: "The unique identifier of the maintenance window",
 							Computed:    true,
@@ -98,7 +102,7 @@ func (d *MaintenanceWindowsDataSource) Read(ctx context.Context, req datasource.
 		return
 	}
 
-	windows, err := d.client.ListMaintenanceWindows()
+	windows, err := d.client.ListMaintenanceWindowsInProject(data.ProjectId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read maintenance windows, got error: %s", err))
 		return
@@ -107,6 +111,7 @@ func (d *MaintenanceWindowsDataSource) Read(ctx context.Context, req datasource.
 	data.MaintenanceWindows = make([]MaintenanceWindowDataModel, len(windows))
 	for i, mw := range windows {
 		data.MaintenanceWindows[i] = MaintenanceWindowDataModel{
+			ProjectId:       optionalStringValue(mw.ProjectID),
 			ID:              types.StringValue(mw.ID),
 			Name:            types.StringValue(mw.Name),
 			StartDate:       types.StringValue(mw.StartDate),

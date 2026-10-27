@@ -287,6 +287,12 @@
       "terraform": "onlineornot_maintenance_window resource"
     },
     {
+      "operationId": "moveMaintenanceWindow",
+      "status": "planned",
+      "terraform": "onlineornot_maintenance_window in-place project_id update",
+      "reason": "Maintenance window project changes currently require replacement; dedicated move support is not implemented. Linked checks and heartbeats must retain the same project assignment."
+    },
+    {
       "operationId": "listUsers",
       "status": "implemented",
       "terraform": "onlineornot_users data source"
