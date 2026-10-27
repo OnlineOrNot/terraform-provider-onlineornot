@@ -32,6 +32,7 @@ func (r *MaintenanceWindowResource) Metadata(ctx context.Context, req resource.M
 
 func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_maintenance_window.MaintenanceWindowResourceSchema(ctx)
+	resp.Schema.Attributes["project_id"] = projectOwnershipAttribute(true)
 	// The generator drops array defaults. Keep overrides outside generated code.
 	for _, name := range []string{"checks", "heartbeats"} {
 		a := resp.Schema.Attributes[name].(schema.ListAttribute)
@@ -67,6 +68,7 @@ func (r *MaintenanceWindowResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	mw := &client.MaintenanceWindow{
+		ProjectID:       data.ProjectId.ValueString(),
 		Name:            data.Name.ValueString(),
 		StartDate:       data.StartDate.ValueString(),
 		DurationMinutes: int(data.DurationMinutes.ValueInt64()),
@@ -90,6 +92,7 @@ func (r *MaintenanceWindowResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	data.Id = types.StringValue(created.ID)
+	data.ProjectId = optionalStringValue(created.ProjectID)
 
 	// Set computed fields to null if not provided by user to avoid "unknown after apply" errors
 	if data.Checks.IsUnknown() {
@@ -117,6 +120,7 @@ func (r *MaintenanceWindowResource) Read(ctx context.Context, req resource.ReadR
 	}
 
 	data.Id = types.StringValue(mw.ID)
+	data.ProjectId = optionalStringValue(mw.ProjectID)
 	data.Name = types.StringValue(mw.Name)
 	data.StartDate = types.StringValue(mw.StartDate)
 	data.DurationMinutes = types.Int64Value(int64(mw.DurationMinutes))
@@ -137,9 +141,10 @@ func (r *MaintenanceWindowResource) Read(ctx context.Context, req resource.ReadR
 }
 
 func (r *MaintenanceWindowResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data resource_maintenance_window.MaintenanceWindowModel
+	var data, state resource_maintenance_window.MaintenanceWindowModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -161,11 +166,14 @@ func (r *MaintenanceWindowResource) Update(ctx context.Context, req resource.Upd
 		data.Heartbeats.ElementsAs(ctx, &mw.Heartbeats, false)
 	}
 
-	_, err := r.client.UpdateMaintenanceWindow(data.Id.ValueString(), mw)
+	updated, err := r.client.UpdateMaintenanceWindow(state.Id.ValueString(), mw)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update maintenance window, got error: %s", err))
 		return
 	}
+
+	data.Id = types.StringValue(updated.ID)
+	data.ProjectId = optionalStringValue(updated.ProjectID)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

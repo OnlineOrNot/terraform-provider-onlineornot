@@ -7,6 +7,7 @@ import (
 
 // MaintenanceWindow represents a maintenance window
 type MaintenanceWindow struct {
+	ProjectID       string   `json:"project_id,omitempty"`
 	ID              string   `json:"id,omitempty"`
 	Name            string   `json:"name"`
 	StartDate       string   `json:"start_date"`
@@ -63,7 +64,9 @@ func (c *Client) GetMaintenanceWindow(id string) (*MaintenanceWindow, error) {
 
 // UpdateMaintenanceWindow updates an existing maintenance window
 func (c *Client) UpdateMaintenanceWindow(id string, mw *MaintenanceWindow) (*MaintenanceWindow, error) {
-	respBody, err := c.Patch(fmt.Sprintf("/v1/maintenance-windows/%s", id), mw)
+	input := *mw
+	input.ProjectID = ""
+	respBody, err := c.Patch(fmt.Sprintf("/v1/maintenance-windows/%s", id), &input)
 	if err != nil {
 		return nil, err
 	}
@@ -91,5 +94,9 @@ func (c *Client) DeleteMaintenanceWindow(id string) error {
 
 // ListMaintenanceWindows retrieves all maintenance windows
 func (c *Client) ListMaintenanceWindows() ([]MaintenanceWindow, error) {
-	return listAll[MaintenanceWindow](c, "/v1/maintenance-windows")
+	return c.ListMaintenanceWindowsInProject("")
+}
+
+func (c *Client) ListMaintenanceWindowsInProject(projectID string) ([]MaintenanceWindow, error) {
+	return listAll[MaintenanceWindow](c, projectCollectionPath("/v1/maintenance-windows", projectID))
 }

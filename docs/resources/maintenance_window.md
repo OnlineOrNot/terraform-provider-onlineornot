@@ -28,3 +28,4 @@ description: |-
 - `checks` (List of String) Uptime check IDs to associate with this maintenance window
 - `heartbeats` (List of String) Heartbeat IDs to associate with this maintenance window
 - `id` (String) Maintenance Window ID
+- `project_id` (String) Project ID. Omit on creation to leave the resource Unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value requires replacement.

@@ -24,6 +24,10 @@ func TestProjectNullableOwnershipLifecycle(t *testing.T) {
 		{"dns_check", "/v1/checks/dns", "dns_domain = \"example.com\"\ndns_record_type = \"A\"", "name", "monitor", "renamed", true},
 		{"tcp_check", "/v1/checks/tcp", "tcp_hostname = \"example.com\"\ntcp_port = 443", "name", "monitor", "renamed", true},
 		{"heartbeat", "/v1/heartbeats", "grace_period = 1\nreport_period = 60", "name", "monitor", "renamed", true},
+		{"maintenance_window", "/v1/maintenance-windows", `start_date = "2026-10-28T00:00:00Z"
+duration_minutes = 30
+days_of_week = ["MONDAY"]
+timezone = "UTC"`, "name", "maintenance", "renamed", false},
 		{"webhook", "/v1/webhooks", "url = \"https://example.com/hook\"\nevents = [\"uptime.down\"]", "description", "receiver", "renamed receiver", false},
 		{"environment_variable", "/v1/env", "type = \"secret\"\nvalue = \"loopback-write-only-value\"\nvalue_version = \"1\"", "name", "API_KEY", "RENAMED_KEY", false},
 	}
