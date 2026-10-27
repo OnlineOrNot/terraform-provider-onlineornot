@@ -228,6 +228,10 @@ func TestTokenResourceInvalidConfiguration(t *testing.T) {
 		{"scope", "", "INVALID", "READ", "Invalid Attribute Value Match"},
 		{"permission", "", "UPTIME_CHECKS", "WRITE", "Invalid Attribute Value Match"},
 		{"expiry", `expires_at = "tomorrow"`, "UPTIME_CHECKS", "READ", "Invalid expiration"},
+		{"sendOnChecks", "", "UPTIME_CHECKS", "SEND", "Invalid log grant"},
+		{"projectWithoutSend", `project_id = "projectSource123456"`, "LOGS", "READ", "Invalid sending project"},
+		{"projectOnManagement", `project_id = "projectSource123456"`, "API_TOKENS", "EDIT", "Invalid sending project"},
+		{"invalidSendingProject", `project_id = "bad"`, "LOGS", "SEND", "Invalid Attribute Value"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

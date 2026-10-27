@@ -25,6 +25,7 @@ var _ resource.ResourceWithImportState = &TokenResource{}
 
 type TokenResource struct{ client *client.Client }
 type tokenModel struct {
+	ProjectID    types.String `tfsdk:"project_id"`
 	ID           types.String `tfsdk:"id"`
 	Name         types.String `tfsdk:"name"`
 	Grants       types.Set    `tfsdk:"grants"`
@@ -51,14 +52,15 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 		Description: "Manages an API token. Configuration changes replace the token. The secret is only returned on creation and is stored in Terraform state.",
 		Attributes: map[string]schema.Attribute{
 			"id":            schema.StringAttribute{Computed: true, Description: "Token ID."},
+			"project_id":    schema.StringAttribute{Optional: true, Description: "Project ID receiving logs. Requires LOGS:SEND. Omit or set null for Unassigned. Applies only to sending; other grants remain organisation-wide. Changes replace the token.", PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Validators: []validator.String{stringvalidator.LengthBetween(16, 128), stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$"), "must be a project ID, not a project name")}},
 			"name":          schema.StringAttribute{Required: true, Description: "Token name. Changes replace the token.", PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
 			"expires_at":    schema.StringAttribute{Optional: true, Description: "Expiration in UTC RFC3339 format, with at most millisecond precision. Omit for the API default of 365 days from creation. To disable expiration, set never_expires = true. Changes replace the token.", Validators: []validator.String{tokenExpiryValidator{}}, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
 			"never_expires": schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), Description: "Explicitly create a token without expiration. Cannot be combined with expires_at. Changes replace the token.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()}},
 			"expires_after": schema.StringAttribute{Computed: true, Description: "Actual expiration returned by the API, including the default expiration. Null for a non-expiring token."},
 			"token":         schema.StringAttribute{Computed: true, Sensitive: true, Description: "Secret returned only on creation, preserved on refresh. Unavailable (null) after import. Stored in state; protect state and plan files."},
-			"grants": schema.SetNestedAttribute{Required: true, Description: "Unordered scope/permission pairs. EDIT implies READ. Changes replace the token.", PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()}, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-				"scope":      schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.OneOf("UPTIME_CHECKS", "STATUS_PAGES", "HEARTBEAT_CHECKS", "MAINTENANCE_WINDOWS", "PEOPLE", "INTEGRATIONS", "API_TOKENS", "WEBHOOKS")}},
-				"permission": schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.OneOf("READ", "EDIT")}},
+			"grants": schema.SetNestedAttribute{Required: true, Description: "Unordered scope/permission pairs. EDIT implies READ, not sending. SEND is valid only for LOGS and may be combined with other explicit grants. Changes replace the token.", PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()}, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+				"scope":      schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.OneOf("PROJECTS", "LOGS", "UPTIME_CHECKS", "STATUS_PAGES", "HEARTBEAT_CHECKS", "MAINTENANCE_WINDOWS", "PEOPLE", "INTEGRATIONS", "API_TOKENS", "WEBHOOKS", "ENVIRONMENT_VARIABLES")}},
+				"permission": schema.StringAttribute{Required: true, Validators: []validator.String{stringvalidator.OneOf("READ", "EDIT", "SEND")}},
 			}}},
 		},
 	}
@@ -102,6 +104,31 @@ func (r *TokenResource) ValidateConfig(ctx context.Context, req resource.Validat
 	if data.NeverExpires.ValueBool() && !data.ExpiresAt.IsNull() && !data.ExpiresAt.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(path.Root("expires_at"), "Conflicting expiration settings", "Do not set expires_at when never_expires is true.")
 	}
+	if resp.Diagnostics.HasError() || data.Grants.IsUnknown() {
+		return
+	}
+	var grants []tokenGrantModel
+	resp.Diagnostics.Append(data.Grants.ElementsAs(ctx, &grants, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	hasSending, unknownGrant := false, false
+	for _, grant := range grants {
+		if grant.Scope.IsUnknown() || grant.Permission.IsUnknown() {
+			unknownGrant = true
+			continue
+		}
+		if grant.Permission.ValueString() == "SEND" {
+			if grant.Scope.ValueString() != "LOGS" {
+				resp.Diagnostics.AddAttributeError(path.Root("grants"), "Invalid log grant", "SEND is valid only for LOGS.")
+			} else {
+				hasSending = true
+			}
+		}
+	}
+	if !data.ProjectID.IsNull() && !hasSending && !unknownGrant {
+		resp.Diagnostics.AddAttributeError(path.Root("project_id"), "Invalid sending project", "A project ID requires a LOGS:SEND grant. Other grants remain organisation-wide.")
+	}
 }
 
 // Never relay raw API errors here: upstream errors could echo the secret.
@@ -119,7 +146,7 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	input := &client.CreateTokenRequest{Name: data.Name.ValueString(), Grants: make([]client.TokenGrant, 0, len(grants))}
+	input := &client.CreateTokenRequest{Name: data.Name.ValueString(), Grants: make([]client.TokenGrant, 0, len(grants)), ProjectID: data.ProjectID.ValueStringPointer()}
 	for _, g := range grants {
 		input.Grants = append(input.Grants, client.TokenGrant{Scope: g.Scope.ValueString(), Permission: g.Permission.ValueString()})
 	}
@@ -138,6 +165,7 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 	data.ID = types.StringValue(token.ID)
+	data.ProjectID = types.StringPointerValue(token.ProjectID)
 	data.Token = types.StringValue(token.Token)
 	data.ExpiresAfter = types.StringPointerValue(token.ExpiresAfter)
 	// Create does not return grants. Keep the configured grants and the user's
@@ -163,6 +191,7 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	// creation/refresh, so its absence identifies the initial imported read.
 	initialImport := data.Name.IsNull()
 	data.ID = types.StringValue(token.ID)
+	data.ProjectID = types.StringPointerValue(token.ProjectID)
 	data.Name = types.StringValue(token.Name)
 	grants := make([]tokenGrantModel, 0, len(token.Grants))
 	for _, g := range token.Grants {
