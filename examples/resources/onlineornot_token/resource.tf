@@ -14,3 +14,16 @@ output "monitoring_token" {
   value     = onlineornot_token.monitoring.token
   sensitive = true
 }
+
+resource "onlineornot_project" "application" {
+  name = "Application"
+}
+
+resource "onlineornot_token" "logs" {
+  name       = "Application logs"
+  project_id = onlineornot_project.application.id
+  grants = [
+    { scope = "LOGS", permission = "SEND" },
+    { scope = "API_TOKENS", permission = "READ" },
+  ]
+}

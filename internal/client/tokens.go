@@ -13,13 +13,15 @@ type TokenGrant struct {
 }
 
 type CreateTokenRequest struct {
-	Name   string       `json:"name"`
-	Grants []TokenGrant `json:"grants"`
+	ProjectID *string      `json:"project_id,omitempty"`
+	Name      string       `json:"name"`
+	Grants    []TokenGrant `json:"grants"`
 	// Nil omits expiry (API default); a pointer to nil sends explicit null.
 	ExpiresAt **string `json:"expiresAt,omitempty"`
 }
 
 type Token struct {
+	ProjectID    *string      `json:"project_id"`
 	ID           string       `json:"id"`
 	Name         string       `json:"name"`
 	Grants       []TokenGrant `json:"grants"`
