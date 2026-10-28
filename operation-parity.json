@@ -609,6 +609,18 @@
       "status": "waived",
       "terraform": "none",
       "reason": "Imperative atomic movement of an explicit resource selection has no persistent Terraform resource identity; individual resources own their project assignments."
+    },
+    {
+      "operationId": "sendLogs",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Imperative log ingestion does not represent managed infrastructure."
+    },
+    {
+      "operationId": "searchLogs",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Runtime log search over receipt-time windows does not represent managed infrastructure."
     }
   ]
 }
