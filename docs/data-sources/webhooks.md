@@ -30,5 +30,5 @@ Read-Only:
 
 - `description` (String) The description of the webhook
 - `id` (String) The unique identifier of the webhook
-- `project_id` (String) Owning project ID. Null for Unassigned.
+- `project_id` (String) Owning project ID. Null for unassigned.
 - `url` (String) Webhook URL. May contain {{NAME}} references to environment variables.

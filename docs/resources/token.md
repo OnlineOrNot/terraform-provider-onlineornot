@@ -14,9 +14,9 @@ The provider credential needs `API_TOKENS` `EDIT` for creation/deletion (which i
 
 `LOGS:SEND` grants sending access only, not log-read or management access. It can be combined with other explicitly requested grants. `LOGS:EDIT` permits delegating `LOGS:SEND` but does not itself grant sending access.
 
-Set `project_id` to the project receiving logs, or omit it/use null for Unassigned. A project ID requires a `LOGS:SEND` grant. Project scope applies only to sending; other grants remain organisation-wide. Changing or removing the project ID replaces the token rather than moving its sending destination.
+Set `project_id` to the project receiving logs, or omit it/use null for unassigned. A project ID requires a `LOGS:SEND` grant. Project scope applies only to sending; other grants remain organisation-wide. Changing or removing the project ID replaces the token rather than moving its sending destination.
 
-A provider credential relying on `LOGS:SEND` may delegate sending only to its own project, including Unassigned. Organisation-wide `LOGS:EDIT` permits issuing sending credentials for other projects. Assigned tokens must be revoked before deleting their project.
+A provider credential relying on `LOGS:SEND` may delegate sending only to its own project, including unassigned. Organisation-wide `LOGS:EDIT` permits issuing sending credentials for other projects. Assigned tokens must be revoked before deleting their project.
 
 ## Expiration and replacement
 
@@ -76,7 +76,7 @@ resource "onlineornot_token" "logs" {
 
 - `expires_at` (String) Expiration in UTC RFC3339 format, with at most millisecond precision. Omit for the API default of 365 days from creation. To disable expiration, set never_expires = true. Changes replace the token.
 - `never_expires` (Boolean) Explicitly create a token without expiration. Cannot be combined with expires_at. Changes replace the token.
-- `project_id` (String) Project ID receiving logs. Requires LOGS:SEND. Omit or set null for Unassigned. Applies only to sending; other grants remain organisation-wide. Changes replace the token.
+- `project_id` (String) Project ID receiving logs. Requires LOGS:SEND. Omit or set null for unassigned. Applies only to sending; other grants remain organisation-wide. Changes replace the token.
 
 ### Read-Only
 
@@ -94,7 +94,7 @@ Required:
 
 ## Import
 
-For an existing sending token, configure its current `project_id` (or omit it for Unassigned) and grants to avoid replacing it after import.
+For an existing sending token, configure its current `project_id` (or omit it for unassigned) and grants to avoid replacing it after import.
 
 For an existing expiring token, set `expires_at` in configuration to its `expires_after` value returned by the API. The initial import reads that expiration into state; matching configuration does not replace the credential. For a non-expiring token, configure `never_expires = true`. Import cannot infer whether an existing expiry originally used the API default. Tokens created by this provider with omitted `expires_at` continue to preserve that omission on refresh.
 

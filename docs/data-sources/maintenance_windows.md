@@ -31,6 +31,6 @@ Read-Only:
 - `duration_minutes` (Number) The duration of the maintenance window in minutes
 - `id` (String) The unique identifier of the maintenance window
 - `name` (String) The name of the maintenance window
-- `project_id` (String) Owning project ID. Null for Unassigned.
+- `project_id` (String) Owning project ID. Null for unassigned.
 - `start_date` (String) The start time of the maintenance window
 - `timezone` (String) The timezone for the maintenance window
