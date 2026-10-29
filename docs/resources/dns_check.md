@@ -67,7 +67,7 @@ resource "onlineornot_dns_check" "custom_resolver" {
 - `muted` (Boolean) Whether alerts for the check are muted. Cannot be true when paused is true.
 - `oncall_alerts` (List of String)
 - `paused` (Boolean) Whether the check is paused. Cannot be true when muted is true.
-- `project_id` (String) Project ID. Omit on creation to leave the resource Unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value moves the resource to another project.
+- `project_id` (String) Project ID. Omit on creation to leave the resource unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to unassigned. unassigned resources have a null project ID in state. Changing this value moves the resource to another project.
 - `pushover_alerts` (List of String)
 - `recovery_period_seconds` (Number)
 - `reminder_alert_interval_minutes` (Number)

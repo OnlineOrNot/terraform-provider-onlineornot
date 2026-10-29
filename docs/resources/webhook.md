@@ -42,5 +42,5 @@ resource "onlineornot_uptime_check" "example" {
 - `enabled` (Boolean) Whether webhook delivery is enabled. Defaults to true on creation; omitted PATCH values preserve the current state.
 - `heartbeat_ids` (List of String) IDs of heartbeats to associate with this webhook
 - `id` (String) Webhook ID
-- `project_id` (String) Project ID. Omit on creation to leave the resource Unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state. Changing this value requires replacement.
+- `project_id` (String) Project ID. Omit on creation to leave the resource unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to unassigned. unassigned resources have a null project ID in state. Changing this value requires replacement.
 - `status_page_ids` (List of String) IDs of status pages to associate with this webhook

@@ -14,9 +14,9 @@ The provider credential needs `API_TOKENS` `EDIT` for creation/deletion (which i
 
 `LOGS:SEND` grants sending access only, not log-read or management access. It can be combined with other explicitly requested grants. `LOGS:EDIT` permits delegating `LOGS:SEND` but does not itself grant sending access.
 
-Set `project_id` to the project receiving logs, or omit it/use null for Unassigned. A project ID requires a `LOGS:SEND` grant. Project scope applies only to sending; other grants remain organisation-wide. Changing or removing the project ID replaces the token rather than moving its sending destination.
+Set `project_id` to the project receiving logs, or omit it/use null for unassigned. A project ID requires a `LOGS:SEND` grant. Project scope applies only to sending; other grants remain organisation-wide. Changing or removing the project ID replaces the token rather than moving its sending destination.
 
-A provider credential relying on `LOGS:SEND` may delegate sending only to its own project, including Unassigned. Organisation-wide `LOGS:EDIT` permits issuing sending credentials for other projects. Assigned tokens must be revoked before deleting their project.
+A provider credential relying on `LOGS:SEND` may delegate sending only to its own project, including unassigned. Organisation-wide `LOGS:EDIT` permits issuing sending credentials for other projects. Assigned tokens must be revoked before deleting their project.
 
 ## Expiration and replacement
 
@@ -38,7 +38,7 @@ Import retrieves metadata only: the secret remains null and cannot be recovered.
 
 ## Import
 
-For an existing sending token, configure its current `project_id` (or omit it for Unassigned) and grants to avoid replacing it after import.
+For an existing sending token, configure its current `project_id` (or omit it for unassigned) and grants to avoid replacing it after import.
 
 For an existing expiring token, set `expires_at` in configuration to its `expires_after` value returned by the API. The initial import reads that expiration into state; matching configuration does not replace the credential. For a non-expiring token, configure `never_expires = true`. Import cannot infer whether an existing expiry originally used the API default. Tokens created by this provider with omitted `expires_at` continue to preserve that omission on refresh.
 

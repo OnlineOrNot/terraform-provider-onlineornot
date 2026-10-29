@@ -26,7 +26,7 @@ func TestMaintenanceWindowProjectFilters(t *testing.T) {
 			rows = append(rows, map[string]any{"id": "assigned123", "project_id": projectSourceID, "name": "Assigned", "start_date": "2026-10-28T00:00:00Z", "duration_minutes": 30, "timezone": "UTC"})
 		}
 		if selector != projectSourceID {
-			rows = append(rows, map[string]any{"id": "unassigned123", "project_id": nil, "name": "Unassigned", "start_date": "2026-10-28T00:00:00Z", "duration_minutes": 30, "timezone": "UTC"})
+			rows = append(rows, map[string]any{"id": "unassigned123", "project_id": nil, "name": "unassigned", "start_date": "2026-10-28T00:00:00Z", "duration_minutes": 30, "timezone": "UTC"})
 		}
 		json.NewEncoder(w).Encode(map[string]any{"success": true, "result": rows, "result_info": map[string]any{"page": 1, "per_page": 100, "count": len(rows), "total_count": len(rows)}})
 	}))

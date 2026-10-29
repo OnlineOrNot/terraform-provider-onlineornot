@@ -47,7 +47,7 @@ func (d *HeartbeatsDataSource) Schema(ctx context.Context, req datasource.Schema
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"project_id": schema.StringAttribute{Computed: true, Description: "Owning project ID. Null for Unassigned."},
+						"project_id": schema.StringAttribute{Computed: true, Description: "Owning project ID. Null for unassigned."},
 						"id": schema.StringAttribute{
 							Description: "The unique identifier of the heartbeat",
 							Computed:    true,

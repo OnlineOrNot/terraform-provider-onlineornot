@@ -11,7 +11,7 @@ import (
 )
 
 func projectOwnershipAttribute(replacement bool) schema.StringAttribute {
-	description := "Project ID. Omit on creation to leave the resource Unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to Unassigned. Unassigned resources have a null project ID in state."
+	description := "Project ID. Omit on creation to leave the resource unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to unassigned. unassigned resources have a null project ID in state."
 	modifiers := []planmodifier.String{stringplanmodifier.UseStateForUnknown()}
 	if replacement {
 		description += " Changing this value requires replacement."
