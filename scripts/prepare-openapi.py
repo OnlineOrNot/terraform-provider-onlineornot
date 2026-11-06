@@ -3,7 +3,8 @@
 
 The framework generator cannot map HTTP 200 success/failure anyOf envelopes.
 Terraform state describes successful results; the client still checks success
-at runtime. Nested resource unions and nullable fields are left unchanged.
+at runtime. The generic check keeps its supported string-valued assertion
+branch; other nested resource unions and nullable fields are left unchanged.
 """
 
 import copy
@@ -25,6 +26,21 @@ def project_id_patterns(value):
 def prepare(spec):
     result = copy.deepcopy(spec)
     project_id_patterns(result)
+    # The Terraform assertion model has a string expected value. Keep that
+    # branch explicit instead of relying on codegen skipping the whole union
+    # and retaining stale generated attributes from a previous run.
+    check_input = result.get('components', {}).get('schemas', {}).get('CheckInput', {})
+    assertions = check_input.get('properties', {}).get('assertions', {})
+    items = assertions.get('items', {})
+    branches = items.get('oneOf', [])
+    if branches:
+        supported = [branch for branch in branches
+                     if branch.get('properties', {}).get('expected', {}).get('type') == 'string']
+        if len(branches) != 2 or len(supported) != 1 or not any(
+                branch.get('properties', {}).get('type', {}).get('enum') == ['STATUS_CODE']
+                for branch in branches):
+            raise ValueError('Unsupported CheckInput assertion union')
+        assertions['items'] = supported[0]
     for path in result['paths'].values():
         for operation in path.values():
             if not isinstance(operation, dict):

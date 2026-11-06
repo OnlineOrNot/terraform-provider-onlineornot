@@ -27,8 +27,8 @@ func ProjectResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				Description:         "Project name.",
-				MarkdownDescription: "Project name.",
+				Description:         "Project name. Must be unique within the organization, ignoring case and surrounding spaces.",
+				MarkdownDescription: "Project name. Must be unique within the organization, ignoring case and surrounding spaces.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 255),
 				},

@@ -49,6 +49,7 @@ generate-schemas: fetch-schema
 # Generate documentation (Step 3 + 4)
 .PHONY: docs
 docs: fetch-schema
+	python3 scripts/prepare-openapi.py openapi.json openapi.codegen.json
 	terraform fmt -recursive ./examples/
 	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-name onlineornot --rendered-provider-name terraform-provider-onlineornot
 	go run ./tools/enrich-docs

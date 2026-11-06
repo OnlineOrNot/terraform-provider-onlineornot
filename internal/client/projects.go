@@ -90,9 +90,9 @@ func (c *Client) moveMonitorProject(path, id, projectID string) error {
 	return nil
 }
 
-func projectCollectionPath(path string, projectID string) string {
-	if projectID == "" {
+func projectCollectionPath(path string, projectIDs []string) string {
+	if len(projectIDs) == 0 {
 		return path
 	}
-	return path + "?" + url.Values{"project_id": {projectID}}.Encode()
+	return path + "?" + url.Values{"project_id": projectIDs}.Encode()
 }

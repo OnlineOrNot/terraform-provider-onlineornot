@@ -53,3 +53,14 @@ class PrepareOpenAPITest(unittest.TestCase):
         import re
         for value in ('1234567890123456', 'sourceProject1234567', '-1234567890123456', '123abc', '', 'bad/value', 'abc_def', 'abcé'):
             self.assertEqual(bool(re.fullmatch(pattern, value)), bool(re.fullmatch(prepared['components']['schemas']['ProjectId']['pattern'], value)))
+
+    def test_check_assertions_keep_supported_string_branch_without_mutating_contract(self):
+        legacy = {'type': 'object', 'properties': {'type': {'enum': ['JSON_BODY']}, 'expected': {'type': 'string'}}}
+        status = {'type': 'object', 'properties': {'type': {'enum': ['STATUS_CODE']}, 'expected': {'type': 'array', 'items': {'type': 'number'}}}}
+        spec = {'paths': {}, 'components': {'schemas': {'CheckInput': {'properties': {'assertions': {'type': 'array', 'items': {'oneOf': [legacy, status]}}}}}}}
+        original = copy.deepcopy(spec)
+        prepared = prepare_openapi.prepare(spec)
+        items = prepared['components']['schemas']['CheckInput']['properties']['assertions']['items']
+        self.assertEqual(items, legacy)
+        self.assertEqual(spec, original)
+        self.assertEqual(prepare_openapi.prepare(prepared), prepared)

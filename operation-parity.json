@@ -621,6 +621,18 @@
       "status": "waived",
       "terraform": "none",
       "reason": "Runtime log search over receipt-time windows does not represent managed infrastructure."
+    },
+    {
+      "operationId": "exportOtlpLogs",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Imperative log ingestion does not represent managed infrastructure."
+    },
+    {
+      "operationId": "getLogUsage",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Current billing-period log usage is runtime telemetry, not managed infrastructure."
     }
   ]
 }

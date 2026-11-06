@@ -22,6 +22,7 @@ type MaintenanceWindowsDataSource struct {
 }
 
 type MaintenanceWindowsDataSourceModel struct {
+	ProjectIds         types.List                   `tfsdk:"project_ids"`
 	ProjectId          types.String                 `tfsdk:"project_id"`
 	MaintenanceWindows []MaintenanceWindowDataModel `tfsdk:"maintenance_windows"`
 }
@@ -43,7 +44,8 @@ func (d *MaintenanceWindowsDataSource) Schema(ctx context.Context, req datasourc
 	resp.Schema = schema.Schema{
 		Description: "Fetches the list of maintenance windows.",
 		Attributes: map[string]schema.Attribute{
-			"project_id": schema.StringAttribute{Optional: true, Description: "Filter by project ID, or unassigned for windows without a project. Omit to list across all projects."},
+			"project_id":  projectFilterAttribute(),
+			"project_ids": projectFiltersAttribute(),
 			"maintenance_windows": schema.ListNestedAttribute{
 				Description: "List of maintenance windows",
 				Computed:    true,
@@ -102,7 +104,12 @@ func (d *MaintenanceWindowsDataSource) Read(ctx context.Context, req datasource.
 		return
 	}
 
-	windows, err := d.client.ListMaintenanceWindowsInProject(data.ProjectId.ValueString())
+	projectIDs := projectFilterValues(ctx, data.ProjectId, data.ProjectIds, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	windows, err := d.client.ListMaintenanceWindowsInProjects(projectIDs)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read maintenance windows, got error: %s", err))
 		return

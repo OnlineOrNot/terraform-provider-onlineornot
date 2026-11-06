@@ -22,8 +22,9 @@ type WebhooksDataSource struct {
 }
 
 type WebhooksDataSourceModel struct {
-	ProjectId types.String       `tfsdk:"project_id"`
-	Webhooks  []WebhookDataModel `tfsdk:"webhooks"`
+	ProjectIds types.List         `tfsdk:"project_ids"`
+	ProjectId  types.String       `tfsdk:"project_id"`
+	Webhooks   []WebhookDataModel `tfsdk:"webhooks"`
 }
 
 type WebhookDataModel struct {
@@ -41,7 +42,8 @@ func (d *WebhooksDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 	resp.Schema = schema.Schema{
 		Description: "Fetches the list of webhooks.",
 		Attributes: map[string]schema.Attribute{
-			"project_id": schema.StringAttribute{Optional: true, Description: "Filter by project ID. Omit to list across all projects."},
+			"project_id":  projectFilterAttribute(),
+			"project_ids": projectFiltersAttribute(),
 			"webhooks": schema.ListNestedAttribute{
 				Description: "List of webhooks",
 				Computed:    true,
@@ -92,7 +94,12 @@ func (d *WebhooksDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	webhooks, err := d.client.ListWebhooksInProject(data.ProjectId.ValueString())
+	projectIDs := projectFilterValues(ctx, data.ProjectId, data.ProjectIds, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	webhooks, err := d.client.ListWebhooksInProjects(projectIDs)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read webhooks, got error: %s", err))
 		return

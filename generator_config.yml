@@ -24,7 +24,7 @@ resources:
           id:
             description: "Project ID."
           name:
-            description: "Project name."
+            description: "Project name. Must be unique within the organization, ignoring case and surrounding spaces."
   # onlineornot_token is hand-written in token_resource.go: asymmetric
   # create/read secret and expiry fields, and replacement-only lifecycle.
   # ===================

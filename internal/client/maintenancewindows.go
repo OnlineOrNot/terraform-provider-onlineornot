@@ -98,5 +98,13 @@ func (c *Client) ListMaintenanceWindows() ([]MaintenanceWindow, error) {
 }
 
 func (c *Client) ListMaintenanceWindowsInProject(projectID string) ([]MaintenanceWindow, error) {
-	return listAll[MaintenanceWindow](c, projectCollectionPath("/v1/maintenance-windows", projectID))
+	var projectIDs []string
+	if projectID != "" {
+		projectIDs = []string{projectID}
+	}
+	return c.ListMaintenanceWindowsInProjects(projectIDs)
+}
+
+func (c *Client) ListMaintenanceWindowsInProjects(projectIDs []string) ([]MaintenanceWindow, error) {
+	return listAll[MaintenanceWindow](c, projectCollectionPath("/v1/maintenance-windows", projectIDs))
 }

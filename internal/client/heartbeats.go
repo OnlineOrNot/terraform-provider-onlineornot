@@ -117,5 +117,13 @@ func (c *Client) DeleteHeartbeat(id string) error {
 func (c *Client) ListHeartbeats() ([]Heartbeat, error) { return c.ListHeartbeatsInProject("") }
 
 func (c *Client) ListHeartbeatsInProject(projectID string) ([]Heartbeat, error) {
-	return listAll[Heartbeat](c, projectCollectionPath("/v1/heartbeats", projectID))
+	var projectIDs []string
+	if projectID != "" {
+		projectIDs = []string{projectID}
+	}
+	return c.ListHeartbeatsInProjects(projectIDs)
+}
+
+func (c *Client) ListHeartbeatsInProjects(projectIDs []string) ([]Heartbeat, error) {
+	return listAll[Heartbeat](c, projectCollectionPath("/v1/heartbeats", projectIDs))
 }

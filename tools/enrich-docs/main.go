@@ -182,10 +182,10 @@ func main() {
 }
 
 func fetchOpenAPISpec() (*OpenAPISpec, error) {
-	// make docs fetches and verifies the SDK's exact schema lock first.
-	body, err := os.ReadFile("openapi.json")
+	// Use the same supported contract projection as resource generation.
+	body, err := os.ReadFile("openapi.codegen.json")
 	if err != nil {
-		return nil, fmt.Errorf("read pinned spec (run make fetch-schema): %w", err)
+		return nil, fmt.Errorf("read pinned spec (run make docs): %w", err)
 	}
 
 	var spec OpenAPISpec
