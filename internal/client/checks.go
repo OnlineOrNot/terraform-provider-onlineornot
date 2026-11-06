@@ -221,7 +221,15 @@ func (c *Client) DeleteTypedCheck(kind string, id string) error {
 func (c *Client) ListChecks() ([]Check, error) { return c.ListChecksInProject("") }
 
 func (c *Client) ListChecksInProject(projectID string) ([]Check, error) {
-	return listAll[Check](c, projectCollectionPath("/v1/checks", projectID))
+	var projectIDs []string
+	if projectID != "" {
+		projectIDs = []string{projectID}
+	}
+	return c.ListChecksInProjects(projectIDs)
+}
+
+func (c *Client) ListChecksInProjects(projectIDs []string) ([]Check, error) {
+	return listAll[Check](c, projectCollectionPath("/v1/checks", projectIDs))
 }
 
 // Copy selected configuration before adding PATCH-only operational fields.

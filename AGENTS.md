@@ -51,7 +51,7 @@ terraform-provider-onlineornot/
 
 ## Documentation Tooling
 
-- Despite its name and log message, `fetchOpenAPISpec` in `tools/enrich-docs/main.go` reads local `openapi.json`; `make docs` performs the download first.
+- Despite its name and log message, `fetchOpenAPISpec` in `tools/enrich-docs/main.go` reads local `openapi.codegen.json`; `make docs` downloads and prepares the pinned schema first.
 - Enrichment uses resource POST request schemas and data-source GET 200 response schemas. New endpoint coverage requires updating the path maps.
 - Enum lookup tracks nested Markdown schema context; values are sorted, and existing `Must be one of:` text is retained. Regenerate docs before rerunning enrichment after enum changes.
 

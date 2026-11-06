@@ -139,5 +139,13 @@ func (c *Client) DeleteWebhook(id string) error {
 func (c *Client) ListWebhooks() ([]Webhook, error) { return c.ListWebhooksInProject("") }
 
 func (c *Client) ListWebhooksInProject(projectID string) ([]Webhook, error) {
-	return listAll[Webhook](c, projectCollectionPath("/v1/webhooks", projectID))
+	var projectIDs []string
+	if projectID != "" {
+		projectIDs = []string{projectID}
+	}
+	return c.ListWebhooksInProjects(projectIDs)
+}
+
+func (c *Client) ListWebhooksInProjects(projectIDs []string) ([]Webhook, error) {
+	return listAll[Webhook](c, projectCollectionPath("/v1/webhooks", projectIDs))
 }

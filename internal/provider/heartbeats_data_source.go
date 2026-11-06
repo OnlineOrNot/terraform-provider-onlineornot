@@ -22,6 +22,7 @@ type HeartbeatsDataSource struct {
 }
 
 type HeartbeatsDataSourceModel struct {
+	ProjectIds types.List           `tfsdk:"project_ids"`
 	ProjectId  types.String         `tfsdk:"project_id"`
 	Heartbeats []HeartbeatDataModel `tfsdk:"heartbeats"`
 }
@@ -41,7 +42,8 @@ func (d *HeartbeatsDataSource) Schema(ctx context.Context, req datasource.Schema
 	resp.Schema = schema.Schema{
 		Description: "Fetches the list of heartbeats.",
 		Attributes: map[string]schema.Attribute{
-			"project_id": schema.StringAttribute{Optional: true, Description: "Filter by project ID. Omit to list across all projects."},
+			"project_id":  projectFilterAttribute(),
+			"project_ids": projectFiltersAttribute(),
 			"heartbeats": schema.ListNestedAttribute{
 				Description: "List of heartbeats",
 				Computed:    true,
@@ -92,7 +94,12 @@ func (d *HeartbeatsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	heartbeats, err := d.client.ListHeartbeatsInProject(data.ProjectId.ValueString())
+	projectIDs := projectFilterValues(ctx, data.ProjectId, data.ProjectIds, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	heartbeats, err := d.client.ListHeartbeatsInProjects(projectIDs)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read heartbeats, got error: %s", err))
 		return

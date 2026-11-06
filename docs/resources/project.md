@@ -40,7 +40,7 @@ data "onlineornot_checks" "staging" {
 
 ### Required
 
-- `name` (String) Project name.
+- `name` (String) Project name. Must be unique within the organization, ignoring case and surrounding spaces.
 
 ### Read-Only
 

@@ -22,8 +22,9 @@ type ChecksDataSource struct {
 }
 
 type ChecksDataSourceModel struct {
-	ProjectId types.String     `tfsdk:"project_id"`
-	Checks    []CheckDataModel `tfsdk:"checks"`
+	ProjectIds types.List       `tfsdk:"project_ids"`
+	ProjectId  types.String     `tfsdk:"project_id"`
+	Checks     []CheckDataModel `tfsdk:"checks"`
 }
 
 type CheckDataModel struct {
@@ -44,7 +45,8 @@ func (d *ChecksDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 	resp.Schema = schema.Schema{
 		Description: "Fetches the list of uptime checks.",
 		Attributes: map[string]schema.Attribute{
-			"project_id": schema.StringAttribute{Optional: true, Description: "Filter by project ID. Omit to list across all projects."},
+			"project_id":  projectFilterAttribute(),
+			"project_ids": projectFiltersAttribute(),
 			"checks": schema.ListNestedAttribute{
 				Description: "List of uptime checks",
 				Computed:    true,
@@ -107,7 +109,12 @@ func (d *ChecksDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	checks, err := d.client.ListChecksInProject(data.ProjectId.ValueString())
+	projectIDs := projectFilterValues(ctx, data.ProjectId, data.ProjectIds, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	checks, err := d.client.ListChecksInProjects(projectIDs)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read checks, got error: %s", err))
 		return

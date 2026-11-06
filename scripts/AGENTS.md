@@ -17,7 +17,7 @@ Python and Bash tooling for digest-pinned OpenAPI generation and API-free Terraf
 - Run these scripts via root make targets or from the repository root. Schema fetch reads `schema.lock.json` relative to the working directory.
 - Fetch writes a temporary file, compares SHA-256, then moves it into place. Keep mismatch failure and temporary-file cleanup intact.
 - `prepare` deep-copies its input. Only a supported top-level HTTP 200 response `anyOf` with success/failure object branches is projected to the success branch.
-- Unsupported response unions raise an error. Nested resource unions and nullable fields remain unchanged; this script is not a general schema simplifier.
+- Unsupported response unions raise an error. The generic check request keeps only the supported string-valued assertion branch; other nested resource unions and nullable fields remain unchanged. The same projection feeds schema generation and documentation enrichment.
 - The projection only serves code generation; runtime API clients still validate success/failure envelopes.
 - Parity covers GET/POST/PUT/PATCH/DELETE operation IDs. Duplicate IDs, missing/extra mappings, and unsupported dispositions are errors.
 - Every manifest entry needs a Terraform mapping; `planned` and `waived` entries also need a reason. A passing check establishes coverage, not implementation correctness.
