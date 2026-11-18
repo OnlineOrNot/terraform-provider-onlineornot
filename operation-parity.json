@@ -298,6 +298,12 @@
       "terraform": "onlineornot_users data source"
     },
     {
+      "operationId": "updateUserRole",
+      "status": "planned",
+      "terraform": "onlineornot_organization_member resource",
+      "reason": "Organization membership and roles are not yet managed by the provider."
+    },
+    {
       "operationId": "removeUser",
       "status": "planned",
       "terraform": "onlineornot_organization_member resource",
@@ -314,6 +320,12 @@
       "status": "planned",
       "terraform": "onlineornot_invitation resource",
       "reason": "Not yet implemented; tracked by the provider parity plan."
+    },
+    {
+      "operationId": "revokeInvitation",
+      "status": "planned",
+      "terraform": "onlineornot_invitation resource",
+      "reason": "Revoking a pending invitation would be the delete operation for the planned invitation resource."
     },
     {
       "operationId": "getStatusPage",
@@ -633,6 +645,24 @@
       "status": "waived",
       "terraform": "none",
       "reason": "Current billing-period log usage is runtime telemetry, not managed infrastructure."
+    },
+    {
+      "operationId": "exportOtlpTraces",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Imperative trace ingestion does not represent managed infrastructure."
+    },
+    {
+      "operationId": "searchTraces",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Searching runtime traces does not represent managed infrastructure."
+    },
+    {
+      "operationId": "submitAgentFeedback",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "One-off feedback submission does not represent managed infrastructure."
     }
   ]
 }
