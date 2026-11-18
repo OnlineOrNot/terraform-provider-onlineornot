@@ -56,6 +56,12 @@ func StatusPageIncidentResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Components affected by this incident with their status",
 				MarkdownDescription: "Components affected by this incident with their status",
 			},
+			"date_happened": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "When the incident and its first update occurred. Defaults to now. Must not be in the future.",
+				MarkdownDescription: "When the incident and its first update occurred. Defaults to now. Must not be in the future.",
+			},
 			"description": schema.StringAttribute{
 				Required:            true,
 				Description:         "a description of the incident",
@@ -114,6 +120,7 @@ func StatusPageIncidentResourceSchema(ctx context.Context) schema.Schema {
 
 type StatusPageIncidentModel struct {
 	Components        types.List   `tfsdk:"components"`
+	DateHappened      types.String `tfsdk:"date_happened"`
 	Description       types.String `tfsdk:"description"`
 	Id                types.String `tfsdk:"id"`
 	NotifySubscribers types.Bool   `tfsdk:"notify_subscribers"`
