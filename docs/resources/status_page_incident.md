@@ -24,6 +24,7 @@ description: |-
 ### Optional
 
 - `components` (Attributes List) Components affected by this incident with their status (see [below for nested schema](#nestedatt--components))
+- `date_happened` (String) When the incident and its first update occurred. Defaults to now. Must not be in the future.
 - `id` (String) Status Page Incident ID
 - `impact` (String) Impact of the incident.
 - `notify_subscribers` (Boolean) Whether to notify status page subscribers
