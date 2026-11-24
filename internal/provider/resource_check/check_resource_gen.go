@@ -192,8 +192,8 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Project ID. Omit on creation to leave the resource unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to unassigned. unassigned resources have a null project ID in state. Changing this value moves the resource to another project.",
 				MarkdownDescription: "Project ID. Omit on creation to leave the resource unassigned. Omitting this attribute or setting it to null on updates preserves the current assignment; it does not move the resource to unassigned. unassigned resources have a null project ID in state. Changing this value moves the resource to another project.",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(16, 128),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$"), ""),
+					stringvalidator.LengthBetween(12, 128),
+					stringvalidator.RegexMatches(regexp.MustCompile("^(?:[0-9a-z]{12}|[0-9]{0}[a-zA-Z-][a-zA-Z0-9-]{15,}|[0-9]{1}[a-zA-Z-][a-zA-Z0-9-]{14,}|[0-9]{2}[a-zA-Z-][a-zA-Z0-9-]{13,}|[0-9]{3}[a-zA-Z-][a-zA-Z0-9-]{12,}|[0-9]{4}[a-zA-Z-][a-zA-Z0-9-]{11,}|[0-9]{5}[a-zA-Z-][a-zA-Z0-9-]{10,}|[0-9]{6}[a-zA-Z-][a-zA-Z0-9-]{9,}|[0-9]{7}[a-zA-Z-][a-zA-Z0-9-]{8,}|[0-9]{8}[a-zA-Z-][a-zA-Z0-9-]{7,}|[0-9]{9}[a-zA-Z-][a-zA-Z0-9-]{6,}|[0-9]{10}[a-zA-Z-][a-zA-Z0-9-]{5,}|[0-9]{11}[a-zA-Z-][a-zA-Z0-9-]{4,}|[0-9]{12}[a-zA-Z-][a-zA-Z0-9-]{3,}|[0-9]{13}[a-zA-Z-][a-zA-Z0-9-]{2,}|[0-9]{14}[a-zA-Z-][a-zA-Z0-9-]{1,}|[0-9]{15}[a-zA-Z-][a-zA-Z0-9-]{0,}|[0-9]{16,}[a-zA-Z-][a-zA-Z0-9-]*)$"), ""),
 				},
 			},
 			"pushover_alerts": schema.ListAttribute{

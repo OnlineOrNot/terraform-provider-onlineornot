@@ -54,6 +54,32 @@ class PrepareOpenAPITest(unittest.TestCase):
         for value in ('1234567890123456', 'sourceProject1234567', '-1234567890123456', '123abc', '', 'bad/value', 'abc_def', 'abcé'):
             self.assertEqual(bool(re.fullmatch(pattern, value)), bool(re.fullmatch(prepared['components']['schemas']['ProjectId']['pattern'], value)))
 
+    def test_short_project_id_pattern_is_re2_compatible_without_changing_contract(self):
+        import random
+        import re
+        pattern = prepare_openapi.PROJECT_ID_PATTERN
+        spec = {'paths': {}, 'components': {'schemas': {'ProjectId': {
+            'type': 'string', 'minLength': 12, 'maxLength': 128, 'pattern': pattern}}}}
+        prepared = prepare_openapi.prepare(spec)
+        rewritten = prepared['components']['schemas']['ProjectId']['pattern']
+        self.assertNotIn('(?=', rewritten)
+        self.assertEqual(spec['components']['schemas']['ProjectId']['pattern'], pattern)
+        self.assertEqual(prepare_openapi.prepare(prepared), prepared)
+
+        def valid(candidate, regex):
+            return 12 <= len(candidate) <= 128 and bool(re.fullmatch(regex, candidate))
+
+        values = ['izkpm55j334u', 'IZKPM55J334U', 'izkpm55j334', 'izkpm55j334uu', '123456789012',
+                  '1234567890123456', '12345678901234567', '123456789012345a', 'a234567890123456',
+                  '1234567890123456-', '-23456789012345', 'sourceProject1234567', 'abc_def1234567890',
+                  'abcé123456789012', '', 'a' * 128, 'a' * 129, '1' * 127 + 'a', '1' * 128 + 'a']
+        rng = random.Random(0)
+        for _ in range(20000):
+            alphabet = rng.choice(['0123456789', '0123456789a', '0123456789-Z', 'abc012', '0123456789_'])
+            values.append(''.join(rng.choice(alphabet) for _ in range(rng.choice([11, 12, 13, 15, 16, 17, 40, 128, 129]))))
+        for value in values:
+            self.assertEqual(valid(value, pattern), valid(value, rewritten), value)
+
     def test_check_assertions_keep_supported_string_branch_without_mutating_contract(self):
         legacy = {'type': 'object', 'properties': {'type': {'enum': ['JSON_BODY']}, 'expected': {'type': 'string'}}}
         status = {'type': 'object', 'properties': {'type': {'enum': ['STATUS_CODE']}, 'expected': {'type': 'array', 'items': {'type': 'number'}}}}

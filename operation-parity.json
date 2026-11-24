@@ -581,6 +581,114 @@
       "terraform": "onlineornot_project resource"
     },
     {
+      "operationId": "listTeams",
+      "status": "planned",
+      "terraform": "onlineornot_teams data source",
+      "reason": "Teams are not yet exposed as a data source."
+    },
+    {
+      "operationId": "createTeam",
+      "status": "planned",
+      "terraform": "onlineornot_team resource",
+      "reason": "Teams are not yet managed by the provider."
+    },
+    {
+      "operationId": "getTeam",
+      "status": "planned",
+      "terraform": "onlineornot_team resource read",
+      "reason": "Teams are not yet managed by the provider."
+    },
+    {
+      "operationId": "updateTeam",
+      "status": "planned",
+      "terraform": "onlineornot_team resource",
+      "reason": "Renaming would be the update operation for the planned team resource."
+    },
+    {
+      "operationId": "deleteTeam",
+      "status": "planned",
+      "terraform": "onlineornot_team resource",
+      "reason": "Deleting would be the delete operation for the planned team resource."
+    },
+    {
+      "operationId": "listTeamMembers",
+      "status": "planned",
+      "terraform": "onlineornot_team_member resource read",
+      "reason": "Team membership is not yet managed by the provider."
+    },
+    {
+      "operationId": "setTeamMember",
+      "status": "planned",
+      "terraform": "onlineornot_team_member resource",
+      "reason": "Team membership and roles are not yet managed by the provider."
+    },
+    {
+      "operationId": "removeTeamMember",
+      "status": "planned",
+      "terraform": "onlineornot_team_member resource",
+      "reason": "Removing a member would be the delete operation for the planned team member resource."
+    },
+    {
+      "operationId": "joinTeam",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Self-service membership action for a signed-in user; organisation tokens cannot act on behalf of a user, so it is not declarative infrastructure."
+    },
+    {
+      "operationId": "leaveTeam",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Self-service membership action for a signed-in user; organisation tokens cannot act on behalf of a user, so it is not declarative infrastructure."
+    },
+    {
+      "operationId": "listTeamJoinRequests",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Approving or rejecting user-initiated join requests is a moderation workflow, not declarative infrastructure; use onlineornot_team_member to manage membership."
+    },
+    {
+      "operationId": "approveTeamJoinRequest",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Approving or rejecting user-initiated join requests is a moderation workflow, not declarative infrastructure; use onlineornot_team_member to manage membership."
+    },
+    {
+      "operationId": "deleteTeamJoinRequest",
+      "status": "waived",
+      "terraform": "none",
+      "reason": "Approving or rejecting user-initiated join requests is a moderation workflow, not declarative infrastructure; use onlineornot_team_member to manage membership."
+    },
+    {
+      "operationId": "listTeamProjects",
+      "status": "planned",
+      "terraform": "onlineornot_project_team resource read",
+      "reason": "Project sharing with teams is not yet managed by the provider."
+    },
+    {
+      "operationId": "listProjectTeams",
+      "status": "planned",
+      "terraform": "onlineornot_project_team resource read",
+      "reason": "Project sharing with teams is not yet managed by the provider."
+    },
+    {
+      "operationId": "addProjectTeam",
+      "status": "planned",
+      "terraform": "onlineornot_project_team resource",
+      "reason": "Project sharing with teams is not yet managed by the provider."
+    },
+    {
+      "operationId": "removeProjectTeam",
+      "status": "planned",
+      "terraform": "onlineornot_project_team resource",
+      "reason": "Removing a team link would be the delete operation for the planned project team resource."
+    },
+    {
+      "operationId": "getOrganisationAccessSettings",
+      "status": "planned",
+      "terraform": "onlineornot_organisation_access_settings data source",
+      "reason": "Organisation access settings are not yet exposed as a data source."
+    },
+    {
       "operationId": "getWebhookDeliverySummary",
       "status": "waived",
       "terraform": "none",
