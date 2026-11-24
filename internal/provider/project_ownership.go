@@ -19,5 +19,17 @@ func projectOwnershipAttribute(replacement bool) schema.StringAttribute {
 	} else {
 		description += " Changing this value moves the resource to another project."
 	}
-	return schema.StringAttribute{Optional: true, Computed: true, Description: description, MarkdownDescription: description, PlanModifiers: modifiers, Validators: []validator.String{stringvalidator.LengthBetween(16, 128), stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$"), "must be a project ID, not a project name")}}
+	return schema.StringAttribute{Optional: true, Computed: true, Description: description, MarkdownDescription: description, PlanModifiers: modifiers, Validators: projectIDValidators()}
+}
+
+// projectIDValidators accepts current 12-character lowercase project IDs and
+// legacy 16-128 character IDs that contain a letter or hyphen.
+func projectIDValidators() []validator.String {
+	return []validator.String{stringvalidator.Any(
+		stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-z]{12}$"), "must be a project ID, not a project name"),
+		stringvalidator.All(
+			stringvalidator.LengthBetween(16, 128),
+			stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z0-9-]*[a-zA-Z-][a-zA-Z0-9-]*$"), "must be a project ID, not a project name"),
+		),
+	)}
 }
