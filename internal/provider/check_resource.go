@@ -205,16 +205,28 @@ func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	if config.Url.IsNull() && !config.Script.IsNull() && !config.Script.IsUnknown() && config.Script.ValueString() != "" {
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("url"), types.StringNull())...)
 	}
-	// Omitted alerts keep the prior value, but the API turns alerts off when a
-	// check becomes a browser check, and always reports false for one.
-	if !r.browserOnly() && config.DomainExpiryAlerts.IsNull() && !req.State.Raw.IsNull() {
+	// Judge alerts by the planned check, which can keep an omitted type.
+	if !r.browserOnly() {
 		var plan checkModel
 		resp.Diagnostics.Append(resp.Plan.Get(ctx, r.modelTarget(&plan))...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		if isBrowserCheckModel(plan) {
-			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("domain_expiry_alerts"), types.BoolValue(false))...)
+		browser := isBrowserCheckModel(plan)
+		if browser && !config.DomainExpiryAlerts.IsNull() {
+			// The API rejects the field on browser checks, even false.
+			resp.Diagnostics.AddAttributeError(path.Root("domain_expiry_alerts"), domainExpiryAlertsBrowserSummary, domainExpiryAlertsBrowserDetail)
+			return
+		}
+		// Omitted alerts keep the prior value, but the API turns alerts off
+		// when a check becomes a browser check, and reports false for one.
+		if config.DomainExpiryAlerts.IsNull() && !req.State.Raw.IsNull() {
+			if browser {
+				resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("domain_expiry_alerts"), types.BoolValue(false))...)
+			} else if plan.Type.IsUnknown() || plan.Script.IsUnknown() {
+				// The check may still become a browser check during apply.
+				resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("domain_expiry_alerts"), types.BoolUnknown())...)
+			}
 		}
 	}
 	if config.Timeout.IsNull() {
@@ -691,6 +703,11 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	fields := configuredCheckPatch(req.Config, check, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+	// A nil pointer would reach the field map as JSON null, which browser
+	// checks reject like any other value.
+	if check.DomainExpiryAlerts == nil {
+		delete(fields, "domain_expiry_alerts")
 	}
 	// URL absence is meaningful when switching to script-controlled execution.
 	var config checkModel

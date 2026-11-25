@@ -352,3 +352,51 @@ func TestDomainExpiryAlertsTurnOffOnBrowserConversion(t *testing.T) {
 		{Config: browser, PlanOnly: true},
 	}})
 }
+
+// An omitted type stays BROWSER_CHECK in the plan, so a configured alert
+// setting fails at plan time, before any PATCH.
+func TestDomainExpiryAlertsRejectedOnPlannedBrowserType(t *testing.T) {
+	api := newDomainExpiryAPI(t)
+	defer api.server.Close()
+	url := `url = "https://www.example.com/"`
+	resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+		{Config: domainExpiryConfig(api.server.URL, "check", "type = \"BROWSER_CHECK\"\n "+url, "")},
+		{
+			Config:      strings.Replace(domainExpiryConfig(api.server.URL, "check", url, "domain_expiry_alerts = false"), `"domain-expiry"`, `"renamed"`, 1),
+			ExpectError: regexp.MustCompile(`Domain\s+expiry\s+alerts\s+are\s+not\s+available\s+for\s+browser\s+checks`),
+		},
+	}})
+	api.mu.Lock()
+	defer api.mu.Unlock()
+	if len(api.bodies["PATCH"]) != 0 {
+		t.Errorf("expected no PATCH, got %#v", api.bodies["PATCH"])
+	}
+}
+
+// While the type is unknown the check may become a browser check, which
+// turns alerts off, so an omitted setting plans unknown rather than true.
+func TestDomainExpiryAlertsUnknownWhileConversionUnresolved(t *testing.T) {
+	api := newDomainExpiryAPI(t)
+	defer api.server.Close()
+	address := "onlineornot_check.test"
+	converted := domainExpiryConfig(api.server.URL, "check", "type = terraform_data.settings.output.type\n "+domainExpiryScript, "") + `
+resource "terraform_data" "settings" {
+ input = { type = "BROWSER_CHECK" }
+}`
+	resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+		{Config: domainExpiryConfig(api.server.URL, "check", domainExpiryTargets["check"], "domain_expiry_alerts = true")},
+		{
+			Config: converted,
+			ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+				plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate),
+				plancheck.ExpectUnknownValue(address, tfjsonpath.New("domain_expiry_alerts")),
+			}},
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(address, "type", "BROWSER_CHECK"),
+				resource.TestCheckResourceAttr(address, "domain_expiry_alerts", "false"),
+				api.expectNoDomainExpiryAlerts("PATCH"),
+			),
+		},
+		{Config: converted, PlanOnly: true},
+	}})
+}
