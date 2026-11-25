@@ -375,11 +375,12 @@ func TestDomainExpiryAlertsRejectedOnPlannedBrowserType(t *testing.T) {
 
 // While the type is unknown the check may become a browser check, which
 // turns alerts off, so an omitted setting plans unknown rather than true.
+// It keeps its URL: a known script alone would already mark it as browser.
 func TestDomainExpiryAlertsUnknownWhileConversionUnresolved(t *testing.T) {
 	api := newDomainExpiryAPI(t)
 	defer api.server.Close()
 	address := "onlineornot_check.test"
-	converted := domainExpiryConfig(api.server.URL, "check", "type = terraform_data.settings.output.type\n "+domainExpiryScript, "") + `
+	converted := domainExpiryConfig(api.server.URL, "check", "type = terraform_data.settings.output.type\n "+domainExpiryTargets["check"], "") + `
 resource "terraform_data" "settings" {
  input = { type = "BROWSER_CHECK" }
 }`
