@@ -32,9 +32,9 @@ func TestCheckResourcePopulateModelFromAPIPushoverAlerts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			data := checkModel{
+			data := checkModel{checkFields: checkFields{
 				PushoverAlerts: types.ListUnknown(types.StringType),
-			}
+			}}
 			var diagnostics diag.Diagnostics
 
 			resource := &CheckResource{}

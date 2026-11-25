@@ -140,6 +140,9 @@ func TestExplicitAPIDefaultPlans(t *testing.T) {
 			var checks []plancheck.PlanCheck
 			if tc.kind == "check" || tc.kind == "uptime_check" || tc.kind == "browser_check" || tc.kind == "dns_check" || tc.kind == "tcp_check" {
 				tc.expected["alert_priority"] = knownvalue.StringExact("HIGH")
+			}
+			// Browser checks run scripts and have no domain expiry alerts.
+			if tc.kind == "check" || tc.kind == "uptime_check" || tc.kind == "dns_check" || tc.kind == "tcp_check" {
 				tc.expected["domain_expiry_alerts"] = knownvalue.Bool(false)
 			}
 			for field, expected := range tc.expected {

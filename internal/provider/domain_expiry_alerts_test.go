@@ -29,13 +29,19 @@ type domainExpiryAPI struct {
 
 var domainExpiryCheckTypes = map[string]string{"": "UPTIME", "uptime": "UPTIME", "browser": "BROWSER", "tcp": "TCP", "dns": "DNS"}
 
-// Mirrors the API rule: enabled alerts need a target with a registered domain.
-func domainExpiryTargetProblem(check map[string]any) string {
+func domainExpiryIsBrowser(check map[string]any) bool {
+	script, _ := check["script"].(string)
+	return check["check_type"] == "BROWSER" || script != ""
+}
+
+// Mirrors the API rules: browser checks reject the field, even false, and
+// enabled alerts need a target with a registered domain.
+func domainExpiryTargetProblem(check map[string]any, input map[string]any) string {
+	if _, sent := input["domain_expiry_alerts"]; sent && domainExpiryIsBrowser(check) {
+		return "Domain expiry alerts are not available for browser checks."
+	}
 	if check["domain_expiry_alerts"] != true {
 		return ""
-	}
-	if script, _ := check["script"].(string); script != "" {
-		return "Domain expiry alerts need a check target with a registered domain; scripted browser checks have none."
 	}
 	target, _ := check["dns_domain"].(string)
 	if hostname, _ := check["tcp_hostname"].(string); hostname != "" {
@@ -100,11 +106,19 @@ func newDomainExpiryAPI(t *testing.T) *domainExpiryAPI {
 		for k, v := range input {
 			next[k] = v
 		}
+		if checkType, ok := input["type"].(string); ok {
+			next["check_type"] = strings.TrimSuffix(checkType, "_CHECK")
+		}
 		if script, _ := next["script"].(string); script != "" {
 			// Scripted checks store no timeout.
 			next["timeout"] = nil
 		}
-		if problem := domainExpiryTargetProblem(next); problem != "" {
+		problem := domainExpiryTargetProblem(next, input)
+		if domainExpiryIsBrowser(next) {
+			// A check that becomes a browser check stops watching its domain.
+			next["domain_expiry_alerts"] = false
+		}
+		if problem != "" {
 			if r.Method == "POST" {
 				delete(api.checks, id)
 			}
@@ -154,7 +168,6 @@ resource "onlineornot_%s" "test" {
 var domainExpiryTargets = map[string]string{
 	"check":         `url = "https://api.example.com/health"`,
 	"uptime_check":  `url = "https://api.example.com/health"`,
-	"browser_check": `url = "https://www.example.com/"`,
 	"tcp_check":     "tcp_hostname = \"mail.example.com\"\n tcp_port = 443",
 	"dns_check":     "dns_domain = \"example.com\"\n dns_record_type = \"A\"",
 }
@@ -250,41 +263,92 @@ func TestDomainExpiryAlertsRejectedTargets(t *testing.T) {
 	})
 }
 
-func TestDomainExpiryAlertsRejectScriptedBrowserChecks(t *testing.T) {
-	for _, resourceType := range []string{"browser_check", "check"} {
-		t.Run(resourceType, func(t *testing.T) {
-			typeSetting := ""
-			if resourceType == "check" {
-				typeSetting = `type = "BROWSER_CHECK"`
-			}
+func (api *domainExpiryAPI) expectNoDomainExpiryAlerts(method string) resource.TestCheckFunc {
+	return func(*terraform.State) error {
+		if body := api.lastBody(method); body == nil {
+			return fmt.Errorf("expected a %s request", method)
+		} else if _, ok := body["domain_expiry_alerts"]; ok {
+			return fmt.Errorf("expected last %s to omit domain_expiry_alerts, got %#v", method, body)
+		}
+		return nil
+	}
+}
+
+const domainExpiryScript = "script = \"test('home', async () => {})\""
+
+// Browser checks run scripts: onlineornot_browser_check has no attribute,
+// and onlineornot_check rejects it, even false, for BROWSER_CHECK.
+func TestDomainExpiryAlertsUnavailableForBrowserChecks(t *testing.T) {
+	t.Run("browser_check", func(t *testing.T) {
+		resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
+			Config:   domainExpiryConfig("http://127.0.0.1:1", "browser_check", domainExpiryScript, "domain_expiry_alerts = false"),
+			PlanOnly: true, ExpectError: regexp.MustCompile(`argument\s+named\s+"domain_expiry_alerts"\s+is\s+not\s+expected`),
+		}}})
+	})
+	for name, target := range map[string]string{"url": `url = "https://www.example.com/"`, "script": domainExpiryScript} {
+		t.Run("check_"+name, func(t *testing.T) {
 			resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
-				Config:   domainExpiryConfig("http://127.0.0.1:1", resourceType, typeSetting+"\n script = \"test('home', async () => {})\"", "domain_expiry_alerts = true"),
-				PlanOnly: true, ExpectError: regexp.MustCompile(`Domain\s+expiry\s+alerts\s+are\s+incompatible\s+with\s+scripted\s+browser\s+checks`),
+				Config:   domainExpiryConfig("http://127.0.0.1:1", "check", "type = \"BROWSER_CHECK\"\n "+target, "domain_expiry_alerts = false"),
+				PlanOnly: true, ExpectError: regexp.MustCompile(`Domain\s+expiry\s+alerts\s+are\s+not\s+available\s+for\s+browser\s+checks`),
 			}}})
 		})
 	}
 }
 
-// Omitted alerts are preserved, so converting an enabled check to a script
-// must fail at plan time instead of sending a PATCH the API rejects.
-func TestDomainExpiryAlertsBlockInheritedScriptConversion(t *testing.T) {
+// Browser check requests never carry the field, which the API rejects.
+func TestBrowserChecksOmitDomainExpiryAlerts(t *testing.T) {
+	t.Run("browser_check", func(t *testing.T) {
+		api := newDomainExpiryAPI(t)
+		defer api.server.Close()
+		address := "onlineornot_browser_check.test"
+		resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+			{
+				Config: domainExpiryConfig(api.server.URL, "browser_check", `url = "https://www.example.com/"`, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(address, "domain_expiry_alerts"),
+					api.expectNoDomainExpiryAlerts("POST"),
+				),
+			},
+			{
+				Config: domainExpiryConfig(api.server.URL, "browser_check", domainExpiryScript, ""),
+				Check:  api.expectNoDomainExpiryAlerts("PATCH"),
+			},
+		}})
+	})
+	t.Run("check", func(t *testing.T) {
+		api := newDomainExpiryAPI(t)
+		defer api.server.Close()
+		address := "onlineornot_check.test"
+		resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
+			Config: domainExpiryConfig(api.server.URL, "check", "type = \"BROWSER_CHECK\"\n "+domainExpiryScript, ""),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(address, "domain_expiry_alerts", "false"),
+				api.expectNoDomainExpiryAlerts("POST"),
+			),
+		}}})
+	})
+}
+
+// The API turns alerts off when a check becomes a browser check, so an
+// omitted attribute plans false instead of keeping the prior true.
+func TestDomainExpiryAlertsTurnOffOnBrowserConversion(t *testing.T) {
 	api := newDomainExpiryAPI(t)
 	defer api.server.Close()
-	script := "script = \"test('home', async () => {})\""
+	address := "onlineornot_check.test"
+	browser := domainExpiryConfig(api.server.URL, "check", "type = \"BROWSER_CHECK\"\n "+domainExpiryScript, "")
 	resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
-		{Config: domainExpiryConfig(api.server.URL, "browser_check", domainExpiryTargets["browser_check"], "domain_expiry_alerts = true")},
+		{Config: domainExpiryConfig(api.server.URL, "check", domainExpiryTargets["check"], "domain_expiry_alerts = true")},
 		{
-			Config:      domainExpiryConfig(api.server.URL, "browser_check", script, ""),
-			ExpectError: regexp.MustCompile(`Set\s+domain_expiry_alerts\s+=\s+false\s+to\s+convert`),
+			Config: browser,
+			ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+				plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate),
+				plancheck.ExpectKnownValue(address, tfjsonpath.New("domain_expiry_alerts"), knownvalue.Bool(false)),
+			}},
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(address, "domain_expiry_alerts", "false"),
+				api.expectNoDomainExpiryAlerts("PATCH"),
+			),
 		},
-		{Config: domainExpiryConfig(api.server.URL, "browser_check", script, "domain_expiry_alerts = false")},
+		{Config: browser, PlanOnly: true},
 	}})
-	if body := api.lastBody("PATCH"); body["domain_expiry_alerts"] != false || body["script"] == nil {
-		t.Errorf("expected only the explicit conversion PATCH to disable alerts, got %#v", body)
-	}
-	api.mu.Lock()
-	defer api.mu.Unlock()
-	if len(api.bodies["PATCH"]) != 1 {
-		t.Errorf("expected one PATCH, got %d", len(api.bodies["PATCH"]))
-	}
 }

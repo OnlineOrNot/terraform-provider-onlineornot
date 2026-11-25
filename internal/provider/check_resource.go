@@ -38,11 +38,21 @@ func NewBrowserCheckResource() resource.Resource {
 	return &CheckResource{
 		typeName:        "browser_check",
 		endpointKind:    "browser",
-		forcedInputType: "BROWSER_CHECK",
+		forcedInputType: browserCheckType,
 	}
 }
 
+const browserCheckType = "BROWSER_CHECK"
+
+// checkModel is the generic and uptime check model. The browser check
+// resource has no domain_expiry_alerts attribute, so it reads and writes only
+// the embedded checkFields; see modelTarget.
 type checkModel struct {
+	checkFields
+	DomainExpiryAlerts types.Bool `tfsdk:"domain_expiry_alerts"`
+}
+
+type checkFields struct {
 	ProjectId                    types.String `tfsdk:"project_id"`
 	AlertPriority                types.String `tfsdk:"alert_priority"`
 	Assertions                   types.List   `tfsdk:"assertions"`
@@ -51,7 +61,6 @@ type checkModel struct {
 	Body                         types.String `tfsdk:"body"`
 	ConfirmationPeriodSeconds    types.Int64  `tfsdk:"confirmation_period_seconds"`
 	DiscordAlerts                types.List   `tfsdk:"discord_alerts"`
-	DomainExpiryAlerts           types.Bool   `tfsdk:"domain_expiry_alerts"`
 	FollowRedirects              types.Bool   `tfsdk:"follow_redirects"`
 	Headers                      types.Map    `tfsdk:"headers"`
 	Id                           types.String `tfsdk:"id"`
@@ -88,6 +97,21 @@ type CheckResource struct {
 	forcedInputType string
 }
 
+// browserOnly reports whether this resource only manages browser checks.
+func (r *CheckResource) browserOnly() bool {
+	return r.forcedInputType == browserCheckType
+}
+
+// modelTarget is what Get and Set read into and write from. Browser checks
+// run scripts, so onlineornot_browser_check has no domain_expiry_alerts
+// attribute and uses only the embedded fields.
+func (r *CheckResource) modelTarget(data *checkModel) any {
+	if r.browserOnly() {
+		return &data.checkFields
+	}
+	return data
+}
+
 func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	typeName := r.typeName
 	if typeName == "" {
@@ -114,7 +138,11 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 	resp.Schema.Attributes["timeout"] = timeout
 	resp.Schema.Attributes["paused"] = pausedAttribute("check")
 	resp.Schema.Attributes["muted"] = mutedAttribute("check")
-	resp.Schema.Attributes["domain_expiry_alerts"] = domainExpiryAlertsAttribute()
+	if r.browserOnly() {
+		delete(resp.Schema.Attributes, "domain_expiry_alerts")
+	} else {
+		resp.Schema.Attributes["domain_expiry_alerts"] = domainExpiryAlertsAttribute()
+	}
 
 	if authUsernameAttr, ok := resp.Schema.Attributes["auth_username"].(schema.StringAttribute); ok {
 		authUsernameAttr.Description = "Username to use for URLs behind HTTP Basic Auth. Set this to an empty string for an empty user-id."
@@ -141,12 +169,12 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 
 func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var data checkModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, r.modelTarget(&data))...)
 	if !data.Script.IsUnknown() && data.Script.ValueString() != "" && !data.Timeout.IsNull() && !data.Timeout.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(path.Root("timeout"), "Timeout is incompatible with scripted browser checks", "Omit timeout and configure timing in the Playwright script instead. The API stores no timeout for scripted browser checks.")
 	}
-	if !data.Script.IsUnknown() && data.Script.ValueString() != "" && data.DomainExpiryAlerts.ValueBool() {
-		resp.Diagnostics.AddAttributeError(path.Root("domain_expiry_alerts"), "Domain expiry alerts are incompatible with scripted browser checks", "A scripted browser check has no target domain. Use a URL-based check, or omit domain_expiry_alerts.")
+	if isBrowserCheckModel(data) && !data.DomainExpiryAlerts.IsNull() && !data.DomainExpiryAlerts.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(path.Root("domain_expiry_alerts"), domainExpiryAlertsBrowserSummary, domainExpiryAlertsBrowserDetail)
 	}
 }
 
@@ -155,7 +183,7 @@ func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 		return
 	}
 	var config checkModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, r.modelTarget(&config))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -167,8 +195,8 @@ func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	// assertion or timing edit does not select a new runtime.
 	if config.Version.IsNull() && !req.State.Raw.IsNull() {
 		var plan, state checkModel
-		resp.Diagnostics.Append(resp.Plan.Get(ctx, &plan)...)
-		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		resp.Diagnostics.Append(resp.Plan.Get(ctx, r.modelTarget(&plan))...)
+		resp.Diagnostics.Append(req.State.Get(ctx, r.modelTarget(&state))...)
 		if !plan.Type.IsUnknown() && plan.Type.Equal(state.Type) && !plan.Script.IsUnknown() && (plan.Script.ValueString() == "") == (state.Script.ValueString() == "") {
 			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("version"), state.Version)...)
 		}
@@ -177,24 +205,23 @@ func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	if config.Url.IsNull() && !config.Script.IsNull() && !config.Script.IsUnknown() && config.Script.ValueString() != "" {
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("url"), types.StringNull())...)
 	}
-	// Omitted alerts keep the prior value, so a switch to scripted mode can
-	// inherit alerts the API rejects. Fail at plan time, before any project move.
-	if config.DomainExpiryAlerts.IsNull() && !req.State.Raw.IsNull() {
+	// Omitted alerts keep the prior value, but the API turns alerts off when a
+	// check becomes a browser check, and always reports false for one.
+	if !r.browserOnly() && config.DomainExpiryAlerts.IsNull() && !req.State.Raw.IsNull() {
 		var plan checkModel
-		resp.Diagnostics.Append(resp.Plan.Get(ctx, &plan)...)
+		resp.Diagnostics.Append(resp.Plan.Get(ctx, r.modelTarget(&plan))...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		if !plan.Script.IsUnknown() && plan.Script.ValueString() != "" && !plan.DomainExpiryAlerts.IsUnknown() && plan.DomainExpiryAlerts.ValueBool() {
-			resp.Diagnostics.AddAttributeError(path.Root("domain_expiry_alerts"), "Domain expiry alerts are incompatible with scripted browser checks", "This check has domain expiry alerts enabled, and scripted browser checks have no target domain. Set domain_expiry_alerts = false to convert it to a scripted check.")
-			return
+		if isBrowserCheckModel(plan) {
+			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("domain_expiry_alerts"), types.BoolValue(false))...)
 		}
 	}
 	if config.Timeout.IsNull() {
 		var plan, state checkModel
-		resp.Diagnostics.Append(resp.Plan.Get(ctx, &plan)...)
+		resp.Diagnostics.Append(resp.Plan.Get(ctx, r.modelTarget(&plan))...)
 		if !req.State.Raw.IsNull() {
-			resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+			resp.Diagnostics.Append(req.State.Get(ctx, r.modelTarget(&state))...)
 		}
 		if resp.Diagnostics.HasError() {
 			return
@@ -235,7 +262,7 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 	var data checkModel
 
 	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, r.modelTarget(&data))...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -261,7 +288,7 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	// Persist the ID even if the authoritative read fails, avoiding an orphan.
 	data.Id = types.StringValue(created.ID)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, r.modelTarget(&data))...)
 	created, err = r.client.GetTypedCheck(r.endpointKind, created.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Check created but unable to read complete check: %s", err))
@@ -269,7 +296,7 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 	// Mutation responses omit R2-backed scripts; GET is authoritative.
 	r.populateModelFromAPI(ctx, &data, created, &resp.Diagnostics)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, r.modelTarget(&data))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -291,7 +318,7 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, r.modelTarget(&data))...)
 }
 
 // checkModelToClient converts a Terraform check model into the API request model.
@@ -333,7 +360,10 @@ func checkModelToClient(ctx context.Context, data *checkModel, forcedInputType s
 		value := data.VerifySsl.ValueBool()
 		check.VerifySSL = &value
 	}
-	check.DomainExpiryAlerts = knownBoolPointer(data.DomainExpiryAlerts)
+	// The API rejects the field on browser checks, even false.
+	if check.Type != browserCheckType && data.Script.ValueString() == "" {
+		check.DomainExpiryAlerts = knownBoolPointer(data.DomainExpiryAlerts)
+	}
 
 	if !data.TestRegions.IsNull() && !data.TestRegions.IsUnknown() {
 		diags.Append(data.TestRegions.ElementsAs(ctx, &check.TestRegions, false)...)
@@ -611,7 +641,7 @@ func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	var data checkModel
 
 	// Read Terraform prior state data into the model
-	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, r.modelTarget(&data))...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -628,7 +658,7 @@ func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	r.populateModelFromAPI(ctx, &data, check, &resp.Diagnostics)
 
 	// Save updated data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, r.modelTarget(&data))...)
 }
 
 func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -636,9 +666,9 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	var state checkModel
 
 	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, r.modelTarget(&data))...)
 	// Read current state to get the ID
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, r.modelTarget(&state))...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -664,7 +694,7 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 	// URL absence is meaningful when switching to script-controlled execution.
 	var config checkModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, r.modelTarget(&config))...)
 	if config.Url.IsNull() && config.Script.ValueString() != "" {
 		fields["url"] = nil
 	}
@@ -682,7 +712,7 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 			return
 		}
 		state.ProjectId = data.ProjectId
-		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+		resp.Diagnostics.Append(resp.State.Set(ctx, r.modelTarget(&state))...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -715,14 +745,14 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	r.populateModelFromAPI(ctx, &data, updated, &resp.Diagnostics)
 
 	// Save updated data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, r.modelTarget(&data))...)
 }
 
 func (r *CheckResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data checkModel
 
 	// Read Terraform prior state data into the model
-	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, r.modelTarget(&data))...)
 
 	if resp.Diagnostics.HasError() {
 		return
