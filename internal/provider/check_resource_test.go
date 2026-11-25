@@ -53,12 +53,12 @@ func TestCheckModelToClientPreservesHeadersAndAssertions(t *testing.T) {
 		t.Fatalf("failed to create test assertions: %v", assertionDiags.Errors())
 	}
 
-	model := checkModel{
+	model := checkModel{checkFields: checkFields{
 		Name:       types.StringValue("API check"),
 		Url:        types.StringValue("https://example.com"),
 		Headers:    headerValues,
 		Assertions: assertionValues,
-	}
+	}}
 	var diagnostics diag.Diagnostics
 
 	check := checkModelToClient(ctx, &model, "UPTIME_CHECK", &diagnostics)
@@ -85,10 +85,10 @@ func TestCheckModelToClientPreservesHeadersAndAssertions(t *testing.T) {
 
 func TestCheckModelToClientPreservesBasicAuthValues(t *testing.T) {
 	ctx := context.Background()
-	model := checkModel{
+	model := checkModel{checkFields: checkFields{
 		AuthUsername: types.StringValue(""),
 		AuthPassword: types.StringValue("secret"),
-	}
+	}}
 	var diagnostics diag.Diagnostics
 
 	check := checkModelToClient(ctx, &model, "UPTIME_CHECK", &diagnostics)
@@ -167,10 +167,10 @@ func TestCheckResourcePopulateModelFromAPIReconcilesBasicAuthState(t *testing.T)
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			model := checkModel{
+			model := checkModel{checkFields: checkFields{
 				AuthUsername: test.username,
 				AuthPassword: test.password,
-			}
+			}}
 			var diagnostics diag.Diagnostics
 			resource := CheckResource{}
 
@@ -197,7 +197,7 @@ func TestCheckModelToClientSkipsUnknownCollections(t *testing.T) {
 			AttrTypes: resource_check.AssertionsValue{}.AttributeTypes(ctx),
 		},
 	}
-	model := checkModel{
+	model := checkModel{checkFields: checkFields{
 		Name:                 types.StringValue("API check"),
 		Url:                  types.StringValue("https://example.com"),
 		TestRegions:          unknownStrings,
@@ -212,7 +212,7 @@ func TestCheckModelToClientSkipsUnknownCollections(t *testing.T) {
 		MicrosoftTeamsAlerts: unknownStrings,
 		Headers:              types.MapUnknown(types.StringType),
 		Assertions:           types.ListUnknown(assertionType),
-	}
+	}}
 	var diagnostics diag.Diagnostics
 
 	check := checkModelToClient(ctx, &model, "UPTIME_CHECK", &diagnostics)

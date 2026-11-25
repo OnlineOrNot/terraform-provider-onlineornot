@@ -37,13 +37,21 @@ func TestCheckSchemasIncludeDomainExpiryAlerts(t *testing.T) {
 	for name, resource := range map[string]frameworkresource.Resource{
 		"generic": NewCheckResource(),
 		"uptime":  NewUptimeCheckResource(),
-		"browser": NewBrowserCheckResource(),
 		"dns":     NewDNSCheckResource(),
 		"tcp":     NewTCPCheckResource(),
 	} {
 		t.Run(name, func(t *testing.T) {
 			requireSchemaFields(t, resource, "domain_expiry_alerts")
 		})
+	}
+}
+
+// Browser checks run scripts, so they have no domain to watch.
+func TestBrowserCheckSchemaOmitsDomainExpiryAlerts(t *testing.T) {
+	resp := &frameworkresource.SchemaResponse{}
+	NewBrowserCheckResource().Schema(context.Background(), frameworkresource.SchemaRequest{}, resp)
+	if _, ok := resp.Schema.Attributes["domain_expiry_alerts"]; ok {
+		t.Fatal("onlineornot_browser_check must not have domain_expiry_alerts")
 	}
 }
 
