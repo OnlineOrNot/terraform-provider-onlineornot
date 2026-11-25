@@ -46,7 +46,7 @@ func TestOmittedCheckFieldsTerraformLifecycle(t *testing.T) {
 				return
 			}
 			if drifted && r.Method == "PATCH" {
-				for _, key := range []string{"alert_priority", "follow_redirects", "verify_ssl", "test_interval", "timeout", "test_regions", "user_alerts", "reminder_alert_interval_minutes", "paused", "muted", "type", "version", "auth_username", "auth_password"} {
+				for _, key := range []string{"alert_priority", "follow_redirects", "verify_ssl", "test_interval", "timeout", "test_regions", "user_alerts", "reminder_alert_interval_minutes", "paused", "muted", "type", "version", "auth_username", "auth_password", "domain_expiry_alerts"} {
 					if _, ok := input[key]; ok {
 						t.Errorf("PATCH sends omitted %s: %v", key, input)
 					}
@@ -117,6 +117,7 @@ resource "onlineornot_status_page_component" "api" {
 		plancheck.ExpectKnownValue(api, tfjsonpath.New("timeout"), knownvalue.Int64Exact(45000)),
 		plancheck.ExpectKnownValue(api, tfjsonpath.New("follow_redirects"), knownvalue.Bool(false)),
 		plancheck.ExpectKnownValue(api, tfjsonpath.New("verify_ssl"), knownvalue.Bool(true)),
+		plancheck.ExpectKnownValue(api, tfjsonpath.New("domain_expiry_alerts"), knownvalue.Bool(true)),
 		plancheck.ExpectKnownValue(api, tfjsonpath.New("test_regions"), knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("US_EAST_1")})),
 		plancheck.ExpectKnownValue(api, tfjsonpath.New("auth_password"), knownvalue.Null()),
 		plancheck.ExpectKnownValue(api, tfjsonpath.New("version"), knownvalue.Null()),
@@ -133,6 +134,7 @@ resource "onlineornot_status_page_component" "api" {
 				c["timeout"] = 45000
 				c["follow_redirects"] = false
 				c["verify_ssl"] = true
+				c["domain_expiry_alerts"] = true
 				c["test_regions"] = []string{"US_EAST_1"}
 			}
 			component["status"] = "MAJOR_OUTAGE"
@@ -176,7 +178,7 @@ func TestTypedMonitorOmittedDefaultsTerraformLifecycle(t *testing.T) {
 						t.Error(err)
 					}
 					if drifted && r.Method == "PATCH" {
-						for _, key := range []string{"alert_priority", "timeout", "dns_protocol", "tcp_ip_family", "tcp_should_fail", "reminder_alert_interval_minutes"} {
+						for _, key := range []string{"alert_priority", "timeout", "dns_protocol", "tcp_ip_family", "tcp_should_fail", "reminder_alert_interval_minutes", "domain_expiry_alerts"} {
 							if _, ok := input[key]; ok {
 								t.Errorf("omitted field %s sent: %v", key, input)
 							}
@@ -211,6 +213,7 @@ func TestTypedMonitorOmittedDefaultsTerraformLifecycle(t *testing.T) {
 					drifted = true
 					stored["alert_priority"] = "LOW"
 					stored["timeout"] = 45000
+					stored["domain_expiry_alerts"] = true
 					if kind == "dns" {
 						stored["dns_protocol"] = "TCP"
 					} else {
@@ -222,6 +225,7 @@ func TestTypedMonitorOmittedDefaultsTerraformLifecycle(t *testing.T) {
 					plancheck.ExpectKnownValue(address, tfjsonpath.New("id"), knownvalue.StringExact("monitor1234")),
 					plancheck.ExpectKnownValue(address, tfjsonpath.New("alert_priority"), knownvalue.StringExact("LOW")),
 					plancheck.ExpectKnownValue(address, tfjsonpath.New("timeout"), knownvalue.Int64Exact(45000)),
+					plancheck.ExpectKnownValue(address, tfjsonpath.New("domain_expiry_alerts"), knownvalue.Bool(true)),
 				}}},
 			}})
 		})

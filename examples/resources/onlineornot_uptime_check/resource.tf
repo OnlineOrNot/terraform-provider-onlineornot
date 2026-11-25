@@ -10,6 +10,9 @@ resource "onlineornot_uptime_check" "api" {
     "aws:eu-central-1",
   ]
 
+  # Email alert recipients before example.com's registration expires.
+  domain_expiry_alerts = true
+
   assertions = [
     {
       type       = "TEXT_BODY"

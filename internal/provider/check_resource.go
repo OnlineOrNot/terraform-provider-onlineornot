@@ -51,6 +51,7 @@ type checkModel struct {
 	Body                         types.String `tfsdk:"body"`
 	ConfirmationPeriodSeconds    types.Int64  `tfsdk:"confirmation_period_seconds"`
 	DiscordAlerts                types.List   `tfsdk:"discord_alerts"`
+	DomainExpiryAlerts           types.Bool   `tfsdk:"domain_expiry_alerts"`
 	FollowRedirects              types.Bool   `tfsdk:"follow_redirects"`
 	Headers                      types.Map    `tfsdk:"headers"`
 	Id                           types.String `tfsdk:"id"`
@@ -113,6 +114,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 	resp.Schema.Attributes["timeout"] = timeout
 	resp.Schema.Attributes["paused"] = pausedAttribute("check")
 	resp.Schema.Attributes["muted"] = mutedAttribute("check")
+	resp.Schema.Attributes["domain_expiry_alerts"] = domainExpiryAlertsAttribute()
 
 	if authUsernameAttr, ok := resp.Schema.Attributes["auth_username"].(schema.StringAttribute); ok {
 		authUsernameAttr.Description = "Username to use for URLs behind HTTP Basic Auth. Set this to an empty string for an empty user-id."
@@ -142,6 +144,9 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if !data.Script.IsUnknown() && data.Script.ValueString() != "" && !data.Timeout.IsNull() && !data.Timeout.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(path.Root("timeout"), "Timeout is incompatible with scripted browser checks", "Omit timeout and configure timing in the Playwright script instead. The API stores no timeout for scripted browser checks.")
+	}
+	if !data.Script.IsUnknown() && data.Script.ValueString() != "" && data.DomainExpiryAlerts.ValueBool() {
+		resp.Diagnostics.AddAttributeError(path.Root("domain_expiry_alerts"), "Domain expiry alerts are incompatible with scripted browser checks", "A scripted browser check has no target domain. Use a URL-based check, or omit domain_expiry_alerts.")
 	}
 }
 
@@ -315,6 +320,7 @@ func checkModelToClient(ctx context.Context, data *checkModel, forcedInputType s
 		value := data.VerifySsl.ValueBool()
 		check.VerifySSL = &value
 	}
+	check.DomainExpiryAlerts = knownBoolPointer(data.DomainExpiryAlerts)
 
 	if !data.TestRegions.IsNull() && !data.TestRegions.IsUnknown() {
 		diags.Append(data.TestRegions.ElementsAs(ctx, &check.TestRegions, false)...)
@@ -464,6 +470,7 @@ func (r *CheckResource) populateModelFromAPI(ctx context.Context, data *checkMod
 	} else {
 		data.VerifySsl = types.BoolNull()
 	}
+	data.DomainExpiryAlerts = domainExpiryAlertsValue(check.DomainExpiryAlerts)
 
 	// List fields - convert slices to Terraform lists
 	if len(check.TestRegions) > 0 {

@@ -32,6 +32,7 @@ type typedCheckModel struct {
 	Assertions                   types.List   `tfsdk:"assertions"`
 	ConfirmationPeriodSeconds    types.Int64  `tfsdk:"confirmation_period_seconds"`
 	DiscordAlerts                types.List   `tfsdk:"discord_alerts"`
+	DomainExpiryAlerts           types.Bool   `tfsdk:"domain_expiry_alerts"`
 	Id                           types.String `tfsdk:"id"`
 	IncidentIoAlerts             types.List   `tfsdk:"incident_io_alerts"`
 	MicrosoftTeamsAlerts         types.List   `tfsdk:"microsoft_teams_alerts"`
@@ -167,6 +168,7 @@ func typedCheckSchema(ctx context.Context, idDescription string) schema.Schema {
 		},
 		"confirmation_period_seconds": schema.Int64Attribute{Optional: true, Computed: true, Validators: []validator.Int64{int64validator.AtLeast(0)}, Default: int64default.StaticInt64(60)},
 		"discord_alerts":              stringListAttribute(),
+		"domain_expiry_alerts":        domainExpiryAlertsAttribute(),
 		"id": schema.StringAttribute{
 			Optional:            true,
 			Computed:            true,
@@ -459,6 +461,7 @@ func dnsModelToClient(ctx context.Context, data *DNSCheckModel, diags *diag.Diag
 		RecoveryPeriodSeconds:        int(data.RecoveryPeriodSeconds.ValueInt64()),
 		Timeout:                      int(data.Timeout.ValueInt64()),
 		AlertPriority:                data.AlertPriority.ValueString(),
+		DomainExpiryAlerts:           knownBoolPointer(data.DomainExpiryAlerts),
 		DNSDomain:                    data.DNSDomain.ValueString(),
 		DNSRecordType:                data.DNSRecordType.ValueString(),
 		DNSProtocol:                  data.DNSProtocol.ValueString(),
@@ -481,6 +484,7 @@ func tcpModelToClient(ctx context.Context, data *TCPCheckModel, diags *diag.Diag
 		RecoveryPeriodSeconds:        int(data.RecoveryPeriodSeconds.ValueInt64()),
 		Timeout:                      int(data.Timeout.ValueInt64()),
 		AlertPriority:                data.AlertPriority.ValueString(),
+		DomainExpiryAlerts:           knownBoolPointer(data.DomainExpiryAlerts),
 		TCPHostname:                  data.TCPHostname.ValueString(),
 		TCPPort:                      int(data.TCPPort.ValueInt64()),
 		TCPIPFamily:                  data.TCPIPFamily.ValueString(),
@@ -532,6 +536,7 @@ func listElementsAs(ctx context.Context, value types.List, target *[]string, dia
 func populateDNSModel(ctx context.Context, data *DNSCheckModel, check *client.DNSCheck, diags *diag.Diagnostics) {
 	data.ProjectId = optionalStringValue(check.ProjectID)
 	populateCommonModel(ctx, &data.typedCheckModel, check.ID, check.Name, check.Status, check.TestInterval, check.ReminderAlertIntervalMinutes, check.ConfirmationPeriodSeconds, check.RecoveryPeriodSeconds, check.Timeout, check.AlertPriority, check.TestRegions, check.UserAlerts, check.SlackAlerts, check.DiscordAlerts, check.TelegramAlerts, check.PushoverAlerts, check.WebhookAlerts, check.OncallAlerts, check.IncidentIOAlerts, check.MicrosoftTeamsAlerts, check.Assertions, diags)
+	data.DomainExpiryAlerts = domainExpiryAlertsValue(check.DomainExpiryAlerts)
 	data.DNSDomain = types.StringValue(check.DNSDomain)
 	data.DNSRecordType = types.StringValue(check.DNSRecordType)
 	data.DNSProtocol = optionalStringValue(check.DNSProtocol)
@@ -545,6 +550,7 @@ func populateDNSModel(ctx context.Context, data *DNSCheckModel, check *client.DN
 func populateTCPModel(ctx context.Context, data *TCPCheckModel, check *client.TCPCheck, diags *diag.Diagnostics) {
 	data.ProjectId = optionalStringValue(check.ProjectID)
 	populateCommonModel(ctx, &data.typedCheckModel, check.ID, check.Name, check.Status, check.TestInterval, check.ReminderAlertIntervalMinutes, check.ConfirmationPeriodSeconds, check.RecoveryPeriodSeconds, check.Timeout, check.AlertPriority, check.TestRegions, check.UserAlerts, check.SlackAlerts, check.DiscordAlerts, check.TelegramAlerts, check.PushoverAlerts, check.WebhookAlerts, check.OncallAlerts, check.IncidentIOAlerts, check.MicrosoftTeamsAlerts, check.Assertions, diags)
+	data.DomainExpiryAlerts = domainExpiryAlertsValue(check.DomainExpiryAlerts)
 	data.TCPHostname = types.StringValue(check.TCPHostname)
 	data.TCPPort = types.Int64Value(int64(check.TCPPort))
 	data.TCPIPFamily = optionalStringValue(check.TCPIPFamily)

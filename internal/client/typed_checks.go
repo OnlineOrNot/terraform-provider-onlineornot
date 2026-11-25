@@ -25,6 +25,7 @@ type DNSCheck struct {
 	RecoveryPeriodSeconds        int                `json:"recovery_period_seconds"`
 	Timeout                      int                `json:"timeout,omitempty"`
 	AlertPriority                string             `json:"alert_priority,omitempty"`
+	DomainExpiryAlerts           *bool              `json:"domain_expiry_alerts,omitempty"`
 	DNSDomain                    string             `json:"dns_domain"`
 	DNSRecordType                string             `json:"dns_record_type"`
 	DNSResolver                  *string            `json:"dns_resolver,omitempty"`
@@ -55,6 +56,7 @@ type TCPCheck struct {
 	RecoveryPeriodSeconds        int                `json:"recovery_period_seconds"`
 	Timeout                      int                `json:"timeout,omitempty"`
 	AlertPriority                string             `json:"alert_priority,omitempty"`
+	DomainExpiryAlerts           *bool              `json:"domain_expiry_alerts,omitempty"`
 	TCPHostname                  string             `json:"tcp_hostname"`
 	TCPPort                      int                `json:"tcp_port"`
 	TCPIPFamily                  string             `json:"tcp_ip_family,omitempty"`

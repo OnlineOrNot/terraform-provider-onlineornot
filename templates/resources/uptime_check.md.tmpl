@@ -26,5 +26,6 @@ For a bearer token, use `"Bearer ${onlineornot_environment_variable.api_token.re
 - `url` is required for URL-based uptime checks.
 - `type` is managed by the provider and is always `UPTIME_CHECK` for this resource.
 - Importing a non-uptime monitor ID fails because reads go through the typed uptime endpoint.
+- `domain_expiry_alerts` requires a URL whose host has a registered domain. The API rejects IP addresses, `localhost`, and hosting-provider subdomains such as `myapp.herokuapp.com`.
 
 {{ .SchemaMarkdown | trimspace }}

@@ -33,6 +33,20 @@ func TestMonitorSchemasIncludeOperationalState(t *testing.T) {
 	}
 }
 
+func TestCheckSchemasIncludeDomainExpiryAlerts(t *testing.T) {
+	for name, resource := range map[string]frameworkresource.Resource{
+		"generic": NewCheckResource(),
+		"uptime":  NewUptimeCheckResource(),
+		"browser": NewBrowserCheckResource(),
+		"dns":     NewDNSCheckResource(),
+		"tcp":     NewTCPCheckResource(),
+	} {
+		t.Run(name, func(t *testing.T) {
+			requireSchemaFields(t, resource, "domain_expiry_alerts")
+		})
+	}
+}
+
 func TestTypedMonitorAndHeartbeatSchemasIncludeMissingAlertChannels(t *testing.T) {
 	requireSchemaFields(t, NewDNSCheckResource(), "pushover_alerts")
 	requireSchemaFields(t, NewTCPCheckResource(), "pushover_alerts")

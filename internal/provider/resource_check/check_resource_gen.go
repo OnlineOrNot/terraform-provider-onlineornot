@@ -128,6 +128,12 @@ func CheckResourceSchema(ctx context.Context) schema.Schema {
 				Optional:    true,
 				Computed:    true,
 			},
+			"domain_expiry_alerts": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Alert before the registered domain of the check’s target expires: the URL host, TCP hostname or DNS domain, reduced to the registered domain (https://api.example.com becomes example.com). Alerts go to the check’s email alert recipients at 30, 14, 7 and 1 day before expiry and when it expires, once per organization and domain. Requires a target with a registered domain; IP addresses and hosting providers’ subdomains have none. Defaults to false.",
+				MarkdownDescription: "Alert before the registered domain of the check’s target expires: the URL host, TCP hostname or DNS domain, reduced to the registered domain (https://api.example.com becomes example.com). Alerts go to the check’s email alert recipients at 30, 14, 7 and 1 day before expiry and when it expires, once per organization and domain. Requires a target with a registered domain; IP addresses and hosting providers’ subdomains have none. Defaults to false.",
+			},
 			"follow_redirects": schema.BoolAttribute{
 				Optional: true,
 				Computed: true,
@@ -331,6 +337,7 @@ type CheckModel struct {
 	Body                         types.String `tfsdk:"body"`
 	ConfirmationPeriodSeconds    types.Int64  `tfsdk:"confirmation_period_seconds"`
 	DiscordAlerts                types.List   `tfsdk:"discord_alerts"`
+	DomainExpiryAlerts           types.Bool   `tfsdk:"domain_expiry_alerts"`
 	FollowRedirects              types.Bool   `tfsdk:"follow_redirects"`
 	Headers                      types.Map    `tfsdk:"headers"`
 	Id                           types.String `tfsdk:"id"`
