@@ -100,6 +100,10 @@ func newDomainExpiryAPI(t *testing.T) *domainExpiryAPI {
 		for k, v := range input {
 			next[k] = v
 		}
+		if script, _ := next["script"].(string); script != "" {
+			// Scripted checks store no timeout.
+			next["timeout"] = nil
+		}
 		if problem := domainExpiryTargetProblem(next); problem != "" {
 			if r.Method == "POST" {
 				delete(api.checks, id)
@@ -258,5 +262,29 @@ func TestDomainExpiryAlertsRejectScriptedBrowserChecks(t *testing.T) {
 				PlanOnly: true, ExpectError: regexp.MustCompile(`Domain\s+expiry\s+alerts\s+are\s+incompatible\s+with\s+scripted\s+browser\s+checks`),
 			}}})
 		})
+	}
+}
+
+// Omitted alerts are preserved, so converting an enabled check to a script
+// must fail at plan time instead of sending a PATCH the API rejects.
+func TestDomainExpiryAlertsBlockInheritedScriptConversion(t *testing.T) {
+	api := newDomainExpiryAPI(t)
+	defer api.server.Close()
+	script := "script = \"test('home', async () => {})\""
+	resource.UnitTest(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+		{Config: domainExpiryConfig(api.server.URL, "browser_check", domainExpiryTargets["browser_check"], "domain_expiry_alerts = true")},
+		{
+			Config:      domainExpiryConfig(api.server.URL, "browser_check", script, ""),
+			ExpectError: regexp.MustCompile(`Set\s+domain_expiry_alerts\s+=\s+false\s+to\s+convert`),
+		},
+		{Config: domainExpiryConfig(api.server.URL, "browser_check", script, "domain_expiry_alerts = false")},
+	}})
+	if body := api.lastBody("PATCH"); body["domain_expiry_alerts"] != false || body["script"] == nil {
+		t.Errorf("expected only the explicit conversion PATCH to disable alerts, got %#v", body)
+	}
+	api.mu.Lock()
+	defer api.mu.Unlock()
+	if len(api.bodies["PATCH"]) != 1 {
+		t.Errorf("expected one PATCH, got %d", len(api.bodies["PATCH"]))
 	}
 }

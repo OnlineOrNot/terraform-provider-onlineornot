@@ -177,6 +177,19 @@ func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	if config.Url.IsNull() && !config.Script.IsNull() && !config.Script.IsUnknown() && config.Script.ValueString() != "" {
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("url"), types.StringNull())...)
 	}
+	// Omitted alerts keep the prior value, so a switch to scripted mode can
+	// inherit alerts the API rejects. Fail at plan time, before any project move.
+	if config.DomainExpiryAlerts.IsNull() && !req.State.Raw.IsNull() {
+		var plan checkModel
+		resp.Diagnostics.Append(resp.Plan.Get(ctx, &plan)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if !plan.Script.IsUnknown() && plan.Script.ValueString() != "" && !plan.DomainExpiryAlerts.IsUnknown() && plan.DomainExpiryAlerts.ValueBool() {
+			resp.Diagnostics.AddAttributeError(path.Root("domain_expiry_alerts"), "Domain expiry alerts are incompatible with scripted browser checks", "This check has domain expiry alerts enabled, and scripted browser checks have no target domain. Set domain_expiry_alerts = false to convert it to a scripted check.")
+			return
+		}
+	}
 	if config.Timeout.IsNull() {
 		var plan, state checkModel
 		resp.Diagnostics.Append(resp.Plan.Get(ctx, &plan)...)
