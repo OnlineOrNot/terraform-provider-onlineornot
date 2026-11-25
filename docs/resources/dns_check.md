@@ -41,6 +41,7 @@ resource "onlineornot_dns_check" "custom_resolver" {
 - `dns_domain` is the domain name to query.
 - `dns_record_type` is the record type to query, such as `A`, `AAAA`, `CNAME`, `MX`, `NS`, `SOA`, or `TXT`.
 - `dns_resolver` is optional. Leave it unset to use the platform default resolver.
+- `domain_expiry_alerts` (Boolean) Whether to email the check's alert recipients 30, 14, 7 and 1 day before the registered domain of the check's target expires, and when it expires. The registered domain comes from the URL host, TCP hostname or DNS domain (https://api.example.com becomes example.com). The API rejects true when the target has no registered domain, such as an IP address, localhost or a hosting provider's subdomain like myapp.herokuapp.com, and for scripted browser checks. Changing the target of a check with alerts enabled moves the alerts to the new target's domain, or fails if the new target has none. Defaults to false on creation; omitting it on updates preserves the current setting.
 - `dns_protocol` defaults to `UDP`.
 - Importing a non-DNS monitor ID fails because reads go through the typed DNS endpoint.
 
@@ -59,7 +60,6 @@ resource "onlineornot_dns_check" "custom_resolver" {
 - `assertions` (Attributes List) Assertions to run on the response (see [below for nested schema](#nestedatt--assertions))
 - `confirmation_period_seconds` (Number)
 - `discord_alerts` (List of String)
-- `domain_expiry_alerts` (Boolean) Whether to email the check's alert recipients 30, 14, 7 and 1 day before the registered domain of the check's target expires, and when it expires. The registered domain comes from the URL host, TCP hostname or DNS domain (https://api.example.com becomes example.com). The API rejects true when the target has no registered domain, such as an IP address, localhost or a hosting provider's subdomain like myapp.herokuapp.com, and for scripted browser checks. Changing the target of a check with alerts enabled moves the alerts to the new target's domain, or fails if the new target has none. Defaults to false on creation; omitting it on updates preserves the current setting.
 - `dns_protocol` (String) DNS protocol to use
 - `dns_resolver` (String) DNS resolver to use
 - `id` (String) DNS check ID
