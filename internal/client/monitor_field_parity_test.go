@@ -91,6 +91,31 @@ func TestTypedCheckPayloadsIncludePushoverOnlyOnSupportedBasePayload(t *testing.
 	requireOnlyOperationalState(t, &TCPCheckPatch{Muted: boolPointer(false)}, "muted", false)
 }
 
+func TestCheckPayloadsDistinguishDisabledFromOmittedDomainExpiryAlerts(t *testing.T) {
+	for name, test := range map[string]struct {
+		value    *bool
+		expected any
+		present  bool
+	}{
+		"omitted":  {nil, nil, false},
+		"disabled": {boolPointer(false), false, true},
+		"enabled":  {boolPointer(true), true, true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			for kind, payload := range map[string]any{
+				"check": &Check{Name: "API", URL: "https://example.com", DomainExpiryAlerts: test.value},
+				"dns":   &DNSCheck{Name: "DNS", DNSDomain: "example.com", DNSRecordType: "A", DomainExpiryAlerts: test.value},
+				"tcp":   &TCPCheck{Name: "TCP", TCPHostname: "example.com", TCPPort: 443, DomainExpiryAlerts: test.value},
+			} {
+				value, ok := payloadMap(t, payload)["domain_expiry_alerts"]
+				if ok != test.present || value != test.expected {
+					t.Errorf("%s: expected domain_expiry_alerts present=%v value=%v, got present=%v value=%#v", kind, test.present, test.expected, ok, value)
+				}
+			}
+		})
+	}
+}
+
 func TestHeartbeatCreateAndPatchPayloadsSeparateOperationalState(t *testing.T) {
 	heartbeat := &Heartbeat{Name: "Cron", GracePeriod: 60, TelegramAlerts: []string{"telegram-1"}}
 	create := payloadMap(t, heartbeat)

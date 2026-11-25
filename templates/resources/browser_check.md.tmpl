@@ -40,6 +40,7 @@ The second resource uses URL mode.
 
 - For URL mode, supply `url` to load a page.
 - For scripted mode, supply `script`. Do not set `timeout` in this mode.
+- `domain_expiry_alerts` works only in URL mode. The provider rejects `domain_expiry_alerts = true` with `script` at plan time.
 - Use `@playwright/test` for test steps, browser assertions, and test timeouts. The service execution limit still applies.
 - Use Terraform for monitor names, intervals, regions, and alert settings.
 - The provider sets `type` to `BROWSER_CHECK` for this resource.
